@@ -1,0 +1,19 @@
+{
+  "extends": "./base.json",
+  "compilerOptions": {
+    "module": "Preserve",
+    "moduleResolution": "Bundler",
+    "noEmit": true,
+    "jsx": "preserve",
+    "lib": [
+      "dom",
+      "dom.iterable",
+      "esnext"
+    ],
+    "plugins": [
+      {
+        "name": "next"
+      }
+    ]
+  }
+}

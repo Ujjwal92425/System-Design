@@ -1,0 +1,462 @@
+// packages/db/prisma/schema.prisma
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ==================== ENUMS ====================
+
+enum Role {
+  USER
+  PRO
+  INSTRUCTOR
+  ADMIN
+}
+
+enum Plan {
+  FREE
+  PRO
+  TEAM
+}
+
+enum SubscriptionStatus {
+  ACTIVE
+  CANCELLED
+  EXPIRED
+  TRIAL
+}
+
+enum LessonStatus {
+  NOT_STARTED
+  IN_PROGRESS
+  COMPLETE
+}
+
+enum InterviewStatus {
+  IN_PROGRESS
+  SUBMITTED
+  SCORED
+  ABANDONED
+}
+
+enum NodeType {
+  LOAD_BALANCER
+  API_GATEWAY
+  WEB_SERVER
+  DATABASE_SQL
+  DATABASE_NOSQL
+  CACHE
+  QUEUE
+  CDN
+  OBJECT_STORAGE
+  DNS
+  SEARCH_ENGINE
+  AUTH_SERVICE
+  NOTIFICATION_SERVICE
+  MICROSERVICE
+  CLIENT
+}
+
+// ==================== USERS ====================
+
+model User {
+  id          String    @id @default(cuid())
+  email       String    @unique
+  name        String?
+  avatarUrl   String?
+  role        Role      @default(USER)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  subscription   Subscription?
+  refreshTokens  RefreshToken[]
+  designs        Design[]
+  progress       UserProgress[]
+  lessonStates   LessonState[]
+  quizAttempts   QuizAttempt[]
+  interviews     InterviewSession[]
+  blueprints     Blueprint[]
+  comments       Comment[]
+  votes          Vote[]
+  collections    Collection[]
+  reports        Report[]
+  aiAnalyses     AIAnalysis[]
+}
+
+model RefreshToken {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  token     String   @unique
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+}
+
+model Subscription {
+  id           String             @id @default(cuid())
+  userId       String             @unique
+  user         User               @relation(fields: [userId], references: [id])
+  plan         Plan               @default(FREE)
+  status       SubscriptionStatus @default(ACTIVE)
+  startedAt    DateTime           @default(now())
+  expiresAt    DateTime?
+  stripeCustomerId  String?
+  stripeSubId  String?
+  aiCreditsUsed Int              @default(0)
+  aiCreditsLimit Int             @default(10)
+  createdAt    DateTime           @default(now())
+  updatedAt    DateTime           @updatedAt
+}
+
+// ==================== LEARNING ====================
+
+model Track {
+  id          String   @id @default(cuid())
+  slug        String   @unique
+  name        String
+  description String
+  level       Int
+  order       Int
+  iconUrl     String?
+  isPublished Boolean  @default(false)
+  estimatedHours Int?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  modules     Module[]
+  progress    UserProgress[]
+}
+
+model Module {
+  id           String   @id @default(cuid())
+  trackId      String
+  track        Track    @relation(fields: [trackId], references: [id])
+  name         String
+  description  String
+  order        Int
+  estimatedMin Int
+  isPublished  Boolean  @default(false)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  lessons      Lesson[]
+}
+
+model Lesson {
+  id           String   @id @default(cuid())
+  moduleId     String
+  module       Module   @relation(fields: [moduleId], references: [id])
+  slug         String   @unique
+  title        String
+  content      String   @db.Text
+  order        Int
+  estimatedMin Int
+  difficulty   String
+  companies    String[]
+  tags         String[]
+  isPublished  Boolean  @default(false)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  quizzes      Quiz[]
+  states       LessonState[]
+
+  @@index([moduleId])
+}
+
+model Quiz {
+  id           String   @id @default(cuid())
+  lessonId     String
+  lesson       Lesson   @relation(fields: [lessonId], references: [id])
+  title        String
+  passingScore Int      @default(70)
+  createdAt    DateTime @default(now())
+
+  questions    Question[]
+  attempts     QuizAttempt[]
+}
+
+model Question {
+  id            String   @id @default(cuid())
+  quizId        String
+  quiz          Quiz     @relation(fields: [quizId], references: [id])
+  type          String
+  content       String
+  options       Json
+  correctAnswer String
+  explanation   String
+  order         Int
+  createdAt     DateTime @default(now())
+}
+
+model UserProgress {
+  id            String   @id @default(cuid())
+  userId        String
+  user          User     @relation(fields: [userId], references: [id])
+  trackId       String
+  track         Track    @relation(fields: [trackId], references: [id])
+  completedPct  Float    @default(0)
+  lastActiveAt  DateTime @default(now())
+  startedAt     DateTime @default(now())
+
+  @@unique([userId, trackId])
+}
+
+model LessonState {
+  id          String      @id @default(cuid())
+  userId      String
+  user        User        @relation(fields: [userId], references: [id])
+  lessonId    String
+  lesson      Lesson      @relation(fields: [lessonId], references: [id])
+  status      LessonStatus @default(NOT_STARTED)
+  resumeState Json?
+  completedAt DateTime?
+  bookmarked  Boolean     @default(false)
+  notes       String?     @db.Text
+
+  @@unique([userId, lessonId])
+}
+
+model QuizAttempt {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id])
+  quizId      String
+  quiz        Quiz     @relation(fields: [quizId], references: [id])
+  score       Float
+  answers     Json
+  passed      Boolean
+  completedAt DateTime @default(now())
+}
+
+// ==================== DESIGN ====================
+
+model Design {
+  id            String   @id @default(cuid())
+  userId        String
+  user          User     @relation(fields: [userId], references: [id])
+  title         String   @default("Untitled Design")
+  description   String?
+  isPublic      Boolean  @default(false)
+  forkedFromId  String?
+  templateId    String?
+  thumbnailUrl  String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  versions      DesignVersion[]
+  simulations   Simulation[]
+  interviews    InterviewSession[]
+  blueprints    Blueprint[]
+  aiAnalyses    AIAnalysis[]
+
+  @@index([userId])
+}
+
+model DesignVersion {
+  id        String   @id @default(cuid())
+  designId  String
+  design    Design   @relation(fields: [designId], references: [id], onDelete: Cascade)
+  version   Int
+  nodes     Json
+  edges     Json
+  message   String?
+  createdAt DateTime @default(now())
+
+  @@unique([designId, version])
+  @@index([designId])
+}
+
+model Template {
+  id          String   @id @default(cuid())
+  name        String
+  description String
+  category    String
+  difficulty  String
+  thumbnailUrl String?
+  nodes       Json
+  edges       Json
+  tags        String[]
+  isPublished Boolean  @default(false)
+  createdAt   DateTime @default(now())
+}
+
+// ==================== SIMULATION ====================
+
+model Simulation {
+  id        String   @id @default(cuid())
+  designId  String
+  design    Design   @relation(fields: [designId], references: [id])
+  config    Json
+  createdAt DateTime @default(now())
+
+  runs      SimulationRun[]
+}
+
+model SimulationRun {
+  id           String   @id @default(cuid())
+  simulationId String
+  simulation   Simulation @relation(fields: [simulationId], references: [id])
+  startedAt    DateTime @default(now())
+  endedAt      DateTime?
+  metrics      Json?
+  events       Json?
+}
+
+// ==================== INTERVIEW ====================
+
+model InterviewPrompt {
+  id           String   @id @default(cuid())
+  title        String
+  description  String
+  requirements String[]
+  difficulty   String
+  companies    String[]
+  timeLimitMin Int      @default(45)
+  rubric       Json
+  modelAnswer  Json?
+  tags         String[]
+  isPublished  Boolean  @default(false)
+  createdAt    DateTime @default(now())
+
+  sessions     InterviewSession[]
+}
+
+model InterviewSession {
+  id         String          @id @default(cuid())
+  userId     String
+  user       User            @relation(fields: [userId], references: [id])
+  promptId   String
+  prompt     InterviewPrompt @relation(fields: [promptId], references: [id])
+  designId   String?
+  design     Design?         @relation(fields: [designId], references: [id])
+  startedAt  DateTime        @default(now())
+  endedAt    DateTime?
+  timeLimit  Int
+  status     InterviewStatus @default(IN_PROGRESS)
+  hintsUsed  Int             @default(0)
+
+  score      InterviewScore?
+}
+
+model InterviewScore {
+  id             String          @id @default(cuid())
+  sessionId      String          @unique
+  session        InterviewSession @relation(fields: [sessionId], references: [id])
+  totalScore     Float
+  rubricResults  Json
+  aiFeedback     String?         @db.Text
+  missedItems    Json
+  createdAt      DateTime        @default(now())
+}
+
+// ==================== AI ====================
+
+model AIAnalysis {
+  id         String   @id @default(cuid())
+  userId     String
+  user       User     @relation(fields: [userId], references: [id])
+  designId   String?
+  design     Design?  @relation(fields: [designId], references: [id])
+  sessionId  String?
+  type       String
+  designHash String?
+  input      Json
+  output     Json
+  model      String
+  tokensUsed Int
+  createdAt  DateTime @default(now())
+
+  @@index([designHash])
+}
+
+// ==================== COMMUNITY ====================
+
+model Blueprint {
+  id          String   @id @default(cuid())
+  designId    String
+  design      Design   @relation(fields: [designId], references: [id])
+  authorId    String
+  author      User     @relation(fields: [authorId], references: [id])
+  title       String
+  description String
+  tags        String[]
+  voteCount   Int      @default(0)
+  forkCount   Int      @default(0)
+  viewCount   Int      @default(0)
+  isPublished Boolean  @default(false)
+  publishedAt DateTime?
+  createdAt   DateTime @default(now())
+
+  comments    Comment[]
+  votes       Vote[]
+  reports     Report[]
+  collections CollectionItem[]
+
+  @@index([isPublished, publishedAt])
+}
+
+model Comment {
+  id          String    @id @default(cuid())
+  blueprintId String
+  blueprint   Blueprint @relation(fields: [blueprintId], references: [id])
+  userId      String
+  user        User      @relation(fields: [userId], references: [id])
+  content     String    @db.Text
+  parentId    String?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@index([blueprintId])
+}
+
+model Vote {
+  id          String    @id @default(cuid())
+  blueprintId String
+  blueprint   Blueprint @relation(fields: [blueprintId], references: [id])
+  userId      String
+  user        User      @relation(fields: [userId], references: [id])
+  value       Int
+
+  @@unique([blueprintId, userId])
+}
+
+model Collection {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id])
+  name        String
+  description String?
+  isPublic    Boolean  @default(false)
+  createdAt   DateTime @default(now())
+
+  items       CollectionItem[]
+}
+
+model CollectionItem {
+  id           String     @id @default(cuid())
+  collectionId String
+  collection   Collection @relation(fields: [collectionId], references: [id])
+  blueprintId  String
+  blueprint    Blueprint  @relation(fields: [blueprintId], references: [id])
+  order        Int
+  addedAt      DateTime   @default(now())
+
+  @@unique([collectionId, blueprintId])
+}
+
+model Report {
+  id          String    @id @default(cuid())
+  blueprintId String
+  blueprint   Blueprint @relation(fields: [blueprintId], references: [id])
+  reporterId  String
+  reporter    User      @relation(fields: [reporterId], references: [id])
+  reason      String
+  status      String    @default("pending")
+  createdAt   DateTime  @default(now())
+}
