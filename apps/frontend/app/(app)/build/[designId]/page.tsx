@@ -1,10 +1,11 @@
 'use client';
 
-import React, { useEffect } from 'react';
+import React, { useEffect, use } from 'react';
 import { useCanvasStore } from '@/features/canvas/useCanvasStore';
 import { NodeType } from '@sd-os/shared';
 
-export default function CanvasWorkspace({ params }: { params: { designId: string } }) {
+export default function CanvasWorkspace({ params }: { params: Promise<{ designId: string }> }) {
+  const { designId } = use(params);
   const { nodes, edges, addNode, loadDesign } = useCanvasStore();
 
   useEffect(() => {
@@ -36,7 +37,7 @@ export default function CanvasWorkspace({ params }: { params: { designId: string
       {/* Main drawing area */}
       <div className="flex-1 bg-zinc-950 relative flex items-center justify-center border-r border-zinc-900">
         <div className="absolute top-6 left-6 px-4 py-2 bg-zinc-900 border border-zinc-800 rounded-lg text-xs font-mono text-zinc-400">
-          Design Workspace ID: {params.designId}
+          Design Workspace ID: {designId}
         </div>
         
         {/* Render simple visual elements representing nodes */}

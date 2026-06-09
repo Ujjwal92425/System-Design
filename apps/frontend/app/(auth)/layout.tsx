@@ -1,11 +1,25 @@
-import React from 'react';
+/**
+ * Shared layout for all (auth) route group pages.
+ * Renders a centered card on a dark gradient background.
+ * The auth CSS design system is injected via globals.css.
+ */
+
+import type { Metadata } from 'next';
+
+export const metadata: Metadata = {
+  title: 'SD-OS — Sign In',
+  description: 'Access your System Design Learning OS workspace.',
+};
 
 export default function AuthLayout({ children }: { children: React.ReactNode }) {
   return (
-    <div className="min-h-screen flex items-center justify-center bg-zinc-950 px-4 py-12">
-      <div className="max-w-md w-full space-y-8 bg-zinc-900 border border-zinc-800 p-8 rounded-2xl">
-        {children}
-      </div>
-    </div>
+    <main className="auth-shell">
+      {/* Subtle animated grid background */}
+      <div className="auth-bg-grid" aria-hidden="true" />
+      {/* Gradient orbs for depth */}
+      <div className="auth-orb auth-orb--1" aria-hidden="true" />
+      <div className="auth-orb auth-orb--2" aria-hidden="true" />
+      {children}
+    </main>
   );
 }
