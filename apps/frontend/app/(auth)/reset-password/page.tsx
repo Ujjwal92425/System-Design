@@ -3,12 +3,10 @@
 /**
  * /reset-password?token=<token> page
  *
- * Reads `token` from query string.
- * Validates new password + confirmation match on the client.
- * Calls authService.resetPassword() → on success, redirects to /login.
+ * Wraps the reset content in Suspense to support useSearchParams in Next.js static generation.
  */
 
-import { useState, FormEvent } from 'react';
+import { Suspense, useState, FormEvent } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuth } from '../../../features/auth/useAuth';
@@ -25,7 +23,7 @@ function scorePassword(pw: string): number {
 const STRENGTH_COLORS = ['#ef4444', '#f97316', '#eab308', '#22c55e', '#16a34a'];
 const STRENGTH_LABELS = ['Too weak', 'Weak', 'Fair', 'Good', 'Strong'];
 
-export default function ResetPasswordPage() {
+function ResetPasswordContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const token = searchParams.get('token') ?? '';
@@ -149,5 +147,18 @@ export default function ResetPasswordPage() {
         </button>
       </form>
     </div>
+  );
+}
+
+export default function ResetPasswordPage() {
+  return (
+    <Suspense fallback={
+      <div className="auth-card auth-card--center">
+        <div className="auth-spinner-large" role="status" aria-label="Loading page…" />
+        <h1 className="auth-title" style={{ marginTop: '1.5rem' }}>Loading…</h1>
+      </div>
+    }>
+      <ResetPasswordContent />
+    </Suspense>
   );
 }

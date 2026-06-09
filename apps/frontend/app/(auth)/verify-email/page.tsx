@@ -3,19 +3,17 @@
 /**
  * /verify-email?token=<token> page
  *
- * On mount (useEffect) it calls authService.verifyEmail(token).
- * Shows three states: loading → success → error.
- * On success the user can immediately proceed to login.
+ * Wraps the verification content in Suspense to support useSearchParams in Next.js static generation.
  */
 
-import { useEffect, useState } from 'react';
+import { Suspense, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import { useAuth } from '../../../features/auth/useAuth';
 
 type State = 'loading' | 'success' | 'error';
 
-export default function VerifyEmailPage() {
+function VerifyEmailContent() {
   const searchParams = useSearchParams();
   const token = searchParams.get('token') ?? '';
   const { verifyEmail } = useAuth();
@@ -94,5 +92,18 @@ export default function VerifyEmailPage() {
         <Link href="/login" className="auth-footer-link">Sign in</Link>
       </p>
     </div>
+  );
+}
+
+export default function VerifyEmailPage() {
+  return (
+    <Suspense fallback={
+      <div className="auth-card auth-card--center">
+        <div className="auth-spinner-large" role="status" aria-label="Loading page…" />
+        <h1 className="auth-title" style={{ marginTop: '1.5rem' }}>Loading…</h1>
+      </div>
+    }>
+      <VerifyEmailContent />
+    </Suspense>
   );
 }

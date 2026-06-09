@@ -7,9 +7,9 @@
     "lint": "turbo run lint",
     "test": "turbo run test",
     "typecheck": "turbo run typecheck",
-    "db:generate": "turbo run db:generate --filter=db",
-    "db:migrate": "turbo run db:migrate --filter=db",
-    "db:seed": "turbo run db:seed --filter=db"
+    "db:generate": "turbo run db:generate --filter=@sd-os/db",
+    "db:migrate": "turbo run db:migrate --filter=@sd-os/db",
+    "db:seed": "turbo run db:seed --filter=@sd-os/db"
   },
   "devDependencies": {
     "turbo": "^2.0.4"
