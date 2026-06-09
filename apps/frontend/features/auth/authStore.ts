@@ -4,6 +4,7 @@ export interface User {
   id: string;
   email: string;
   name?: string;
+  bio?: string;
   avatarUrl?: string;
   role: 'USER' | 'PRO' | 'INSTRUCTOR' | 'ADMIN';
   emailVerified: boolean;

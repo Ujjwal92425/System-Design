@@ -20,6 +20,7 @@
     "jsonwebtoken": "^9.0.2",
     "@aws-sdk/client-s3": "^3.588.0",
     "@aws-sdk/s3-request-presigner": "^3.588.0",
+    "@prisma/client": "^5.14.0",
     "nodemailer": "^6.9.13",
     "pino": "^9.1.0",
     "pino-pretty": "^11.1.0",

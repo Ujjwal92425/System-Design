@@ -16,8 +16,9 @@ import { authenticate, AuthRequest } from '../../middleware/authenticate';
 import { validate } from '../../middleware/validate';
 import { success } from '../../utils/response';
 import { usersService } from './users.service';
-import { UpdateProfileBody, ChangePasswordBody } from './users.schema';
+import { UpdateProfileBody, ChangePasswordBody, AvatarUploadUrlBody } from './users.schema';
 import { AppError } from '../../utils/errors';
+import { storage } from '../../utils/storage';
 
 export const usersRouter = Router();
 
@@ -67,6 +68,27 @@ usersRouter.delete('/account', async (req: AuthRequest, res, next) => {
     if (!req.user?.id) throw new AppError('UNAUTHORIZED', 'Not authenticated', 401);
     const result = await usersService.deleteAccount(req.user.id);
     success(res, result);
+  } catch (err) {
+    next(err);
+  }
+});
+
+// ─── POST /api/users/avatar/upload-url ──────────────────────────────────────
+usersRouter.post('/avatar/upload-url', validate(AvatarUploadUrlBody), async (req: AuthRequest, res, next) => {
+  try {
+    const { filename, contentType } = req.body;
+    const result = await storage.getPresignedUploadUrl(req.user!.id, filename, contentType);
+    success(res, result);
+  } catch (err) {
+    next(err);
+  }
+});
+
+// ─── PUT /api/users/profile/mock-upload ──────────────────────────────────────
+// Used in local development environments when R2 credentials are omitted.
+usersRouter.put('/profile/mock-upload', async (req, res, next) => {
+  try {
+    success(res, { success: true, message: 'Mock upload successful' });
   } catch (err) {
     next(err);
   }

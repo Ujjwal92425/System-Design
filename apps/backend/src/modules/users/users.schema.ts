@@ -34,3 +34,8 @@ export const ChangePasswordBody = z.object({
 export const UserIdParam = z.object({
   id: z.string().min(1, 'User ID is required'),
 });
+
+export const AvatarUploadUrlBody = z.object({
+  filename: z.string().min(1, 'Filename is required'),
+  contentType: z.string().min(1, 'ContentType is required'),
+});

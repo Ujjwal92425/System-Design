@@ -64,6 +64,13 @@ const EnvSchema = z.object({
 
   // ── Monitoring ────────────────────────────────────────────────────────────────
   SENTRY_DSN: z.string().optional(),
+
+  // ── Cloudflare R2 / S3 Storage (Optional) ────────────────────────────────────
+  R2_ACCOUNT_ID: z.string().optional(),
+  R2_ACCESS_KEY_ID: z.string().optional(),
+  R2_SECRET_ACCESS_KEY: z.string().optional(),
+  R2_BUCKET_NAME: z.string().default('sd-os-exports'),
+  R2_PUBLIC_URL: z.string().url().optional(),
 });
 
 // ─── Parse and export ─────────────────────────────────────────────────────────

@@ -7,8 +7,5 @@
     "./typescript/node.json": "./typescript/node.json",
     "./typescript/nextjs.json": "./typescript/nextjs.json",
     "./tailwind": "./tailwind/index.ts"
-  },
-  "dependencies": {
-    "tailwindcss": "^3.4.3"
   }
 }
