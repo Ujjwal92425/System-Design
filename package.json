@@ -1,6 +1,10 @@
 {
   "name": "sd-os",
   "private": true,
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
   "scripts": {
     "build": "turbo run build",
     "dev": "turbo run dev",
@@ -14,5 +18,5 @@
   "devDependencies": {
     "turbo": "^2.0.4"
   },
-  "packageManager": "pnpm@9.1.0"
+  "packageManager": "npm@11.12.1"
 }

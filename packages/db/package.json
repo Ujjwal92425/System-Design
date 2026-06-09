@@ -12,7 +12,7 @@
   },
   "dependencies": {
     "@prisma/client": "^5.14.0",
-    "@sd-os/shared": "workspace:*",
+    "@sd-os/shared": "*",
     "bcrypt": "^5.1.1"
   },
   "devDependencies": {
