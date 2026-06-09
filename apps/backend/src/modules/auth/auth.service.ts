@@ -5,6 +5,7 @@ import { env } from '../../config/env';
 import { usersRepo } from '@sd-os/db';
 import { AppError } from '../../utils/errors';
 import { logger } from '../../utils/logger';
+import { emailQueue } from '../../jobs/queues';
 
 // Helper to hash token for secure DB storage (AUTH-04)
 function hashToken(token: string): string {
@@ -33,6 +34,19 @@ export const authService = {
     const verificationToken = crypto.randomBytes(32).toString('hex');
     const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours
     await usersRepo.createVerificationToken(user.id, verificationToken, expiresAt);
+
+    // Queue verification email
+    try {
+      await emailQueue.add('send-verification', {
+        to: user.email,
+        subject: 'Verify your System Design OS account',
+        type: 'verification',
+        token: verificationToken,
+        name: user.name || undefined
+      });
+    } catch (err) {
+      logger.error({ err, userId: user.id }, 'Failed to queue verification email');
+    }
 
     // Logging token for testing/local setup debugging
     logger.info({ userId: user.id, email: user.email, verificationToken }, 'User registered. Verification token created.');
@@ -154,6 +168,19 @@ export const authService = {
     const token = crypto.randomBytes(32).toString('hex');
     const expiresAt = new Date(Date.now() + 60 * 60 * 1000); // 1 hour
     await usersRepo.createPasswordResetToken(user.id, token, expiresAt);
+
+    // Queue password reset email
+    try {
+      await emailQueue.add('send-reset-password', {
+        to: user.email,
+        subject: 'Reset your System Design OS password',
+        type: 'reset-password',
+        token: token,
+        name: user.name || undefined
+      });
+    } catch (err) {
+      logger.error({ err, userId: user.id }, 'Failed to queue password reset email');
+    }
 
     // Logging reset token for testing/local debug purposes
     logger.info({ userId: user.id, resetToken: token }, 'Password reset token created.');
