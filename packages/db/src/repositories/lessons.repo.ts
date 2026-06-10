@@ -37,6 +37,22 @@ export const lessonsRepo = {
     });
   },
 
+  async findWithModule(slug: string) {
+    return db.lesson.findFirst({
+      where: { slug, isPublished: true },
+      include: {
+        module: {
+          include: {
+            track: true
+          }
+        },
+        quizzes: {
+          include: { questions: { orderBy: { order: 'asc' } } }
+        }
+      }
+    });
+  },
+
   async search(query: string, filters?: { difficulty?: string; tags?: string[] }) {
     const whereClause: any = {
       isPublished: true,
