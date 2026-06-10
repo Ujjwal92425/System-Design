@@ -22,6 +22,7 @@ interface Lesson {
     track: {
       id: string;
       name: string;
+      slug: string;
       level: number;
     }
   };

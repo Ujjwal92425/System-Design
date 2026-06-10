@@ -259,7 +259,8 @@ export default function CanvasWorkspace({ params }: { params: Promise<{ designId
     };
 
     // Deselect existing
-    setNodes(nodes.map(n => ({ ...n, selected: false })).concat(newNode));
+    const updatedNodes: CanvasNode[] = [...nodes.map(n => ({ ...n, selected: false })), newNode];
+    setNodes(updatedNodes);
   };
 
   // Connection setup

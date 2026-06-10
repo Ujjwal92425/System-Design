@@ -16,6 +16,21 @@ export default async function AdminLayout({ children }: { children: ReactNode })
 
   return (
     <div style={{ display: 'flex', minHeight: '100vh', background: 'var(--bg-base)' }}>
+      <style>{`
+        .admin-nav-link {
+          display: block;
+          padding: 9px 12px;
+          border-radius: 8px;
+          font-size: 13px;
+          color: var(--text-secondary);
+          text-decoration: none;
+          transition: background 150ms ease, color 150ms ease;
+        }
+        .admin-nav-link:hover {
+          background: var(--bg-elevated) !important;
+          color: var(--text-primary) !important;
+        }
+      `}</style>
       {/* Sidebar */}
       <aside style={{
         width: '220px',
@@ -42,17 +57,7 @@ export default async function AdminLayout({ children }: { children: ReactNode })
             <a
               key={href}
               href={href}
-              style={{
-                display: 'block',
-                padding: '9px 12px',
-                borderRadius: '8px',
-                fontSize: '13px',
-                color: 'var(--text-secondary)',
-                textDecoration: 'none',
-                transition: 'background 150ms ease, color 150ms ease',
-              }}
-              onMouseOver={(e: any) => { e.currentTarget.style.background = 'var(--bg-elevated)'; e.currentTarget.style.color = 'var(--text-primary)'; }}
-              onMouseOut={(e: any) => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'var(--text-secondary)'; }}
+              className="admin-nav-link"
             >
               {label}
             </a>
