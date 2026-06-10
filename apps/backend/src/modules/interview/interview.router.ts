@@ -1,21 +1,85 @@
 import { Router } from 'express';
 import { AuthRequest } from '../../middleware/authenticate';
 import { success } from '../../utils/response';
-import { scoreDesign } from './scoring.service';
+import { interviewService } from './interview.service';
 
 export const interviewRouter = Router();
 
+// 1. Get List of Prompts
+interviewRouter.get('/prompts', async (req: AuthRequest, res, next) => {
+  try {
+    const { difficulty, tag } = req.query as { difficulty?: string; tag?: string };
+    const prompts = await interviewService.getPrompts({ difficulty, tag });
+    success(res, prompts);
+  } catch (err) {
+    next(err);
+  }
+});
+
+// 2. Get User's Session History
+interviewRouter.get('/sessions/history', async (req: AuthRequest, res, next) => {
+  try {
+    const userId = req.user?.id;
+    if (!userId) throw new Error('Unauthorized');
+    
+    const history = await interviewService.getUserHistory(userId);
+    success(res, history);
+  } catch (err) {
+    next(err);
+  }
+});
+
+// 3. Start a new Interview Session
+interviewRouter.post('/sessions', async (req: AuthRequest, res, next) => {
+  try {
+    const userId = req.user?.id;
+    if (!userId) throw new Error('Unauthorized');
+    
+    const { promptId } = req.body;
+    const session = await interviewService.startSession(userId, promptId);
+    success(res, session);
+  } catch (err) {
+    next(err);
+  }
+});
+
+// 4. Fetch Details of an active Session
+interviewRouter.get('/sessions/:id', async (req: AuthRequest, res, next) => {
+  try {
+    const session = await interviewService.getSession(req.params.id);
+    success(res, session);
+  } catch (err) {
+    next(err);
+  }
+});
+
+// 5. Use/Unlock a Hint
+interviewRouter.post('/sessions/:id/hint', async (req: AuthRequest, res, next) => {
+  try {
+    const session = await interviewService.useHint(req.params.id);
+    success(res, session);
+  } catch (err) {
+    next(err);
+  }
+});
+
+// 6. Link Design Canvas to Session
+interviewRouter.post('/sessions/:id/design', async (req: AuthRequest, res, next) => {
+  try {
+    const { designId } = req.body;
+    const session = await interviewService.linkDesign(req.params.id, designId);
+    success(res, session);
+  } catch (err) {
+    next(err);
+  }
+});
+
+// 7. Submit final Design for Scoring
 interviewRouter.post('/sessions/:id/submit', async (req: AuthRequest, res, next) => {
   try {
     const { design } = req.body;
-    const mockRubric = [
-      { id: 'has-load-balancer', name: 'Load Balancer Present', weight: 30, hint: 'Add a load balancer to split incoming traffic.' },
-      { id: 'has-cache', name: 'Cache Layer', weight: 40, hint: 'Store temporary data in Cache (Redis) to limit database accesses.' },
-      { id: 'has-db-replicas', name: 'DB Read Replicas', weight: 30, hint: 'Configure SQL read replicas to scale read queries.' }
-    ];
-
-    const report = scoreDesign(design, mockRubric);
-    success(res, report);
+    const result = await interviewService.submitSession(req.params.id, design);
+    success(res, result);
   } catch (err) {
     next(err);
   }

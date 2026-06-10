@@ -153,6 +153,24 @@ const workerCode = `
           nodeLatency = baseLatency + (excess * 0.1);
         }
 
+        // Retry / backoff calculation (failed requests retry 3x with exponential delay)
+        if (nodeErrorRate > 0) {
+          const errRatio = nodeErrorRate / 100;
+          // Retries amplify incoming load on the node
+          const retryAmplifier = 1 + errRatio + Math.pow(errRatio, 2) + Math.pow(errRatio, 3);
+          nodeQps = nodeQps * retryAmplifier;
+          
+          // Exponential backoff delays: 50ms, 150ms, 450ms for attempts 1, 2, 3
+          const backoffDelay = (errRatio * 50) + (Math.pow(errRatio, 2) * 150) + (Math.pow(errRatio, 3) * 450);
+          nodeLatency += backoffDelay;
+
+          // Recalculate degradation under the amplified retry storm
+          if (nodeQps > capacity) {
+            const excess = nodeQps - capacity;
+            nodeErrorRate = Math.min(99, (excess / nodeQps) * 100);
+          }
+        }
+
         // Cache hit logic
         if (nodeSpecType.includes('CACHE')) {
           let hitRate = 0.85; // 85% cache hit
@@ -171,6 +189,7 @@ const workerCode = `
         }
       }
 
+      nodeMetrics[id].qps = Math.round(nodeQps);
       nodeMetrics[id].latency = Math.round(nodeLatency);
       nodeMetrics[id].errorRate = Math.round(nodeErrorRate);
       nodeMetrics[id].cpu = Math.min(100, Math.round((nodeQps / capacity) * 100));

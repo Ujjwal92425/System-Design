@@ -18,6 +18,7 @@ interface SimulationPanelProps {
     failedNodes: string[];
     metricsHistory: any[];
     currentMetrics: any | null;
+    eventsLog: any[];
     start: () => void;
     stop: () => void;
     updateTraffic: (qps: number) => void;
@@ -168,12 +169,47 @@ export function SimulationPanel({ nodes, edges, simulation }: SimulationPanelPro
             </div>
           </div>
 
-          {/* Col 3: Charts */}
+          {/* Col 3: Charts & Live Events Terminal */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', minWidth: 0 }}>
             <span className="mono" style={{ fontSize: '10px', color: 'var(--text-muted)', fontWeight: 700 }}>
-              03 // REAL-TIME METRICS
+              03 // REAL-TIME TELEMETRY & EVENT LOG
             </span>
-            <MetricsChart history={simulation.metricsHistory} />
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', flex: 1, overflow: 'hidden' }}>
+              <div style={{ flex: 1, minHeight: 0 }}>
+                <MetricsChart history={simulation.metricsHistory} />
+              </div>
+              
+              {/* Event Log Terminal */}
+              <div style={{
+                height: '90px',
+                background: '#05070B',
+                border: '1px solid var(--border)',
+                borderRadius: '8px',
+                padding: '8px 12px',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '4px',
+                overflowY: 'auto',
+                fontFamily: 'var(--font-mono, monospace)'
+              }}>
+                {simulation.eventsLog.length === 0 ? (
+                  <span style={{ fontSize: '10px', color: 'var(--text-muted)' }}>
+                    [SYSTEM] Terminal idle. Awaiting simulation events...
+                  </span>
+                ) : (
+                  simulation.eventsLog.map((event: any) => {
+                    const color = event.severity === 'ERROR' ? '#F87171' : event.severity === 'WARNING' ? '#E8A045' : '#36C98E';
+                    return (
+                      <div key={event.id} style={{ display: 'flex', gap: '8px', fontSize: '9px', lineHeight: '1.2' }}>
+                        <span style={{ color: 'var(--text-muted)', flexShrink: 0 }}>[{event.timestamp}]</span>
+                        <span style={{ color, fontWeight: 700, flexShrink: 0 }}>[{event.type}]</span>
+                        <span style={{ color: 'var(--text-secondary)' }}>{event.message}</span>
+                      </div>
+                    );
+                  })
+                )}
+              </div>
+            </div>
           </div>
 
           {/* Col 4: Chaos Engineering Console */}

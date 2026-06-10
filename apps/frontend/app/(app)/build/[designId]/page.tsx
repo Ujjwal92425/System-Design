@@ -7,7 +7,14 @@ import { useCanvasStore, CanvasNode, CanvasEdge } from '@/features/canvas/useCan
 import { useAutoSave } from '@/features/canvas/useAutoSave';
 import { useSimulation } from '@/features/simulation/useSimulation';
 import { SimulationPanel } from '@/components/canvas/panels/SimulationPanel';
+import { MetricsOverlay } from '@/components/canvas/overlays/MetricsOverlay';
+import { ChaosOverlay } from '@/components/canvas/overlays/ChaosOverlay';
+import { AnimatedEdge } from '@/components/canvas/edges/AnimatedEdge';
 import { NodeType } from '@sd-os/shared';
+import { useInterviewSession } from '@/features/interview/useInterviewSession';
+import { Timer } from '@/components/interview/Timer';
+import { RequirementsPanel } from '@/components/interview/RequirementsPanel';
+import { HintPanel } from '@/components/interview/HintPanel';
 import {
   ChevronLeft, Play, Save, RotateCcw, Copy, Trash, Check,
   Share2, Eye, Shield, Globe, Lock, ShieldAlert, Cpu, Bell,
@@ -99,6 +106,46 @@ export default function CanvasWorkspace({ params }: { params: Promise<{ designId
   const dragOffsetRef = useRef({ x: 0, y: 0 });
   const canvasRef = useRef<HTMLDivElement>(null);
 
+  // Timed Interview state
+  const [interviewSessionId, setInterviewSessionId] = useState<string | null>(null);
+  const [activeLeftTab, setActiveLeftTab] = useState<'palette' | 'requirements' | 'hints'>('requirements');
+  const [isSubmitConfirmOpen, setIsSubmitConfirmOpen] = useState(false);
+  const [isLocked, setIsLocked] = useState(true);
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search);
+      const sessId = params.get('interviewSessionId');
+      if (sessId) {
+        setInterviewSessionId(sessId);
+      }
+    }
+  }, []);
+
+  const interview = useInterviewSession(interviewSessionId || undefined);
+
+  // Auto-unlock if timer is already running (e.g. page refresh)
+  useEffect(() => {
+    if (interview.session && interview.isTimerRunning) {
+      setIsLocked(false);
+    }
+  }, [interview.session, interview.isTimerRunning]);
+
+  // Auto-submit design if timer runs out
+  useEffect(() => {
+    if (interviewSessionId && interview.session && interview.timeLeft === 0 && interview.session.status === 'IN_PROGRESS') {
+      const submitAuto = async () => {
+        try {
+          await interview.submitDesign({ nodes, edges });
+          router.push(`/interview/${interviewSessionId}`);
+        } catch (e) {
+          console.error('Auto-submit failed:', e);
+        }
+      };
+      submitAuto();
+    }
+  }, [interview.timeLeft, interview.session, interviewSessionId, nodes, edges, router]);
+
   // Keyboard shortcut handlers
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -175,6 +222,28 @@ export default function CanvasWorkspace({ params }: { params: Promise<{ designId
       alert(err.response?.data?.message || err.message || 'Save failed');
     } finally {
       setSaving(false);
+    }
+  };
+
+  // Submit timed interview architecture
+  const handleInterviewSubmit = async () => {
+    if (!interviewSessionId) return;
+    setSaving(true);
+    try {
+      await api.post(`/designs/${designId}/save`, {
+        nodes,
+        edges,
+        message: 'Final interview design submission',
+      });
+      markSaved();
+
+      await interview.submitDesign({ nodes, edges });
+      router.push(`/interview/${interviewSessionId}`);
+    } catch (err: any) {
+      alert(err.response?.data?.message || err.message || 'Submission failed');
+    } finally {
+      setSaving(false);
+      setIsSubmitConfirmOpen(false);
     }
   };
 
@@ -486,64 +555,191 @@ export default function CanvasWorkspace({ params }: { params: Promise<{ designId
       {/* ── Main Studio Grid ────────────────────────────────────────────────── */}
       <div style={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
         
-        {/* Left Side: Component Library */}
-        <aside style={{
-          width: '260px',
-          background: 'var(--bg-surface)',
-          borderRight: '1px solid var(--border)',
-          display: 'flex',
-          flexDirection: 'column',
-          flexShrink: 0,
-          overflowY: 'auto',
-          padding: '24px 18px',
-          gap: '20px'
-        }}>
-          <div>
-            <span className="mono" style={{ fontSize: '10px', color: 'var(--text-muted)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em' }}>
-              Component Library
-            </span>
-            <p style={{ fontSize: '11px', color: 'var(--text-muted)', margin: '4px 0 0' }}>
-              Click to deploy elements onto the architectural grid.
-            </p>
-          </div>
+        {/* Left Side: Component Library or Interview Panel */}
+        {interviewSessionId && interview.session ? (
+          <aside style={{
+            width: '320px',
+            background: 'var(--bg-surface)',
+            borderRight: '1px solid var(--border)',
+            display: 'flex',
+            flexDirection: 'column',
+            flexShrink: 0,
+            overflow: 'hidden'
+          }}>
+            {/* Top Timer Panel */}
+            <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--border)' }}>
+              <Timer
+                timeLeft={interview.timeLeft}
+                totalTime={interview.session.timeLimit}
+                isRunning={interview.isTimerRunning}
+                onToggle={interview.toggleTimer}
+              />
+            </div>
 
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-            {Object.values(NodeType).map((type) => (
+            {/* Left Sidebar Tab Selection */}
+            <div style={{ display: 'flex', borderBottom: '1px solid var(--border)', background: 'var(--bg-elevated)' }}>
+              {(['requirements', 'hints', 'palette'] as const).map((tab) => (
+                <button
+                  key={tab}
+                  onClick={() => setActiveLeftTab(tab)}
+                  className="mono"
+                  style={{
+                    flex: 1,
+                    padding: '12px 6px',
+                    background: 'transparent',
+                    border: 'none',
+                    borderBottom: activeLeftTab === tab ? '2px solid var(--accent-amber)' : '2px solid transparent',
+                    color: activeLeftTab === tab ? 'var(--text-primary)' : 'var(--text-muted)',
+                    fontSize: '9px',
+                    fontWeight: 700,
+                    cursor: 'pointer',
+                    textTransform: 'uppercase',
+                    letterSpacing: '0.04em'
+                  }}
+                >
+                  {tab === 'requirements' ? 'Specs' : tab === 'hints' ? 'Hints' : 'Palette'}
+                </button>
+              ))}
+            </div>
+
+            {/* Tab Body */}
+            <div style={{ flex: 1, overflowY: 'auto', padding: '20px' }}>
+              {activeLeftTab === 'requirements' && (
+                <RequirementsPanel prompt={interview.session.prompt} />
+              )}
+              {activeLeftTab === 'hints' && (
+                <HintPanel
+                  hints={interview.session.prompt.hints}
+                  hintsUsed={interview.session.hintsUsed}
+                  onUseHint={interview.requestHint}
+                />
+              )}
+              {activeLeftTab === 'palette' && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                  <div>
+                    <span className="mono" style={{ fontSize: '10px', color: 'var(--text-muted)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+                      Component Library
+                    </span>
+                    <p style={{ fontSize: '11px', color: 'var(--text-muted)', margin: '4px 0 0' }}>
+                      Deploy nodes to satisfy constraints.
+                    </p>
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                    {Object.values(NodeType).map((type) => (
+                      <button
+                        key={type}
+                        onClick={() => handleAddNodeType(type as NodeType)}
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '10px',
+                          padding: '10px 14px',
+                          background: 'var(--bg-elevated)',
+                          border: '1px solid var(--border)',
+                          borderRadius: '8px',
+                          color: 'var(--text-secondary)',
+                          cursor: 'pointer',
+                          textAlign: 'left',
+                          transition: 'all 120ms ease'
+                        }}
+                      >
+                        <div style={{ color: 'var(--accent-amber)', display: 'flex', alignItems: 'center' }}>
+                          {getNodeIcon(type)}
+                        </div>
+                        <span className="mono" style={{ fontSize: '11px', fontWeight: 600, textTransform: 'capitalize' }}>
+                          {getNodeName(type)}
+                        </span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Submit Block */}
+            <div style={{ padding: '16px 20px', borderTop: '1px solid var(--border)', background: 'var(--bg-elevated)' }}>
               <button
-                key={type}
-                onClick={() => handleAddNodeType(type as NodeType)}
+                onClick={() => setIsSubmitConfirmOpen(true)}
+                disabled={!interview.isTimerStarted || interview.session.status !== 'IN_PROGRESS'}
                 style={{
+                  width: '100%',
+                  background: 'var(--accent-amber)',
+                  color: '#080B14',
+                  border: 'none',
+                  borderRadius: '6px',
+                  padding: '12px',
+                  fontSize: '12px',
+                  fontWeight: 800,
+                  cursor: 'pointer',
                   display: 'flex',
                   alignItems: 'center',
-                  gap: '10px',
-                  padding: '10px 14px',
-                  background: 'var(--bg-elevated)',
-                  border: '1px solid var(--border)',
-                  borderRadius: '8px',
-                  color: 'var(--text-secondary)',
-                  cursor: 'pointer',
-                  textAlign: 'left',
-                  transition: 'all 120ms ease'
-                }}
-                onMouseOver={e => {
-                  e.currentTarget.style.borderColor = 'var(--border-bright)';
-                  e.currentTarget.style.color = 'var(--text-primary)';
-                }}
-                onMouseOut={e => {
-                  e.currentTarget.style.borderColor = 'var(--border)';
-                  e.currentTarget.style.color = 'var(--text-secondary)';
+                  justifyContent: 'center',
+                  gap: '8px'
                 }}
               >
-                <div style={{ color: 'var(--accent-amber)', display: 'flex', alignItems: 'center' }}>
-                  {getNodeIcon(type)}
-                </div>
-                <span className="mono" style={{ fontSize: '11px', fontWeight: 600, textTransform: 'capitalize' }}>
-                  {getNodeName(type)}
-                </span>
+                <span>Submit Architecture</span>
               </button>
-            ))}
-          </div>
-        </aside>
+            </div>
+          </aside>
+        ) : (
+          <aside style={{
+            width: '260px',
+            background: 'var(--bg-surface)',
+            borderRight: '1px solid var(--border)',
+            display: 'flex',
+            flexDirection: 'column',
+            flexShrink: 0,
+            overflowY: 'auto',
+            padding: '24px 18px',
+            gap: '20px'
+          }}>
+            <div>
+              <span className="mono" style={{ fontSize: '10px', color: 'var(--text-muted)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+                Component Library
+              </span>
+              <p style={{ fontSize: '11px', color: 'var(--text-muted)', margin: '4px 0 0' }}>
+                Click to deploy elements onto the architectural grid.
+              </p>
+            </div>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+              {Object.values(NodeType).map((type) => (
+                <button
+                  key={type}
+                  onClick={() => handleAddNodeType(type as NodeType)}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '10px',
+                    padding: '10px 14px',
+                    background: 'var(--bg-elevated)',
+                    border: '1px solid var(--border)',
+                    borderRadius: '8px',
+                    color: 'var(--text-secondary)',
+                    cursor: 'pointer',
+                    textAlign: 'left',
+                    transition: 'all 120ms ease'
+                  }}
+                  onMouseOver={e => {
+                    e.currentTarget.style.borderColor = 'var(--border-bright)';
+                    e.currentTarget.style.color = 'var(--text-primary)';
+                  }}
+                  onMouseOut={e => {
+                    e.currentTarget.style.borderColor = 'var(--border)';
+                    e.currentTarget.style.color = 'var(--text-secondary)';
+                  }}
+                >
+                  <div style={{ color: 'var(--accent-amber)', display: 'flex', alignItems: 'center' }}>
+                    {getNodeIcon(type)}
+                  </div>
+                  <span className="mono" style={{ fontSize: '11px', fontWeight: 600, textTransform: 'capitalize' }}>
+                    {getNodeName(type)}
+                  </span>
+                </button>
+              ))}
+            </div>
+          </aside>
+        )}
 
         {/* Center: Canvas Workspace Area */}
         <div
@@ -589,40 +785,32 @@ export default function CanvasWorkspace({ params }: { params: Promise<{ designId
             </div>
           )}
 
-          {/* SVG Overlay for Connections */}
+          {/* SVG Overlay for Connections — uses AnimatedEdge for Bezier + flow animation */}
           <svg style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', pointerEvents: 'none', zIndex: 1 }}>
-            <defs>
-              <marker id="arrow" viewBox="0 0 10 10" refX="28" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
-                <path d="M 0 0 L 10 5 L 0 10 z" fill="var(--border-bright)" />
-              </marker>
-            </defs>
             {edges.map(e => {
               const sourceNode = nodes.find(n => n.id === e.source);
               const targetNode = nodes.find(n => n.id === e.target);
               if (!sourceNode || !targetNode) return null;
 
-              // Compute centers
-              const x1 = sourceNode.position.x + 70;
-              const y1 = sourceNode.position.y + 40;
-              const x2 = targetNode.position.x + 70;
-              const y2 = targetNode.position.y + 40;
+              // Centre of each node card (140px wide, ~80px tall)
+              const sourcePt = { x: sourceNode.position.x + 70, y: sourceNode.position.y + 40 };
+              const targetPt = { x: targetNode.position.x + 70, y: targetNode.position.y + 40 };
+
+              // Look up per-edge error rate from the source-node simulation metrics
+              const srcMetrics = simulation.currentMetrics?.nodes?.find(
+                (m: any) => m.id === e.source
+              );
 
               return (
-                <g key={e.id}>
-                  {/* Glowing background line */}
-                  <line
-                    x1={x1} y1={y1} x2={x2} y2={y2}
-                    stroke="rgba(232, 160, 69, 0.05)"
-                    strokeWidth="6"
-                  />
-                  {/* Connector line */}
-                  <line
-                    x1={x1} y1={y1} x2={x2} y2={y2}
-                    stroke="var(--border-bright)"
-                    strokeWidth="1.5"
-                    markerEnd="url(#arrow)"
-                  />
-                </g>
+                <AnimatedEdge
+                  key={e.id}
+                  id={e.id}
+                  source={sourcePt}
+                  target={targetPt}
+                  label={e.label}
+                  isSimulating={simulation.isRunning}
+                  errorRate={srcMetrics?.errorRate ?? 0}
+                />
               );
             })}
           </svg>
@@ -684,6 +872,48 @@ export default function CanvasWorkspace({ params }: { params: Promise<{ designId
                     <span style={{ fontSize: '8px', color: 'var(--text-muted)' }}>QPS: {node.data.qps || 1000}</span>
                     <span style={{ fontSize: '8px', color: 'var(--text-muted)' }}>{node.data.latency || 10}ms</span>
                   </div>
+
+                  {/* Cache Node - Hit Rate Badge */}
+                  {node.type === NodeType.CACHE && (
+                    <div style={{ marginTop: '6px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderTop: '1px dashed var(--border)', paddingTop: '4px' }} className="mono">
+                      <span style={{ fontSize: '8px', color: 'var(--text-muted)' }}>HIT RATE:</span>
+                      <span style={{
+                        fontSize: '9px',
+                        fontWeight: 700,
+                        color: simulation.isRunning && simulation.scenario === 'chaos' && (simulation.currentMetrics?.tick % 10 >= 6)
+                          ? '#F87171'
+                          : '#36C98E',
+                      }}>
+                        {simulation.isRunning && simulation.scenario === 'chaos' && (simulation.currentMetrics?.tick % 10 >= 6) ? '5%' : '85%'}
+                      </span>
+                    </div>
+                  )}
+
+                  {/* Queue Node - Fill Level Meter */}
+                  {node.type === NodeType.QUEUE && (() => {
+                    const nodeMetrics = simulation.currentMetrics?.nodes?.find((m: any) => m.id === node.id) ?? null;
+                    const qpsVal = nodeMetrics?.qps ?? 0;
+                    const isCongested = qpsVal > 2000;
+                    const queueDepthPct = Math.min(100, Math.round((qpsVal / 3000) * 100));
+                    return (
+                      <div style={{ marginTop: '6px', display: 'flex', flexDirection: 'column', gap: '2px', borderTop: '1px dashed var(--border)', paddingTop: '4px' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '8px' }} className="mono">
+                          <span style={{ color: 'var(--text-muted)' }}>BACKLOG:</span>
+                          <span style={{ color: isCongested ? '#F87171' : 'var(--text-secondary)', fontWeight: 700 }}>
+                            {queueDepthPct}%
+                          </span>
+                        </div>
+                        <div style={{ height: '3px', background: 'var(--border)', borderRadius: '1.5px', overflow: 'hidden' }}>
+                          <div style={{
+                            height: '100%',
+                            width: `${queueDepthPct}%`,
+                            background: isCongested ? '#F87171' : 'var(--accent-blue)',
+                            transition: 'width 300ms ease'
+                          }} />
+                        </div>
+                      </div>
+                    );
+                  })()}
                 </div>
 
                 {/* Node Connector Handle Button */}
@@ -708,6 +938,105 @@ export default function CanvasWorkspace({ params }: { params: Promise<{ designId
               </div>
             );
           })}
+
+          {/* ── Simulation Overlays — MetricsOverlay + ChaosOverlay per node ── */}
+          {nodes.map(node => {
+            const nodeMetrics = simulation.currentMetrics?.nodes?.find(
+              (m: any) => m.id === node.id
+            ) ?? null;
+            const isFailed = simulation.failedNodes.includes(node.id);
+            // Node card dimensions (matches styles above)
+            const nodeW = 140;
+            const nodeH = 80;
+
+            return (
+              <React.Fragment key={`overlay-${node.id}`}>
+                <MetricsOverlay
+                  x={node.position.x}
+                  y={node.position.y}
+                  width={nodeW}
+                  height={nodeH}
+                  metrics={nodeMetrics}
+                  isSimulating={simulation.isRunning}
+                />
+                <ChaosOverlay
+                  x={node.position.x}
+                  y={node.position.y}
+                  width={nodeW}
+                  height={nodeH}
+                  isFailed={isFailed}
+                  errorRate={nodeMetrics?.errorRate ?? 0}
+                />
+              </React.Fragment>
+            );
+          })}
+
+          {/* Timed Interview Lock Screen Overlay */}
+          {interviewSessionId && isLocked && (
+            <div style={{
+              position: 'absolute',
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              background: 'rgba(8, 11, 20, 0.88)',
+              backdropFilter: 'blur(12px)',
+              zIndex: 100,
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '24px',
+              padding: '24px',
+              textAlign: 'center'
+            }}>
+              <div style={{
+                width: '64px',
+                height: '64px',
+                borderRadius: '50%',
+                background: 'rgba(232, 160, 69, 0.1)',
+                border: '1.5px solid var(--accent-amber)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                color: 'var(--accent-amber)'
+              }}>
+                <Lock style={{ width: '28px', height: '28px' }} />
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', maxWidth: '440px' }}>
+                <h2 style={{ margin: 0, fontSize: '22px', fontWeight: 900, color: 'var(--text-primary)' }}>
+                  Timed Scenario Locked
+                </h2>
+                <p style={{ margin: 0, fontSize: '13px', color: 'var(--text-secondary)', lineHeight: 1.5 }}>
+                  Click below to begin this timed system design round. The canvas editor, requirements specifications, and architectural hint decks will unlock immediately.
+                </p>
+              </div>
+
+              <button
+                onClick={() => {
+                  setIsLocked(false);
+                  interview.startTimer();
+                }}
+                style={{
+                  background: 'var(--accent-amber)',
+                  color: '#080B14',
+                  border: 'none',
+                  borderRadius: '8px',
+                  padding: '12px 28px',
+                  fontSize: '13px',
+                  fontWeight: 800,
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  boxShadow: '0 4px 20px rgba(232, 160, 69, 0.25)'
+                }}
+              >
+                <Play style={{ width: '14px', height: '14px', fill: '#080B14' }} />
+                <span>Start Timed Attempt ({interview.session?.timeLimit || 45}m)</span>
+              </button>
+            </div>
+          )}
         </div>
 
         {/* Right Panel: Inspector & Version History */}
@@ -976,6 +1305,94 @@ export default function CanvasWorkspace({ params }: { params: Promise<{ designId
         edges={edges}
         simulation={simulation}
       />
+
+      {/* Timed Interview Submit Confirmation Modal */}
+      {isSubmitConfirmOpen && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          background: 'rgba(0, 0, 0, 0.75)',
+          backdropFilter: 'blur(4px)',
+          zIndex: 1000,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          padding: '20px'
+        }}>
+          <div style={{
+            background: 'var(--bg-surface)',
+            border: '1px solid var(--border)',
+            borderRadius: '12px',
+            padding: '24px',
+            maxWidth: '440px',
+            width: '100%',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '16px',
+            boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.5)'
+          }}>
+            <div style={{ display: 'flex', gap: '12px', alignItems: 'flex-start' }}>
+              <div style={{
+                width: '40px',
+                height: '40px',
+                borderRadius: '50%',
+                background: 'rgba(232, 160, 69, 0.1)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                color: 'var(--accent-amber)',
+                flexShrink: 0
+              }}>
+                <Info style={{ width: '20px', height: '20px' }} />
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 800, color: 'var(--text-primary)' }}>
+                  Submit Architecture?
+                </h3>
+                <p style={{ margin: 0, fontSize: '12px', color: 'var(--text-secondary)', lineHeight: 1.5 }}>
+                  Are you sure you want to finish this timed interview session? Your final design will be graded instantly against key checkpoints. This action cannot be undone.
+                </p>
+              </div>
+            </div>
+
+            <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end', marginTop: '8px' }}>
+              <button
+                onClick={() => setIsSubmitConfirmOpen(false)}
+                style={{
+                  background: 'transparent',
+                  border: '1px solid var(--border)',
+                  borderRadius: '6px',
+                  padding: '8px 16px',
+                  fontSize: '12px',
+                  fontWeight: 600,
+                  color: 'var(--text-secondary)',
+                  cursor: 'pointer'
+                }}
+              >
+                Keep Designing
+              </button>
+              <button
+                onClick={handleInterviewSubmit}
+                style={{
+                  background: 'var(--accent-amber)',
+                  color: '#080B14',
+                  border: 'none',
+                  borderRadius: '6px',
+                  padding: '8px 16px',
+                  fontSize: '12px',
+                  fontWeight: 800,
+                  cursor: 'pointer'
+                }}
+              >
+                Submit & Evaluate
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
     </div>
   );
