@@ -1,158 +1,211 @@
+/**
+ * packages/db/src/repositories/designs.repo.ts
+ *
+ * All database queries for the Design canvas module.
+ *
+ * Design decisions:
+ *  - Versions are append-only (no updates). Each save creates a new version row.
+ *  - `listByUser` excludes soft-deleted designs (deletedAt IS NULL).
+ *  - `save()` creates a new DesignVersion and atomically updates Design.updatedAt.
+ *  - `restore()` creates a new version row (copies nodes/edges from an old one)
+ *    rather than mutating the old version — versions are immutable history.
+ *  - `findPublic()` bypasses user auth — used by the public shareable link route.
+ */
+
 import { db } from '../client';
 
 export const designsRepo = {
-  async findById(id: string) {
-    return db.design.findFirst({
-      where: { id, deletedAt: null },
-      include: {
-        versions: {
-          orderBy: { version: 'desc' },
-          take: 1
-        }
-      }
-    });
-  },
 
+  /** List the authenticated user's non-deleted designs, newest first */
   async listByUser(userId: string) {
     return db.design.findMany({
       where: { userId, deletedAt: null },
-      orderBy: { updatedAt: 'desc' }
+      orderBy: { updatedAt: 'desc' },
+      select: {
+        id: true, title: true, description: true, isPublic: true,
+        thumbnailUrl: true, createdAt: true, updatedAt: true,
+        // Most recent version to show node count in the list card
+        versions: {
+          orderBy: { version: 'desc' },
+          take: 1,
+          select: { version: true, nodes: true },
+        },
+      },
     });
   },
 
-  async create(userId: string, data: { title?: string; description?: string; templateId?: string; forkedFromId?: string }) {
+  /** Get a design with all its version history (for the editor + version panel) */
+  async findById(id: string, userId: string) {
+    return db.design.findFirst({
+      where: { id, userId, deletedAt: null },
+      include: {
+        versions: {
+          orderBy: { version: 'desc' },
+          select: { id: true, version: true, message: true, createdAt: true },
+        },
+      },
+    });
+  },
+
+  /**
+   * Get a specific version's node/edge data.
+   * Called when the editor loads the latest version or when restoring.
+   */
+  async findVersion(designId: string, version?: number) {
+    if (version !== undefined) {
+      return db.designVersion.findUnique({
+        where: { designId_version: { designId, version } },
+      });
+    }
+    // Default: return the latest version
+    return db.designVersion.findFirst({
+      where: { designId },
+      orderBy: { version: 'desc' },
+    });
+  },
+
+  /** Get a public design (no userId check) — used by the public shareable link */
+  async findPublic(id: string) {
+    return db.design.findFirst({
+      where: { id, isPublic: true, deletedAt: null },
+      include: {
+        versions: {
+          orderBy: { version: 'desc' },
+          take: 1,
+        },
+      },
+    });
+  },
+
+  /** Create a new blank design (optionally pre-populated from a template) */
+  async create(userId: string, title: string, templateId?: string) {
+    // Fetch template nodes/edges if provided
+    let initNodes: any[] = [];
+    let initEdges: any[] = [];
+
+    if (templateId) {
+      const template = await db.template.findUnique({
+        where: { id: templateId },
+        select: { nodes: true, edges: true },
+      });
+      if (template) {
+        initNodes = template.nodes as any[];
+        initEdges = template.edges as any[];
+      }
+    }
+
     return db.design.create({
       data: {
         userId,
-        title: data.title || 'Untitled Design',
-        description: data.description,
-        templateId: data.templateId,
-        forkedFromId: data.forkedFromId
-      }
+        title,
+        templateId,
+        // Create the first version immediately so the canvas always has something to load
+        versions: {
+          create: { version: 1, nodes: initNodes, edges: initEdges, message: 'Initial save' },
+        },
+      },
+      include: {
+        versions: { orderBy: { version: 'desc' }, take: 1 },
+      },
     });
   },
 
-  async updateMetadata(id: string, data: { title?: string; description?: string; isPublic?: boolean }) {
-    return db.design.update({
-      where: { id },
-      data
-    });
-  },
-
-  async save(designId: string, data: { nodes: any[]; edges: any[]; message?: string }) {
+  /**
+   * Save a new version snapshot.
+   * Uses an atomic transaction to:
+   *   1. Determine the next version number
+   *   2. Create the DesignVersion row
+   *   3. Touch Design.updatedAt
+   */
+  async save(
+    id: string,
+    userId: string,
+    data: { nodes: any[]; edges: any[]; message?: string }
+  ) {
     return db.$transaction(async (tx) => {
-      const latestVersion = await tx.designVersion.findFirst({
-        where: { designId },
-        orderBy: { version: 'desc' }
+      // Ownership check inside the transaction
+      const design = await tx.design.findFirst({
+        where: { id, userId, deletedAt: null },
+        select: { id: true },
       });
+      if (!design) throw new Error('Design not found or access denied');
 
-      const nextVer = (latestVersion?.version || 0) + 1;
-
-      // Update parent Design updated time
-      const design = await tx.design.update({
-        where: { id: designId },
-        data: { updatedAt: new Date() }
+      // Determine next version number
+      const latest = await tx.designVersion.findFirst({
+        where: { designId: id },
+        orderBy: { version: 'desc' },
+        select: { version: true },
       });
+      const nextVersion = (latest?.version ?? 0) + 1;
 
-      // Create new snapshot version
+      // Create the immutable version snapshot
       const version = await tx.designVersion.create({
         data: {
-          designId,
-          version: nextVer,
-          nodes: data.nodes as any,
-          edges: data.edges as any,
-          message: data.message || `Autosave version ${nextVer}`
-        }
+          designId: id,
+          version: nextVersion,
+          nodes: data.nodes,
+          edges: data.edges,
+          message: data.message,
+        },
       });
 
-      return { design, version };
-    });
-  },
-
-  async getVersions(designId: string, limit = 20) {
-    return db.designVersion.findMany({
-      where: { designId },
-      orderBy: { version: 'desc' },
-      take: limit
-    });
-  },
-
-  async restoreVersion(designId: string, versionNumber: number) {
-    return db.$transaction(async (tx) => {
-      const targetVersion = await tx.designVersion.findUnique({
-        where: {
-          designId_version: { designId, version: versionNumber }
-        }
-      });
-
-      if (!targetVersion) {
-        throw new Error(`Version ${versionNumber} not found for design ${designId}`);
-      }
-
-      const latestVersion = await tx.designVersion.findFirst({
-        where: { designId },
-        orderBy: { version: 'desc' }
-      });
-
-      const nextVer = (latestVersion?.version || 0) + 1;
-
-      // Update current state and save as a new restored version
+      // Touch the parent design so the list view sorts correctly
       await tx.design.update({
-        where: { id: designId },
-        data: { updatedAt: new Date() }
+        where: { id },
+        data: { updatedAt: new Date() },
+      });
+
+      return version;
+    });
+  },
+
+  /** Update design metadata (title, description, visibility) */
+  async updateMeta(
+    id: string,
+    userId: string,
+    data: { title?: string; description?: string; isPublic?: boolean; thumbnailUrl?: string }
+  ) {
+    // Ownership check
+    const design = await db.design.findFirst({ where: { id, userId, deletedAt: null } });
+    if (!design) throw new Error('Design not found or access denied');
+
+    return db.design.update({ where: { id }, data });
+  },
+
+  /**
+   * Restore a design to a specific version.
+   * Creates a new version row (copy of the old one) — history is never mutated.
+   */
+  async restore(id: string, userId: string, targetVersion: number) {
+    return db.$transaction(async (tx) => {
+      const old = await tx.designVersion.findUnique({
+        where: { designId_version: { designId: id, version: targetVersion } },
+      });
+      if (!old) throw new Error(`Version ${targetVersion} not found`);
+
+      const latest = await tx.designVersion.findFirst({
+        where: { designId: id },
+        orderBy: { version: 'desc' },
+        select: { version: true },
       });
 
       return tx.designVersion.create({
         data: {
-          designId,
-          version: nextVer,
-          nodes: targetVersion.nodes as any,
-          edges: targetVersion.edges as any,
-          message: `Restored to version ${versionNumber}`
-        }
+          designId: id,
+          version: (latest?.version ?? 0) + 1,
+          nodes: old.nodes as any[],
+          edges: old.edges as any[],
+          message: `Restored from v${targetVersion}`,
+        },
       });
     });
   },
 
-  async fork(designId: string, userId: string) {
-    const original = await this.findById(designId);
-    if (!original) {
-      throw new Error(`Design ${designId} not found or deleted.`);
-    }
+  /** Soft-delete a design (sets deletedAt, data preserved for 30 days) */
+  async softDelete(id: string, userId: string) {
+    const design = await db.design.findFirst({ where: { id, userId, deletedAt: null } });
+    if (!design) throw new Error('Design not found or access denied');
 
-    const latestVersion = original.versions[0];
-    if (!latestVersion) {
-      throw new Error(`Design ${designId} has no saved version to fork.`);
-    }
-
-    return db.$transaction(async (tx) => {
-      const forked = await tx.design.create({
-        data: {
-          userId,
-          title: `Fork of ${original.title}`,
-          description: original.description,
-          forkedFromId: original.id
-        }
-      });
-
-      await tx.designVersion.create({
-        data: {
-          designId: forked.id,
-          version: 1,
-          nodes: latestVersion.nodes as any,
-          edges: latestVersion.edges as any,
-          message: `Initial version forked from ${original.title}`
-        }
-      });
-
-      return forked;
-    });
+    return db.design.update({ where: { id }, data: { deletedAt: new Date() } });
   },
-
-  async softDelete(id: string) {
-    return db.design.update({
-      where: { id },
-      data: { deletedAt: new Date() }
-    });
-  }
 };
