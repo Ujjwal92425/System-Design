@@ -5,9 +5,11 @@ import { serialize } from 'next-mdx-remote/serialize';
 import { useEffect, useState } from 'react';
 import { CalloutBlock } from './CalloutBlock';
 import { CodeBlock } from './CodeBlock';
+import { DiagramEmbed } from './DiagramEmbed';
 
 const COMPONENTS = {
   Callout: CalloutBlock,
+  Diagram: DiagramEmbed,
   pre: (props: any) => <CodeBlock {...props} />,
 };
 

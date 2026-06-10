@@ -87,13 +87,27 @@ export interface LessonDetail {
     status: 'NOT_STARTED' | 'IN_PROGRESS' | 'COMPLETE';
     bookmarked: boolean;
     notes: string | null;
-    resumeState: any;
+    resumeState: { scrollPercent: number } | null;
   };
   navigation: {
     prev: { slug: string; title: string } | null;
     next: { slug: string; title: string } | null;
   };
-  quizzes: any[];
+  quizzes: Array<{
+    id: string;
+    title: string;
+    passingScore: number;
+    isRequired: boolean;
+    questions: Array<{
+      id: string;
+      type: string;
+      content: string;
+      options: string[];
+      correctAnswer: string;
+      explanation: string;
+      order: number;
+    }>;
+  }>;
 }
 
 export function useLesson(slug: string) {
@@ -109,18 +123,42 @@ export function useLesson(slug: string) {
       .finally(() => setLoading(false));
   }, [slug]);
 
-  const markComplete = async () => {
+  /**
+   * General-purpose state updater — sends only the fields provided.
+   * Covers IN_PROGRESS marking, resumeState persistence, notes, and COMPLETE.
+   */
+  const updateState = async (
+    status?: 'NOT_STARTED' | 'IN_PROGRESS' | 'COMPLETE',
+    resumeState?: { scrollPercent: number } | null,
+    notes?: string
+  ) => {
     if (!lesson) return;
-    await api.post('/learn/progress/state', { lessonId: lesson.id, status: 'COMPLETE' });
-    setLesson(prev => prev ? { ...prev, userState: { ...prev.userState, status: 'COMPLETE' } } : null);
+    await api.post('/learn/progress/state', {
+      lessonId: lesson.id,
+      ...(status      !== undefined ? { status }      : {}),
+      ...(resumeState !== undefined ? { resumeState } : {}),
+      ...(notes       !== undefined ? { notes }       : {}),
+    });
+    setLesson(prev => {
+      if (!prev) return null;
+      const next = { ...prev.userState };
+      if (status      !== undefined) next.status      = status;
+      if (resumeState !== undefined) next.resumeState = resumeState;
+      if (notes       !== undefined) next.notes       = notes;
+      return { ...prev, userState: next };
+    });
   };
+
+  const markComplete = () => updateState('COMPLETE');
 
   const toggleBookmark = async () => {
     if (!lesson) return;
     const newVal = !lesson.userState.bookmarked;
     await api.post('/learn/progress/bookmark', { lessonId: lesson.id, bookmarked: newVal });
-    setLesson(prev => prev ? { ...prev, userState: { ...prev.userState, bookmarked: newVal } } : null);
+    setLesson(prev =>
+      prev ? { ...prev, userState: { ...prev.userState, bookmarked: newVal } } : null
+    );
   };
 
-  return { lesson, loading, error, markComplete, toggleBookmark };
+  return { lesson, loading, error, updateState, markComplete, toggleBookmark };
 }

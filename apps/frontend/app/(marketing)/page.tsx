@@ -494,10 +494,10 @@ export default function LandingPage() {
                 </span>
               </div>
 
-              <h1 className="bricolage" style={{
+              <h1 className="bricolage md:text-6xl lg:text-7xl" style={{
                 fontSize: '48px', fontWeight: 800, color: 'var(--text-primary)',
                 lineHeight: 1.05, letterSpacing: '-0.05em', marginBottom: '24px'
-              }} className="md:text-6xl lg:text-7xl">
+              }}>
                 Design systems<br />
                 that actually<br />
                 hold up.
@@ -755,7 +755,7 @@ export default function LandingPage() {
             <span className="mono" style={{ fontSize: 'var(--text-xs)', color: 'var(--accent-amber)', letterSpacing: '0.08em', textTransform: 'uppercase' }}>
               The Three Surfaces
             </span>
-            <h2 className="bricolage" style={{ fontSize: 'var(--text-2xl)', color: 'var(--text-primary)', marginTop: '8px', marginBottom: '16px' }} className="md:text-4xl">
+            <h2 className="bricolage md:text-4xl" style={{ fontSize: 'var(--text-2xl)', color: 'var(--text-primary)', marginTop: '8px', marginBottom: '16px' }}>
               Learn. Build. Evaluate.
             </h2>
             <p style={{ fontSize: 'var(--text-base)', color: 'var(--text-secondary)' }}>
@@ -836,7 +836,7 @@ export default function LandingPage() {
                 <span className="mono" style={{ fontSize: 'var(--text-xs)', color: 'var(--accent-amber)', letterSpacing: '0.08em', textTransform: 'uppercase' }}>
                   BUILD
                 </span>
-                <h3 className="bricolage" style={{ fontSize: 'var(--text-2xl)', color: 'var(--text-primary)', marginTop: '8px', marginBottom: '16px' }} className="md:text-3xl">
+                <h3 className="bricolage md:text-3xl" style={{ fontSize: 'var(--text-2xl)', color: 'var(--text-primary)', marginTop: '8px', marginBottom: '16px' }}>
                   An architecture canvas that knows what the components actually do
                 </h3>
                 <p style={{ fontSize: 'var(--text-base)', color: 'var(--text-secondary)', lineHeight: 1.7, marginBottom: '24px' }}>
@@ -1000,7 +1000,7 @@ export default function LandingPage() {
                 <span className="mono" style={{ fontSize: 'var(--text-xs)', color: 'var(--accent-blue)', letterSpacing: '0.08em', textTransform: 'uppercase' }}>
                   EVALUATE
                 </span>
-                <h3 className="bricolage" style={{ fontSize: 'var(--text-2xl)', color: 'var(--text-primary)', marginTop: '8px', marginBottom: '16px' }} className="md:text-3xl">
+                <h3 className="bricolage md:text-3xl" style={{ fontSize: 'var(--text-2xl)', color: 'var(--text-primary)', marginTop: '8px', marginBottom: '16px' }}>
                   Run your design under real conditions before the interview
                 </h3>
                 <p style={{ fontSize: 'var(--text-base)', color: 'var(--text-secondary)', lineHeight: 1.7, marginBottom: '24px' }}>
@@ -1043,7 +1043,7 @@ export default function LandingPage() {
                 <span className="mono" style={{ fontSize: 'var(--text-xs)', color: 'var(--accent-green)', letterSpacing: '0.08em', textTransform: 'uppercase' }}>
                   PRACTICE
                 </span>
-                <h3 className="bricolage" style={{ fontSize: 'var(--text-2xl)', color: 'var(--text-primary)', marginTop: '8px', marginBottom: '16px' }} className="md:text-3xl">
+                <h3 className="bricolage md:text-3xl" style={{ fontSize: 'var(--text-2xl)', color: 'var(--text-primary)', marginTop: '8px', marginBottom: '16px' }}>
                   Interview mode with a rubric, not just a timer
                 </h3>
                 <p style={{ fontSize: 'var(--text-base)', color: 'var(--text-secondary)', lineHeight: 1.7, marginBottom: '24px' }}>
@@ -1137,7 +1137,7 @@ export default function LandingPage() {
             <span className="mono" style={{ fontSize: 'var(--text-xs)', color: 'var(--accent-amber)', letterSpacing: '0.08em', textTransform: 'uppercase' }}>
               The Curriculum
             </span>
-            <h2 className="bricolage" style={{ fontSize: 'var(--text-2xl)', color: 'var(--text-primary)', marginTop: '8px', marginBottom: '16px' }} className="md:text-4xl">
+            <h2 className="bricolage md:text-4xl" style={{ fontSize: 'var(--text-2xl)', color: 'var(--text-primary)', marginTop: '8px', marginBottom: '16px' }}>
               Five levels. One path.
             </h2>
             <p style={{ fontSize: 'var(--text-base)', color: 'var(--text-secondary)' }}>
@@ -1163,7 +1163,7 @@ export default function LandingPage() {
                 </div>
               </div>
               <div style={{ display: 'flex', gap: '8px' }}>
-                <span className="mono" style={{ background: 'rgba(77,127,255,0.08)', border: '1px solid rgba(77,127,255,0.2)', color: 'var(--accent-blue)', fontSize: '11px', padding: '3px 8px', borderRadius: '4px' }} className="hidden sm:inline-block">Capacity estimation</span>
+                <span className="mono hidden sm:inline-block" style={{ background: 'rgba(77,127,255,0.08)', border: '1px solid rgba(77,127,255,0.2)', color: 'var(--accent-blue)', fontSize: '11px', padding: '3px 8px', borderRadius: '4px' }}>Capacity estimation</span>
                 <span className="mono" style={{ background: 'rgba(77,127,255,0.08)', border: '1px solid rgba(77,127,255,0.2)', color: 'var(--accent-blue)', fontSize: '11px', padding: '3px 8px', borderRadius: '4px' }}>Interview format</span>
               </div>
             </div>
@@ -1184,7 +1184,7 @@ export default function LandingPage() {
                 </div>
               </div>
               <div style={{ display: 'flex', gap: '8px' }}>
-                <span className="mono" style={{ background: 'rgba(77,127,255,0.08)', border: '1px solid rgba(77,127,255,0.2)', color: 'var(--accent-blue)', fontSize: '11px', padding: '3px 8px', borderRadius: '4px' }} className="hidden sm:inline-block">Databases</span>
+                <span className="mono hidden sm:inline-block" style={{ background: 'rgba(77,127,255,0.08)', border: '1px solid rgba(77,127,255,0.2)', color: 'var(--accent-blue)', fontSize: '11px', padding: '3px 8px', borderRadius: '4px' }}>Databases</span>
                 <span className="mono" style={{ background: 'rgba(77,127,255,0.08)', border: '1px solid rgba(77,127,255,0.2)', color: 'var(--accent-blue)', fontSize: '11px', padding: '3px 8px', borderRadius: '4px' }}>Caches</span>
               </div>
             </div>
@@ -1205,7 +1205,7 @@ export default function LandingPage() {
                 </div>
               </div>
               <div style={{ display: 'flex', gap: '8px' }}>
-                <span className="mono" style={{ background: 'rgba(77,127,255,0.08)', border: '1px solid rgba(77,127,255,0.2)', color: 'var(--accent-blue)', fontSize: '11px', padding: '3px 8px', borderRadius: '4px' }} className="hidden sm:inline-block">Sharding</span>
+                <span className="mono hidden sm:inline-block" style={{ background: 'rgba(77,127,255,0.08)', border: '1px solid rgba(77,127,255,0.2)', color: 'var(--accent-blue)', fontSize: '11px', padding: '3px 8px', borderRadius: '4px' }}>Sharding</span>
                 <span className="mono" style={{ background: 'rgba(77,127,255,0.08)', border: '1px solid rgba(77,127,255,0.2)', color: 'var(--accent-blue)', fontSize: '11px', padding: '3px 8px', borderRadius: '4px' }}>Replication</span>
               </div>
             </div>
@@ -1226,7 +1226,7 @@ export default function LandingPage() {
                 </div>
               </div>
               <div style={{ display: 'flex', gap: '8px' }}>
-                <span className="mono" style={{ background: 'rgba(77,127,255,0.08)', border: '1px solid rgba(77,127,255,0.2)', color: 'var(--accent-blue)', fontSize: '11px', padding: '3px 8px', borderRadius: '4px' }} className="hidden sm:inline-block">Video systems</span>
+                <span className="mono hidden sm:inline-block" style={{ background: 'rgba(77,127,255,0.08)', border: '1px solid rgba(77,127,255,0.2)', color: 'var(--accent-blue)', fontSize: '11px', padding: '3px 8px', borderRadius: '4px' }}>Video systems</span>
                 <span className="mono" style={{ background: 'rgba(77,127,255,0.08)', border: '1px solid rgba(77,127,255,0.2)', color: 'var(--accent-blue)', fontSize: '11px', padding: '3px 8px', borderRadius: '4px' }}>Redis internals</span>
               </div>
             </div>
@@ -1247,7 +1247,7 @@ export default function LandingPage() {
                 </div>
               </div>
               <div style={{ display: 'flex', gap: '8px' }}>
-                <span className="mono" style={{ background: 'rgba(77,127,255,0.08)', border: '1px solid rgba(77,127,255,0.2)', color: 'var(--accent-blue)', fontSize: '11px', padding: '3px 8px', borderRadius: '4px' }} className="hidden sm:inline-block">Master template</span>
+                <span className="mono hidden sm:inline-block" style={{ background: 'rgba(77,127,255,0.08)', border: '1px solid rgba(77,127,255,0.2)', color: 'var(--accent-blue)', fontSize: '11px', padding: '3px 8px', borderRadius: '4px' }}>Master template</span>
                 <span className="mono" style={{ background: 'rgba(77,127,255,0.08)', border: '1px solid rgba(77,127,255,0.2)', color: 'var(--accent-blue)', fontSize: '11px', padding: '3px 8px', borderRadius: '4px' }}>Rubric scoring</span>
               </div>
             </div>
@@ -1342,7 +1342,7 @@ export default function LandingPage() {
             <span className="mono" style={{ fontSize: 'var(--text-xs)', color: 'var(--accent-amber)', letterSpacing: '0.08em', textTransform: 'uppercase' }}>
               PRICING
             </span>
-            <h2 className="bricolage" style={{ fontSize: 'var(--text-2xl)', color: 'var(--text-primary)', marginTop: '8px', marginBottom: '16px' }} className="md:text-4xl">
+            <h2 className="bricolage md:text-4xl" style={{ fontSize: 'var(--text-2xl)', color: 'var(--text-primary)', marginTop: '8px', marginBottom: '16px' }}>
               Start free. Upgrade when it matters.
             </h2>
             {/* Annual Toggle Switch */}
@@ -1482,10 +1482,10 @@ export default function LandingPage() {
           <span className="mono" style={{ fontSize: 'var(--text-xs)', color: 'var(--accent-amber)', letterSpacing: '0.08em', textTransform: 'uppercase' }}>
             READY TO START
           </span>
-          <h2 className="bricolage" style={{
+          <h2 className="bricolage md:text-4xl" style={{
             fontSize: 'var(--text-3xl)', color: 'var(--text-primary)',
             marginTop: '12px', marginBottom: '24px', lineHeight: 1.15
-          }} className="md:text-4xl">
+          }}>
             Your next system design<br />
             interview is in 6 weeks.
           </h2>
