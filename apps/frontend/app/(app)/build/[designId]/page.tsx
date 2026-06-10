@@ -5,6 +5,8 @@ import { useRouter } from 'next/navigation';
 import { api } from '@/lib/api';
 import { useCanvasStore, CanvasNode, CanvasEdge } from '@/features/canvas/useCanvasStore';
 import { useAutoSave } from '@/features/canvas/useAutoSave';
+import { useSimulation } from '@/features/simulation/useSimulation';
+import { SimulationPanel } from '@/components/canvas/panels/SimulationPanel';
 import { NodeType } from '@sd-os/shared';
 import {
   ChevronLeft, Play, Save, RotateCcw, Copy, Trash, Check,
@@ -88,6 +90,9 @@ export default function CanvasWorkspace({ params }: { params: Promise<{ designId
 
   // Manual save status
   const [saving, setSaving] = useState(false);
+
+  // Simulation engine hook — receives live canvas nodes/edges
+  const simulation = useSimulation(nodes, edges);
 
   // Dragging node state
   const [draggingNodeId, setDraggingNodeId] = useState<string | null>(null);
@@ -964,6 +969,13 @@ export default function CanvasWorkspace({ params }: { params: Promise<{ designId
         </aside>
 
       </div>
+
+      {/* ── Simulation Engine Dock ───────────────────────────────────────────── */}
+      <SimulationPanel
+        nodes={nodes}
+        edges={edges}
+        simulation={simulation}
+      />
 
     </div>
   );
