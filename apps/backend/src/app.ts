@@ -39,6 +39,7 @@ import { authRouter }      from './modules/auth/auth.router';
 import { usersRouter }     from './modules/users/users.router';
 import { learnRouter }     from './modules/learn/tracks.router';
 import { designsRouter }   from './modules/designs/designs.router';
+import { simulationRouter } from './modules/simulation/simulation.router';
 import { interviewRouter } from './modules/interview/interview.router';
 import { communityRouter } from './modules/community/blueprints.router';
 import { aiRouter }        from './modules/ai/ai.router';
@@ -126,8 +127,9 @@ app.use('/api/auth', authRouter);
 // The frontend then silently refreshes via POST /api/auth/refresh.
 app.use('/api/users',     authenticate, usersRouter);
 app.use('/api/learn',     authenticate, learnRouter);
-app.use('/api/designs',   authenticate, designsRouter);
-app.use('/api/interview', authenticate, interviewRouter);
+app.use('/api/designs',    authenticate, designsRouter);
+app.use('/api/simulation', authenticate, simulationRouter);
+app.use('/api/interview',  authenticate, interviewRouter);
 app.use('/api/community', authenticate, communityRouter);
 app.use('/api/ai',        authenticate, aiRouter);
 app.use('/api/billing',   authenticate, billingRouter);
@@ -147,6 +149,10 @@ app.use((_req: Request, res: Response) => {
 // ── 10. Global Error Handler (MUST BE LAST) ───────────────────────────────────
 app.use(errorHandler);
 
+// ─── WebSocket / Collab Server ────────────────────────────────────────────────
+// Socket.io attaches to the same HTTP server for real-time collaboration.
+import { initSocketServer } from './ws/socketServer';
+
 // ─── Start Server ─────────────────────────────────────────────────────────────
 const PORT = env.PORT;
 
@@ -155,6 +161,9 @@ const server = app.listen(PORT, () => {
     { port: PORT, env: env.NODE_ENV, pid: process.pid },
     `🚀 SD-OS API running on port ${PORT}`
   );
+  // Initialize WebSocket server after HTTP server starts
+  initSocketServer(server);
+  logger.info('WebSocket server attached');
 });
 
 // ─── Graceful Shutdown ────────────────────────────────────────────────────────

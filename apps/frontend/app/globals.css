@@ -1,3 +1,7 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
 /* =============================================================================
    SD-OS Global CSS Design System
    All custom properties defined here — no Tailwind dependency.
