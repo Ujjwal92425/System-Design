@@ -9,20 +9,9 @@ interface SystemHealthBadgeProps {
 export function SystemHealthBadge({ health }: SystemHealthBadgeProps) {
   if (!health) {
     return (
-      <div style={{
-        display: 'inline-flex',
-        alignItems: 'center',
-        gap: '6px',
-        padding: '6px 12px',
-        background: 'var(--bg-elevated)',
-        border: '1px solid var(--border)',
-        borderRadius: '6px',
-        color: 'var(--text-muted)',
-      }}>
-        <Activity style={{ width: '13px', height: '13px' }} />
-        <span className="mono" style={{ fontSize: '10px', fontWeight: 700, letterSpacing: '0.04em' }}>
-          OFFLINE
-        </span>
+      <div className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-yc-bg-card border border-yc-border rounded-md text-yc-text-muted">
+        <Activity className="w-3.5 h-3.5" />
+        <span className="font-mono text-[10px] font-bold tracking-wider">OFFLINE</span>
       </div>
     );
   }
@@ -30,23 +19,23 @@ export function SystemHealthBadge({ health }: SystemHealthBadgeProps) {
   const CONFIG = {
     GREEN: {
       text: 'SYSTEM STABLE',
-      color: '#36C98E',
-      bg: 'rgba(54,201,142,0.06)',
-      border: 'rgba(54,201,142,0.2)',
+      color: 'text-emerald-500',
+      bg: 'bg-emerald-50',
+      border: 'border-emerald-200',
       icon: ShieldCheck
     },
     YELLOW: {
       text: 'DEGRADED',
-      color: '#E8A045',
-      bg: 'rgba(232,160,69,0.06)',
-      border: 'rgba(232,160,69,0.2)',
+      color: 'text-amber-500',
+      bg: 'bg-amber-50',
+      border: 'border-amber-200',
       icon: DegradedIcon
     },
     RED: {
       text: 'CRITICAL FAILURE',
-      color: '#F87171',
-      bg: 'rgba(248,113,113,0.06)',
-      border: 'rgba(248,113,113,0.2)',
+      color: 'text-red-400',
+      bg: 'bg-red-50',
+      border: 'border-red-200',
       icon: ShieldAlert
     }
   };
@@ -55,20 +44,9 @@ export function SystemHealthBadge({ health }: SystemHealthBadgeProps) {
   const Icon = current.icon;
 
   return (
-    <div style={{
-      display: 'inline-flex',
-      alignItems: 'center',
-      gap: '8px',
-      padding: '8px 14px',
-      background: current.bg,
-      border: `1px solid ${current.border}`,
-      borderRadius: '8px',
-      color: current.color,
-      boxShadow: `0 0 12px ${current.bg}`,
-      transition: 'all 300ms ease'
-    }}>
-      <Icon style={{ width: '14px', height: '14px' }} />
-      <span className="mono" style={{ fontSize: '11px', fontWeight: 700, letterSpacing: '0.06em' }}>
+    <div className={`inline-flex items-center gap-2 px-3.5 py-2 ${current.bg} ${current.border} border rounded-lg ${current.color} transition-all duration-300`}>
+      <Icon className="w-3.5 h-3.5" />
+      <span className={`font-mono text-[11px] font-bold tracking-wider ${current.color}`}>
         {current.text}
       </span>
     </div>

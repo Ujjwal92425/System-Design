@@ -24,17 +24,14 @@ interface MetricsChartProps {
 export function MetricsChart({ history }: MetricsChartProps) {
   const [activeMetric, setActiveMetric] = useState<'qps' | 'latency'>('qps');
 
-  // SVG dimensions
   const width = 540;
   const height = 160;
   const padding = { top: 15, right: 15, bottom: 25, left: 45 };
 
-  // Calculate points
   const dataPoints = history.map((snapshot) => {
     if (activeMetric === 'qps') {
       return snapshot.inputQps || 0;
     } else {
-      // average of node latencies
       const sum = snapshot.nodes.reduce((s, n) => s + n.latency, 0);
       return snapshot.nodes.length ? Math.round(sum / snapshot.nodes.length) : 0;
     }
@@ -44,7 +41,6 @@ export function MetricsChart({ history }: MetricsChartProps) {
   const minVal = 0;
   const valRange = maxVal - minVal || 1;
 
-  // Generate SVG path string
   let pathD = '';
   if (dataPoints.length > 1) {
     const segments = dataPoints.map((val, idx) => {
@@ -55,7 +51,6 @@ export function MetricsChart({ history }: MetricsChartProps) {
     pathD = `M ${segments.join(' L ')}`;
   }
 
-  // Draw gridlines
   const yTicks = 4;
   const gridLinesY = Array.from({ length: yTicks }).map((_, idx) => {
     const val = minVal + (idx / (yTicks - 1)) * valRange;
@@ -64,87 +59,53 @@ export function MetricsChart({ history }: MetricsChartProps) {
   });
 
   return (
-    <div style={{
-      background: 'var(--bg-surface)',
-      border: '1px solid var(--border)',
-      borderRadius: '12px',
-      padding: '20px',
-      display: 'flex',
-      flexDirection: 'column',
-      gap: '14px',
-      height: '100%'
-    }}>
-      
-      {/* Chart Headers & Metric Toggles */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+    <div className="bg-yc-bg-alt border border-yc-border rounded-xl p-5 flex flex-col gap-3.5 h-full">
+      <div className="flex justify-between items-center">
         <div>
-          <h4 className="bricolage" style={{ fontSize: '15px', color: 'var(--text-primary)', margin: 0, fontWeight: 700, display: 'flex', alignItems: 'center', gap: '6px' }}>
-            {activeMetric === 'qps' ? <TrendingUp style={{ width: '14px', height: '14px', color: 'var(--accent-blue)' }} /> : <Clock style={{ width: '14px', height: '14px', color: 'var(--accent-amber)' }} />}
+          <h4 className="text-sm text-yc-text m-0 font-bold flex items-center gap-1.5">
+            {activeMetric === 'qps' ? (
+              <TrendingUp className="w-3.5 h-3.5 text-yc-accent" />
+            ) : (
+              <Clock className="w-3.5 h-3.5 text-yc-accent" />
+            )}
             <span>System Telemetry Chart</span>
           </h4>
-          <p style={{ margin: '2px 0 0', fontSize: '11px', color: 'var(--text-muted)' }}>
+          <p className="mt-0.5 text-[11px] text-yc-text-muted">
             Real-time rolling charts for request throughput and performance.
           </p>
         </div>
 
-        {/* Tab Buttons */}
-        <div style={{ display: 'flex', background: 'var(--bg-elevated)', border: '1px solid var(--border)', borderRadius: '6px', padding: '2px' }}>
+        <div className="flex bg-yc-bg-card border border-yc-border rounded-md p-0.5">
           <button
             onClick={() => setActiveMetric('qps')}
-            className="mono"
-            style={{
-              padding: '4px 10px',
-              background: activeMetric === 'qps' ? 'var(--bg-surface)' : 'transparent',
-              border: 'none',
-              borderRadius: '4px',
-              fontSize: '10px',
-              fontWeight: 700,
-              color: activeMetric === 'qps' ? 'var(--accent-blue)' : 'var(--text-muted)',
-              cursor: 'pointer'
-            }}
+            className={`font-mono px-2.5 py-1 border-none rounded text-[10px] font-bold cursor-pointer transition-colors ${
+              activeMetric === 'qps'
+                ? 'bg-yc-bg-alt text-yc-accent'
+                : 'bg-transparent text-yc-text-muted'
+            }`}
           >
             QPS
           </button>
           <button
             onClick={() => setActiveMetric('latency')}
-            className="mono"
-            style={{
-              padding: '4px 10px',
-              background: activeMetric === 'latency' ? 'var(--bg-surface)' : 'transparent',
-              border: 'none',
-              borderRadius: '4px',
-              fontSize: '10px',
-              fontWeight: 700,
-              color: activeMetric === 'latency' ? 'var(--accent-amber)' : 'var(--text-muted)',
-              cursor: 'pointer'
-            }}
+            className={`font-mono px-2.5 py-1 border-none rounded text-[10px] font-bold cursor-pointer transition-colors ${
+              activeMetric === 'latency'
+                ? 'bg-yc-bg-alt text-yc-accent'
+                : 'bg-transparent text-yc-text-muted'
+            }`}
           >
             LATENCY
           </button>
         </div>
       </div>
 
-      {/* SVG Canvas */}
-      <div style={{ flex: 1, position: 'relative', minHeight: '120px' }}>
+      <div className="flex-1 relative min-h-[120px]">
         {history.length < 2 ? (
-          <div style={{
-            position: 'absolute',
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            color: 'var(--text-muted)',
-            fontSize: '11px'
-          }} className="mono">
+          <div className="absolute inset-0 flex items-center justify-center text-yc-text-muted font-mono text-[11px]">
             Awaiting simulation tick metrics...
           </div>
         ) : (
-          <svg viewBox={`0 0 ${width} ${height}`} style={{ width: '100%', height: '100%', display: 'block' }}>
-            
-            {/* Grid Lines & Y Axis Labels */}
+          <svg viewBox={`0 0 ${width} ${height}`} className="w-full h-full block">
             {gridLinesY.map((tick, i) => (
               <g key={i}>
                 <line
@@ -152,42 +113,39 @@ export function MetricsChart({ history }: MetricsChartProps) {
                   y1={tick.y}
                   x2={width - padding.right}
                   y2={tick.y}
-                  stroke="var(--border)"
+                  stroke="#E5E2D9"
                   strokeWidth="1"
                   strokeDasharray="4 4"
                 />
                 <text
                   x={padding.left - 8}
                   y={tick.y + 4}
-                  fill="var(--text-muted)"
+                  fill="#666666"
                   fontSize="9"
                   fontFamily="monospace"
                   textAnchor="end"
                 >
-                  {activeMetric === 'qps' 
+                  {activeMetric === 'qps'
                     ? `${Math.round(tick.val)}/s`
                     : `${Math.round(tick.val)}ms`}
                 </text>
               </g>
             ))}
 
-            {/* Line Path */}
             {pathD && (
               <>
-                {/* Glow under the line */}
                 <path
                   d={pathD}
                   fill="none"
-                  stroke={activeMetric === 'qps' ? 'rgba(77,127,255,0.15)' : 'rgba(232,160,69,0.15)'}
+                  stroke={activeMetric === 'qps' ? 'rgba(255,102,0,0.15)' : 'rgba(255,102,0,0.15)'}
                   strokeWidth="6"
                   strokeLinecap="round"
                   strokeLinejoin="round"
                 />
-                {/* Main line */}
                 <path
                   d={pathD}
                   fill="none"
-                  stroke={activeMetric === 'qps' ? 'var(--accent-blue)' : 'var(--accent-amber)'}
+                  stroke="#FF6600"
                   strokeWidth="2"
                   strokeLinecap="round"
                   strokeLinejoin="round"
@@ -195,11 +153,10 @@ export function MetricsChart({ history }: MetricsChartProps) {
               </>
             )}
 
-            {/* Time / Ticks X Axis labels */}
             <text
               x={padding.left}
               y={height - 6}
-              fill="var(--text-muted)"
+              fill="#666666"
               fontSize="9"
               fontFamily="monospace"
               textAnchor="start"
@@ -209,18 +166,16 @@ export function MetricsChart({ history }: MetricsChartProps) {
             <text
               x={width - padding.right}
               y={height - 6}
-              fill="var(--text-muted)"
+              fill="#666666"
               fontSize="9"
               fontFamily="monospace"
               textAnchor="end"
             >
               Now
             </text>
-
           </svg>
         )}
       </div>
-
     </div>
   );
 }

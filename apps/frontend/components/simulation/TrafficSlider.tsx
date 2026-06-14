@@ -10,26 +10,14 @@ interface TrafficSliderProps {
 
 export function TrafficSlider({ value, onChange, disabled }: TrafficSliderProps) {
   return (
-    <div style={{
-      display: 'flex',
-      flexDirection: 'column',
-      gap: '10px',
-      background: 'var(--bg-surface)',
-      border: '1px solid var(--border)',
-      borderRadius: '10px',
-      padding: '16px 20px',
-      opacity: disabled ? 0.6 : 1,
-      pointerEvents: disabled ? 'none' : 'auto'
-    }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <Activity style={{ width: '13px', height: '13px', color: 'var(--text-muted)' }} />
-          <span className="mono" style={{ fontSize: '10px', color: 'var(--text-secondary)', fontWeight: 700, textTransform: 'uppercase' }}>
-            Input Traffic QPS
-          </span>
+    <div className={`flex flex-col gap-2.5 bg-yc-bg-alt border border-yc-border rounded-xl p-4 px-5 ${disabled ? 'opacity-60 pointer-events-none' : ''}`}>
+      <div className="flex justify-between items-center">
+        <div className="flex items-center gap-2">
+          <Activity className="w-3.5 h-3.5 text-yc-text-muted" />
+          <span className="font-mono text-[10px] text-yc-text-secondary font-bold uppercase">Input Traffic QPS</span>
         </div>
-        <span className="mono" style={{ fontSize: '13px', color: 'var(--accent-amber)', fontWeight: 700 }}>
-          {value.toLocaleString()} <span style={{ fontSize: '9px', color: 'var(--text-muted)' }}>REQ/S</span>
+        <span className="font-mono text-sm text-yc-accent font-bold">
+          {value.toLocaleString()} <span className="text-[9px] text-yc-text-muted">REQ/S</span>
         </span>
       </div>
 
@@ -40,18 +28,11 @@ export function TrafficSlider({ value, onChange, disabled }: TrafficSliderProps)
         step="100"
         value={value}
         onChange={(e) => onChange(parseInt(e.target.value) || 1000)}
-        style={{
-          width: '100%',
-          accentColor: 'var(--accent-amber)',
-          background: 'var(--border)',
-          height: '6px',
-          borderRadius: '3px',
-          cursor: 'pointer',
-          outline: 'none'
-        }}
+        className="w-full accent-yc-accent h-1.5 rounded-full cursor-pointer outline-none"
+        style={{ background: '#E5E2D9' }}
       />
 
-      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '9px', color: 'var(--text-muted)' }} className="mono">
+      <div className="flex justify-between font-mono text-[9px] text-yc-text-muted">
         <span>100 QPS</span>
         <span>5,000 QPS</span>
         <span>10,000 QPS</span>

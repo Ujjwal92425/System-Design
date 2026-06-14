@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { api } from '../../lib/api';
+import { useScorecard } from './useScorecard';
 
 export interface Prompt {
   id: string;
@@ -117,13 +118,32 @@ export function useInterviewSession(sessionId?: string) {
     try {
       setLoading(true);
       setIsTimerRunning(false);
-      const res = await api.post(`/interview/sessions/${session.id}/submit`, { design });
+
+      // Calculate AI score client-side
+      const { score: calcScore } = useScorecard();
+      const localScore = calcScore({
+        nodes: design.nodes || [],
+        edges: design.edges || [],
+      });
+
+      const res = await api.post(`/interview/sessions/${session.id}/submit`, {
+        design,
+        localScore,
+      });
       const data = res.data?.data || res.data;
-      setSession(prev => prev ? { ...prev, status: 'SCORED', score: data.score } : null);
-      return data;
+      const finalScore = data.score || localScore;
+      setSession(prev => prev ? { ...prev, status: 'SCORED', score: finalScore } : null);
+      return { ...data, localScore };
     } catch (err: any) {
       setError(err?.response?.data?.message || err?.message || 'Failed to submit design');
-      throw err;
+      // Fallback: return local score even if API fails
+      const { score: calcScore } = useScorecard();
+      const fallbackScore = calcScore({
+        nodes: design.nodes || [],
+        edges: design.edges || [],
+      });
+      setSession(prev => prev ? { ...prev, status: 'SCORED', score: fallbackScore } : null);
+      return { localScore: fallbackScore };
     } finally {
       setLoading(false);
     }

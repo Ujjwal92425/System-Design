@@ -1,6 +1,6 @@
 'use client';
 
-import { Zap, ZapOff, CheckCircle, AlertTriangle } from 'lucide-react';
+import { Zap, ZapOff, CheckCircle } from 'lucide-react';
 
 interface NodeItem {
   id: string;
@@ -18,82 +18,57 @@ interface ChaosPanelProps {
 
 export function ChaosPanel({ nodes, failedNodes, onToggleFailure }: ChaosPanelProps) {
   return (
-    <div style={{
-      background: 'var(--bg-surface)',
-      border: '1px solid var(--border)',
-      borderRadius: '12px',
-      padding: '20px',
-      display: 'flex',
-      flexDirection: 'column',
-      gap: '14px',
-      height: '100%',
-      overflowY: 'auto'
-    }}>
+    <div className="bg-yc-bg-alt border border-yc-border rounded-xl p-5 flex flex-col gap-3.5 h-full overflow-y-auto">
       <div>
-        <h4 className="bricolage" style={{ fontSize: '15px', color: 'var(--text-primary)', margin: 0, fontWeight: 700, display: 'flex', alignItems: 'center', gap: '6px' }}>
-          <Zap style={{ width: '14px', height: '14px', color: 'var(--accent-amber)' }} />
+        <h4 className="text-sm text-yc-text m-0 font-bold flex items-center gap-1.5">
+          <Zap className="w-3.5 h-3.5 text-yc-accent" />
           <span>Chaos Engineering Console</span>
         </h4>
-        <p style={{ margin: '2px 0 0', fontSize: '11px', color: 'var(--text-muted)' }}>
+        <p className="mt-0.5 text-[11px] text-yc-text-muted">
           Simulate node crashes to verify fault tolerance and failover logic.
         </p>
       </div>
 
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+      <div className="flex flex-col gap-2">
         {nodes.length === 0 ? (
-          <p style={{ fontSize: '12px', color: 'var(--text-muted)', textAlign: 'center', padding: '16px 0' }}>
-            No nodes on the canvas.
-          </p>
+          <p className="text-xs text-yc-text-muted text-center py-4">No nodes on the canvas.</p>
         ) : (
           nodes.map(n => {
             const isFailed = failedNodes.includes(n.id);
             return (
               <div
                 key={n.id}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                  padding: '10px 14px',
-                  background: isFailed ? 'rgba(248,113,113,0.06)' : 'var(--bg-elevated)',
-                  border: isFailed ? '1px solid rgba(248,113,113,0.2)' : '1px solid var(--border)',
-                  borderRadius: '8px',
-                  transition: 'all 200ms ease'
-                }}
+                className={`flex items-center justify-between p-2.5 px-3.5 rounded-lg border transition-all duration-200 ${
+                  isFailed
+                    ? 'bg-red-50 border-red-200'
+                    : 'bg-yc-bg-card border-yc-border'
+                }`}
               >
                 <div>
-                  <span style={{ fontSize: '12px', color: 'var(--text-primary)', fontWeight: 600 }}>
+                  <span className="text-xs text-yc-text font-semibold">
                     {n.data.label || n.type}
                   </span>
-                  <p className="mono" style={{ margin: '2px 0 0', fontSize: '8px', color: 'var(--text-muted)' }}>
-                    {n.id} · {n.type.split('_').join(' ')}
+                  <p className="mt-0.5 font-mono text-[8px] text-yc-text-muted">
+                    {n.id} &middot; {n.type.split('_').join(' ')}
                   </p>
                 </div>
 
                 <button
                   onClick={() => onToggleFailure(n.id)}
-                  style={{
-                    padding: '6px 12px',
-                    background: isFailed ? '#36C98E' : '#F87171',
-                    color: '#080B14',
-                    border: 'none',
-                    borderRadius: '6px',
-                    fontSize: '10px',
-                    fontWeight: 700,
-                    cursor: 'pointer',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '4px'
-                  }}
+                  className={`px-3 py-1.5 border-none rounded-md text-[10px] font-bold cursor-pointer flex items-center gap-1 ${
+                    isFailed
+                      ? 'bg-emerald-400 text-white hover:bg-emerald-500'
+                      : 'bg-red-400 text-white hover:bg-red-500'
+                  } transition-colors`}
                 >
                   {isFailed ? (
                     <>
-                      <CheckCircle style={{ width: '11px', height: '11px' }} />
+                      <CheckCircle className="w-2.5 h-2.5" />
                       <span>HEAL</span>
                     </>
                   ) : (
                     <>
-                      <ZapOff style={{ width: '11px', height: '11px' }} />
+                      <ZapOff className="w-2.5 h-2.5" />
                       <span>CRASH</span>
                     </>
                   )}

@@ -9,13 +9,16 @@
     "lint": "next lint"
   },
   "dependencies": {
+    "@monaco-editor/react": "^4.6.0",
     "@sd-os/shared": "*",
     "@sd-os/ui": "*",
+    "@xyflow/react": "^12.11.0",
     "axios": "^1.7.2",
+    "dagre": "^0.8.5",
+    "fuse.js": "^7.4.2",
     "lucide-react": "^0.379.0",
     "next": "^15.0.0-rc.0",
     "next-mdx-remote": "^5.0.0",
-    "@monaco-editor/react": "^4.6.0",
     "react": "^19.0.0-rc.0",
     "react-dom": "^19.0.0-rc.0",
     "socket.io-client": "^4.7.5",
@@ -23,6 +26,7 @@
   },
   "devDependencies": {
     "@sd-os/config": "*",
+    "@types/dagre": "^0.7.54",
     "@types/node": "^20.12.12",
     "@types/react": "^18.3.3",
     "@types/react-dom": "^18.3.0",

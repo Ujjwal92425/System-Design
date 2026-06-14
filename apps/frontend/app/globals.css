@@ -543,3 +543,12 @@ body.no-scroll {
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb { background: #d4d4d8; border-radius: 3px; }
 ::-webkit-scrollbar-thumb:hover { background: #a1a1aa; }
+
+/* ── FlowCanvas: edge pulse animation for simulation ─────────────────── */
+@keyframes pulse-edge {
+  0%, 100% { stroke-opacity: 1; }
+  50% { stroke-opacity: 0.4; }
+}
+.animate-pulse-edge {
+  animation: pulse-edge 1.5s ease-in-out infinite;
+}

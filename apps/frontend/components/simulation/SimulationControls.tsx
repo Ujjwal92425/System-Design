@@ -1,6 +1,6 @@
 'use client';
 
-import { Play, Square, RefreshCw, Zap, TrendingUp, HelpCircle } from 'lucide-react';
+import { Play, Square, RefreshCw } from 'lucide-react';
 
 interface SimulationControlsProps {
   isRunning: boolean;
@@ -20,109 +20,47 @@ export function SimulationControls({
   onScenarioChange
 }: SimulationControlsProps) {
   return (
-    <div style={{
-      display: 'flex',
-      alignItems: 'center',
-      gap: '16px',
-      flexWrap: 'wrap',
-      background: 'var(--bg-surface)',
-      border: '1px solid var(--border)',
-      borderRadius: '10px',
-      padding: '12px 20px',
-      justifyContent: 'space-between'
-    }}>
-      
-      {/* Playback Controls */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+    <div className="flex items-center gap-4 flex-wrap bg-yc-bg-alt border border-yc-border rounded-xl py-3 px-5 justify-between">
+      <div className="flex items-center gap-2">
         {!isRunning ? (
           <button
             onClick={onStart}
-            style={{
-              padding: '8px 16px',
-              background: 'var(--accent-amber)',
-              color: '#080B14',
-              border: 'none',
-              borderRadius: '6px',
-              fontSize: '11px',
-              fontWeight: 700,
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '6px'
-            }}
+            className="px-4 py-2 bg-yc-accent text-white border-none rounded-md text-[11px] font-bold cursor-pointer flex items-center gap-1.5 hover:bg-yc-accent-hover transition-colors"
           >
-            <Play style={{ width: '13px', height: '13px', fill: 'currentColor' }} />
+            <Play className="w-3.5 h-3.5 fill-current" />
             <span>START SIMULATION</span>
           </button>
         ) : (
           <button
             onClick={onStop}
-            style={{
-              padding: '8px 16px',
-              background: '#F87171',
-              color: '#080B14',
-              border: 'none',
-              borderRadius: '6px',
-              fontSize: '11px',
-              fontWeight: 700,
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '6px'
-            }}
+            className="px-4 py-2 bg-red-400 text-white border-none rounded-md text-[11px] font-bold cursor-pointer flex items-center gap-1.5 hover:bg-red-500 transition-colors"
           >
-            <Square style={{ width: '13px', height: '13px', fill: 'currentColor' }} />
+            <Square className="w-3.5 h-3.5 fill-current" />
             <span>STOP SIMULATION</span>
           </button>
         )}
 
         <button
           onClick={onReset}
-          style={{
-            padding: '8px 12px',
-            background: 'transparent',
-            border: '1px solid var(--border)',
-            color: 'var(--text-secondary)',
-            borderRadius: '6px',
-            fontSize: '11px',
-            fontWeight: 700,
-            cursor: 'pointer',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '6px'
-          }}
+          className="px-3 py-2 bg-transparent border border-yc-border text-yc-text-secondary rounded-md text-[11px] font-bold cursor-pointer flex items-center gap-1.5 hover:bg-yc-bg-card transition-colors"
         >
-          <RefreshCw style={{ width: '12px', height: '12px' }} />
+          <RefreshCw className="w-3 h-3" />
           <span>RESET</span>
         </button>
       </div>
 
-      {/* Scenario Profile */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-        <span className="mono" style={{ fontSize: '10px', color: 'var(--text-muted)', fontWeight: 700, textTransform: 'uppercase' }}>
-          Load Profile:
-        </span>
+      <div className="flex items-center gap-2.5">
+        <span className="font-mono text-[10px] text-yc-text-muted font-bold uppercase">Load Profile:</span>
         <select
           value={scenario}
           onChange={(e) => onScenarioChange(e.target.value)}
-          className="mono"
-          style={{
-            background: 'var(--bg-elevated)',
-            border: '1px solid var(--border)',
-            borderRadius: '6px',
-            padding: '6px 10px',
-            fontSize: '11px',
-            color: 'var(--text-primary)',
-            outline: 'none',
-            cursor: 'pointer'
-          }}
+          className="font-mono bg-yc-bg-card border border-yc-border rounded-md px-2.5 py-1.5 text-[11px] text-yc-text outline-none cursor-pointer"
         >
           <option value="steady">Steady State</option>
           <option value="spike">Traffic Spike Surges</option>
           <option value="chaos">Chaos Test (CacheStampede)</option>
         </select>
       </div>
-
     </div>
   );
 }
