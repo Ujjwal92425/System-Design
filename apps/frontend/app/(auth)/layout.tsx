@@ -1,6 +1,6 @@
 /**
  * Shared layout for all (auth) route group pages.
- * Renders a centered card on a dark gradient background.
+ * Renders a centered card on a clean white background.
  * The auth CSS design system is injected via globals.css.
  */
 
@@ -14,11 +14,7 @@ export const metadata: Metadata = {
 export default function AuthLayout({ children }: { children: React.ReactNode }) {
   return (
     <main className="auth-shell">
-      {/* Subtle animated grid background */}
       <div className="auth-bg-grid" aria-hidden="true" />
-      {/* Gradient orbs for depth */}
-      <div className="auth-orb auth-orb--1" aria-hidden="true" />
-      <div className="auth-orb auth-orb--2" aria-hidden="true" />
       {children}
     </main>
   );

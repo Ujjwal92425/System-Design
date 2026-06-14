@@ -61,11 +61,11 @@ function LessonRow({ lesson }: { lesson: LessonSearchResult }) {
           <span className="mono" style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
             {lesson.module.track.name} · {lesson.module.name}
           </span>
-          {lesson.tags.slice(0, 2).map(t => (
-            <span key={t} className="mono" style={{ fontSize: '10px', color: 'var(--accent-blue)', background: 'rgba(77,127,255,0.08)', border: '1px solid rgba(77,127,255,0.15)', padding: '1px 6px', borderRadius: '4px' }}>
-              #{t}
-            </span>
-          ))}
+              {lesson.tags.slice(0, 2).map(t => (
+                <span key={t} className="mono" style={{ fontSize: '10px', color: 'var(--accent-blue)', background: 'rgba(255,102,0,0.08)', border: '1px solid rgba(255,102,0,0.15)', padding: '1px 6px', borderRadius: '4px' }}>
+                  #{t}
+                </span>
+              ))}
         </div>
       </div>
 
@@ -153,7 +153,7 @@ export default function LearnCurriculumPage() {
       <div style={{ display: 'flex', alignItems: 'flex-start', gap: '16px' }}>
         <div style={{
           width: '44px', height: '44px', borderRadius: '12px', flexShrink: 0,
-          background: 'rgba(77,127,255,0.1)', border: '1px solid rgba(77,127,255,0.2)',
+          background: 'rgba(255,102,0,0.1)', border: '1px solid rgba(255,102,0,0.2)',
           display: 'flex', alignItems: 'center', justifyContent: 'center'
         }}>
           <BookOpen style={{ width: '20px', height: '20px', color: 'var(--accent-blue)' }} />

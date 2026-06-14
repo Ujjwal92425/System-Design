@@ -413,7 +413,7 @@ export default function CanvasWorkspace({ params }: { params: Promise<{ designId
         <AlertCircle style={{ width: '48px', height: '48px', color: '#F87171' }} />
         <h2 className="bricolage" style={{ fontSize: '22px', color: 'var(--text-primary)', margin: 0 }}>Workspace Error</h2>
         <p style={{ fontSize: '14px', color: 'var(--text-muted)', margin: 0 }}>{error || 'Failed to launch design studio.'}</p>
-        <button onClick={() => router.push('/build')} style={{ padding: '10px 20px', background: 'var(--accent-amber)', color: '#080B14', border: 'none', borderRadius: '8px', cursor: 'pointer', fontSize: '13px', fontWeight: 700 }}>
+        <button onClick={() => router.push('/build')} style={{ padding: '10px 20px', background: 'var(--accent-amber)', color: '#ffffff', border: 'none', borderRadius: '8px', cursor: 'pointer', fontSize: '13px', fontWeight: 700 }}>
           Back to list
         </button>
       </div>
@@ -664,7 +664,7 @@ export default function CanvasWorkspace({ params }: { params: Promise<{ designId
                 style={{
                   width: '100%',
                   background: 'var(--accent-amber)',
-                  color: '#080B14',
+                  color: '#ffffff',
                   border: 'none',
                   borderRadius: '6px',
                   padding: '12px',
@@ -769,7 +769,7 @@ export default function CanvasWorkspace({ params }: { params: Promise<{ designId
               left: '50%',
               transform: 'translateX(-50%)',
               background: 'rgba(232, 160, 69, 0.95)',
-              color: '#080B14',
+              color: '#ffffff',
               padding: '6px 14px',
               borderRadius: '20px',
               fontSize: '11px',
@@ -1019,7 +1019,7 @@ export default function CanvasWorkspace({ params }: { params: Promise<{ designId
                 }}
                 style={{
                   background: 'var(--accent-amber)',
-                  color: '#080B14',
+                  color: '#ffffff',
                   border: 'none',
                   borderRadius: '8px',
                   padding: '12px 28px',
@@ -1378,7 +1378,7 @@ export default function CanvasWorkspace({ params }: { params: Promise<{ designId
                 onClick={handleInterviewSubmit}
                 style={{
                   background: 'var(--accent-amber)',
-                  color: '#080B14',
+                  color: '#ffffff',
                   border: 'none',
                   borderRadius: '6px',
                   padding: '8px 16px',

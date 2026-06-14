@@ -24,6 +24,7 @@ export interface BaseEdgeProps {
 }
 
 export function BaseEdge({
+  id,
   label,
   protocol = 'sync',
   animated,

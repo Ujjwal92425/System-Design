@@ -98,7 +98,7 @@ export default function InterviewHistory() {
               display: 'inline-block',
               marginTop: '16px',
               background: 'var(--accent-amber)',
-              color: '#080B14',
+              color: '#ffffff',
               borderRadius: '6px',
               padding: '8px 16px',
               fontSize: '12px',
@@ -133,7 +133,7 @@ export default function InterviewHistory() {
                 const scoreVal = session.score?.totalScore ?? '-';
                 
                 return (
-                  <tr key={session.id} style={{ borderBottom: '1px solid var(--border)', transition: 'background-color 150ms ease' }} className="hover:bg-zinc-900/40">
+                  <tr key={session.id} style={{ borderBottom: '1px solid var(--border)', transition: 'background-color 150ms ease' }} className="hover:bg-gray-50">
                     <td style={{ padding: '18px 20px', fontSize: '13px', fontWeight: 700, color: 'var(--text-primary)' }}>
                       {session.prompt?.title}
                     </td>

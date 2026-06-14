@@ -137,7 +137,7 @@ export default function SignupPage() {
                 <div
                   key={i}
                   className="strength-segment"
-                  style={{ backgroundColor: i < strength ? STRENGTH_COLORS[strength] : '#27272a' }}
+                  style={{ backgroundColor: i < strength ? STRENGTH_COLORS[strength] : '#e4e4e7' }}
                 />
               ))}
               <span className="strength-label" style={{ color: STRENGTH_COLORS[strength] }}>

@@ -96,7 +96,7 @@ export default function InterviewSelector() {
             textDecoration: 'none',
             transition: 'background-color 150ms ease'
           }}
-          className="hover:bg-zinc-900"
+          className="hover:bg-gray-100"
         >
           <History style={{ width: '15px', height: '15px' }} />
           <span>My Attempt History</span>

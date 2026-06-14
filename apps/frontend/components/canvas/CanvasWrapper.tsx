@@ -24,7 +24,7 @@ export function CanvasWrapper({ designId }: CanvasWrapperProps) {
   const { undo, redo, deleteSelected, duplicateSelected } = useCanvasStore();
 
   // Initialize auto-save when a design is loaded
-  useAutoSave(designId);
+  useAutoSave(designId ?? '');
 
   // Keyboard shortcuts
   const handleKeyDown = useCallback(

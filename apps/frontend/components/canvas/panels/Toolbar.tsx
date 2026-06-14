@@ -13,7 +13,7 @@
 
 import { useCallback, useState } from 'react';
 import { NodeType } from '@sd-os/shared';
-import { useCanvasStore, type CanvasNode } from '../../features/canvas/useCanvasStore';
+import { useCanvasStore, type CanvasNode } from '../../../features/canvas/useCanvasStore';
 import { cn } from '@sd-os/ui';
 import {
   Shield, Scale, Server, Database, Hexagon, Zap, ArrowLeftRight,

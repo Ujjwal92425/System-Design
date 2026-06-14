@@ -9,7 +9,6 @@ export function AppHeader() {
   const pathname = usePathname();
   const { user } = useAuth();
 
-  // Create breadcrumbs from pathname
   const pathSegments = pathname ? pathname.split('/').filter(Boolean) : [];
   const breadcrumbs = pathSegments.map((segment, index) => {
     const href = '/' + pathSegments.slice(0, index + 1).join('/');
@@ -20,50 +19,48 @@ export function AppHeader() {
   });
 
   return (
-    <header className="border-b border-zinc-900 bg-zinc-950/40 backdrop-blur-md px-8 py-4 flex items-center justify-between sticky top-0 z-40">
-      {/* Breadcrumbs */}
-      <div className="flex items-center space-x-1.5 text-sm text-zinc-400 font-medium">
-        <Link href="/dashboard" className="hover:text-zinc-200 transition">
+    <header className="border-b border-yc-border bg-yc-bg/95 backdrop-blur-sm px-4 sm:px-8 py-3 sm:py-4 flex items-center justify-between sticky top-0 z-30 min-h-[56px]">
+      <div className="flex items-center space-x-1.5 text-sm text-yc-text-muted font-medium min-w-0 overflow-x-auto no-scrollbar">
+        <Link href="/dashboard" className="hover:text-yc-text transition whitespace-nowrap flex-shrink-0">
           Console
         </Link>
-        {breadcrumbs.length > 0 && <ChevronRight className="w-3.5 h-3.5 text-zinc-600" />}
+        {breadcrumbs.length > 0 && <ChevronRight className="w-3.5 h-3.5 text-yc-border flex-shrink-0" />}
         {breadcrumbs.map((crumb, idx) => (
-          <div key={crumb.href} className="flex items-center space-x-1.5">
+          <div key={crumb.href} className="flex items-center space-x-1.5 min-w-0">
             {crumb.isLast ? (
-              <span className="text-zinc-100 font-semibold">{crumb.label}</span>
+              <span className="text-yc-text font-semibold truncate">{crumb.label}</span>
             ) : (
               <>
-                <Link href={crumb.href} className="hover:text-zinc-200 transition">
+                <Link href={crumb.href} className="hover:text-yc-text transition whitespace-nowrap">
                   {crumb.label}
                 </Link>
-                <ChevronRight className="w-3.5 h-3.5 text-zinc-600" />
+                <ChevronRight className="w-3.5 h-3.5 text-yc-border flex-shrink-0" />
               </>
             )}
           </div>
         ))}
       </div>
 
-      {/* Actions & Status */}
-      <div className="flex items-center space-x-6">
+      <div className="flex items-center space-x-4 sm:space-x-6 flex-shrink-0">
         <Link
           href="/docs"
-          className="text-xs font-semibold text-zinc-400 hover:text-zinc-200 transition flex items-center space-x-1"
+          className="text-xs font-medium text-yc-text-muted hover:text-yc-text transition flex items-center space-x-1 whitespace-nowrap"
         >
           <HelpCircle className="w-3.5 h-3.5" />
-          <span>Documentation</span>
+          <span className="hidden sm:inline">Documentation</span>
         </Link>
 
         {user && (
-          <div className="flex items-center space-x-3 border-l border-zinc-800 pl-6">
-            <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold tracking-wider uppercase ${
+          <div className="flex items-center space-x-3 border-l border-yc-border pl-4 sm:pl-6">
+            <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold tracking-wider uppercase whitespace-nowrap border ${
               user.role === 'ADMIN'
-                ? 'bg-red-500/10 text-red-400 border border-red-500/20'
+                ? 'bg-red-50 text-red-700 border-red-200'
                 : user.role === 'PRO' || user.role === 'INSTRUCTOR'
-                ? 'bg-indigo-500/10 text-indigo-400 border border-indigo-500/20'
-                : 'bg-zinc-800 text-zinc-400 border border-zinc-700/50'
+                ? 'bg-yc-accent/10 text-yc-accent border-yc-accent/20'
+                : 'bg-yc-bg-card text-yc-text-muted border-yc-border'
             }`}>
               <Sparkles className="w-2.5 h-2.5 mr-1" />
-              {user.role} Member
+              <span className="hidden sm:inline">{user.role} </span>Member
             </span>
           </div>
         )}

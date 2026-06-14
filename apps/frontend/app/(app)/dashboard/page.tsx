@@ -21,8 +21,8 @@ function StatCard({ label, value, icon: Icon }: { label: string; value: string; 
     }}>
       <div style={{
         width: '40px', height: '40px', borderRadius: '10px',
-        background: 'rgba(77,127,255,0.08)',
-        border: '1px solid rgba(77,127,255,0.15)',
+        background: 'rgba(255,102,0,0.08)',
+        border: '1px solid rgba(255,102,0,0.15)',
         display: 'flex', alignItems: 'center', justifyContent: 'center',
         flexShrink: 0,
       }}>

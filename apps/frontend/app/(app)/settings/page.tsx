@@ -154,22 +154,22 @@ export default function SettingsPage() {
   return (
     <div className="max-w-4xl mx-auto px-8 py-12 space-y-10">
       <div>
-        <h1 className="text-3xl font-black tracking-tight text-zinc-100">Settings</h1>
-        <p className="text-sm text-zinc-400 mt-1">Manage your account preferences, profile details, and security.</p>
+        <h1 className="text-3xl font-black tracking-tight text-yc-text">Settings</h1>
+        <p className="text-sm text-yc-text-muted mt-1">Manage your account preferences, profile details, and security.</p>
       </div>
 
       {/* Tabs Nav */}
-      <div className="flex border-b border-zinc-800 space-x-8">
+      <div className="flex border-b border-yc-border space-x-8">
         <button
           onClick={() => setActiveTab('profile')}
           className={`pb-4 text-sm font-semibold transition-all relative ${
             activeTab === 'profile' 
-              ? 'text-indigo-400' 
-              : 'text-zinc-400 hover:text-zinc-200'
+              ? 'text-yc-accent' 
+              : 'text-yc-text-muted hover:text-yc-text'
           }`}
         >
           {activeTab === 'profile' && (
-            <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-indigo-500 rounded-full" />
+            <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-yc-accent rounded-full" />
           )}
           <span className="flex items-center space-x-2">
             <UserIcon className="w-4 h-4" />
@@ -180,12 +180,12 @@ export default function SettingsPage() {
           onClick={() => setActiveTab('security')}
           className={`pb-4 text-sm font-semibold transition-all relative ${
             activeTab === 'security' 
-              ? 'text-indigo-400' 
-              : 'text-zinc-400 hover:text-zinc-200'
+              ? 'text-yc-accent' 
+              : 'text-yc-text-muted hover:text-yc-text'
           }`}
         >
           {activeTab === 'security' && (
-            <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-indigo-500 rounded-full" />
+            <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-yc-accent rounded-full" />
           )}
           <span className="flex items-center space-x-2">
             <Lock className="w-4 h-4" />
@@ -198,13 +198,13 @@ export default function SettingsPage() {
       {activeTab === 'profile' ? (
         <div className="space-y-8">
           {/* Profile Form */}
-          <form onSubmit={handleProfileSubmit} className="space-y-6 bg-zinc-900/30 border border-zinc-900/80 rounded-2xl p-8 shadow-sm">
+          <form onSubmit={handleProfileSubmit} className="space-y-6 bg-white border border-yc-border rounded-2xl p-8">
             <div className="flex items-center space-x-8">
               {/* Avatar Upload */}
               <div className="relative group flex-shrink-0">
-                <div className="w-24 h-24 rounded-full overflow-hidden border-2 border-zinc-850 bg-zinc-950 flex items-center justify-center font-bold text-3xl text-zinc-400 relative">
+                <div className="w-24 h-24 rounded-full overflow-hidden border-2 border-yc-border bg-yc-bg-card flex items-center justify-center font-bold text-3xl text-yc-text-muted relative">
                   {avatarLoading ? (
-                    <Loader2 className="w-8 h-8 text-indigo-500 animate-spin" />
+                    <Loader2 className="w-8 h-8 text-yc-accent animate-spin" />
                   ) : avatarUrl ? (
                     <img src={avatarUrl} alt="Avatar" className="w-full h-full object-cover" />
                   ) : (
@@ -214,7 +214,7 @@ export default function SettingsPage() {
                 <button
                   type="button"
                   onClick={() => fileInputRef.current?.click()}
-                  className="absolute inset-0 bg-black/60 rounded-full opacity-0 group-hover:opacity-100 flex flex-col items-center justify-center transition-all duration-200 text-xs text-zinc-300 font-semibold"
+                  className="absolute inset-0 bg-gray-900/60 rounded-full opacity-0 group-hover:opacity-100 flex flex-col items-center justify-center transition-all duration-200 text-xs text-white font-semibold"
                 >
                   <Camera className="w-5 h-5 mb-1" />
                   Update
@@ -229,14 +229,14 @@ export default function SettingsPage() {
               </div>
 
               <div>
-                <h3 className="text-md font-semibold text-zinc-205">Avatar Image</h3>
-                <p className="text-xs text-zinc-400 mt-1">
+                <h3 className="text-md font-semibold text-yc-text">Avatar Image</h3>
+                <p className="text-xs text-yc-text-muted mt-1">
                   Upload a custom square avatar, or keep the default. Supports PNG, JPG, or SVG up to 2MB.
                 </p>
                 <button
                   type="button"
                   onClick={() => fileInputRef.current?.click()}
-                  className="mt-3 px-3 py-1.5 bg-zinc-800 hover:bg-zinc-700 text-zinc-200 rounded-lg text-xs font-semibold flex items-center space-x-1.5 transition"
+                  className="mt-3 px-3 py-1.5 bg-yc-bg-card hover:bg-yc-border text-yc-text rounded-lg text-xs font-semibold flex items-center space-x-1.5 transition"
                 >
                   <Upload className="w-3.5 h-3.5" />
                   <span>Choose file</span>
@@ -245,14 +245,14 @@ export default function SettingsPage() {
             </div>
 
             {profileError && (
-              <div className="bg-red-500/10 border border-red-500/20 text-red-400 text-xs p-4 rounded-xl flex items-center space-x-2 animate-pulse">
+              <div className="bg-red-50 border border-red-200 text-red-600 text-xs p-4 rounded-xl flex items-center space-x-2">
                 <AlertTriangle className="w-4 h-4" />
                 <span>{profileError}</span>
               </div>
             )}
 
             {profileSuccess && (
-              <div className="bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs p-4 rounded-xl flex items-center space-x-2">
+              <div className="bg-emerald-50 border border-emerald-200 text-emerald-600 text-xs p-4 rounded-xl flex items-center space-x-2">
                 <Check className="w-4 h-4" />
                 <span>Profile updated successfully!</span>
               </div>
@@ -260,25 +260,25 @@ export default function SettingsPage() {
 
             <div className="grid grid-cols-1 gap-6">
               <div>
-                <label className="block text-xs font-semibold text-zinc-400 uppercase tracking-wider mb-2">Display Name</label>
+                <label className="block text-xs font-semibold text-yc-text-muted uppercase tracking-wider mb-2">Display Name</label>
                 <input
                   type="text"
                   value={name}
                   onChange={(e) => setName(e.target.value)}
                   placeholder="Your Name"
-                  className="w-full bg-zinc-950/80 border border-zinc-800 rounded-xl px-4 py-3 text-sm text-zinc-200 focus:outline-none focus:border-indigo-500 transition"
+                  className="w-full bg-white border border-yc-border rounded-xl px-4 py-3 text-sm text-yc-text focus:outline-none focus:border-yc-accent transition"
                   required
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-zinc-400 uppercase tracking-wider mb-2">Bio</label>
+                <label className="block text-xs font-semibold text-yc-text-muted uppercase tracking-wider mb-2">Bio</label>
                 <textarea
                   value={bio}
                   onChange={(e) => setBio(e.target.value)}
                   placeholder="Tell us about yourself..."
                   rows={4}
-                  className="w-full bg-zinc-950/80 border border-zinc-800 rounded-xl px-4 py-3 text-sm text-zinc-200 focus:outline-none focus:border-indigo-500 transition resize-none"
+                  className="w-full bg-white border border-yc-border rounded-xl px-4 py-3 text-sm text-yc-text focus:outline-none focus:border-yc-accent transition resize-none"
                 />
               </div>
             </div>
@@ -287,7 +287,7 @@ export default function SettingsPage() {
               <button
                 type="submit"
                 disabled={profileLoading}
-                className="px-6 py-2.5 bg-indigo-600 hover:bg-indigo-500 disabled:bg-indigo-600/50 text-white rounded-xl text-sm font-semibold transition flex items-center space-x-2"
+                className="px-6 py-2.5 bg-yc-accent hover:bg-yc-accent-hover disabled:bg-yc-accent/50 text-white rounded-xl text-sm font-semibold transition flex items-center space-x-2"
               >
                 {profileLoading && <Loader2 className="w-4 h-4 animate-spin" />}
                 <span>Save Changes</span>
@@ -296,13 +296,13 @@ export default function SettingsPage() {
           </form>
 
           {/* Danger Zone */}
-          <div className="border border-red-500/10 bg-red-500/5 rounded-2xl p-8 space-y-6">
+          <div className="border border-red-200 bg-red-50 rounded-2xl p-8 space-y-6">
             <div>
-              <h3 className="text-md font-bold text-red-400 flex items-center space-x-2">
+              <h3 className="text-md font-bold text-red-600 flex items-center space-x-2">
                 <AlertTriangle className="w-5 h-5" />
                 <span>Danger Zone</span>
               </h3>
-              <p className="text-xs text-red-300/80 mt-1">
+              <p className="text-xs text-red-500 mt-1">
                 Once deleted, your account cannot be recovered. Your progress, interviews, and designs will be scheduled for purge.
               </p>
             </div>
@@ -310,14 +310,14 @@ export default function SettingsPage() {
             {!showDeleteModal ? (
               <button
                 onClick={() => setShowDeleteModal(true)}
-                className="px-4 py-2 bg-red-500/10 hover:bg-red-500/20 text-red-400 rounded-lg text-xs font-bold transition flex items-center space-x-1.5"
+                className="px-4 py-2 bg-red-50 hover:bg-red-100 text-red-600 rounded-lg text-xs font-bold transition flex items-center space-x-1.5"
               >
                 <Trash2 className="w-4 h-4" />
                 <span>Delete Account</span>
               </button>
             ) : (
-              <div className="p-4 bg-zinc-950/50 rounded-xl border border-red-500/20 space-y-4">
-                <p className="text-xs text-zinc-300 font-medium">Are you absolutely sure you want to delete your account?</p>
+              <div className="p-4 bg-white rounded-xl border border-red-200 space-y-4">
+                <p className="text-xs text-gray-700 font-medium">Are you absolutely sure you want to delete your account?</p>
                 <div className="flex space-x-3">
                   <button
                     onClick={handleDeleteAccount}
@@ -330,7 +330,7 @@ export default function SettingsPage() {
                   <button
                     onClick={() => setShowDeleteModal(false)}
                     disabled={deleteLoading}
-                    className="px-3 py-1.5 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 rounded-lg text-xs font-semibold transition"
+                    className="px-3 py-1.5 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg text-xs font-semibold transition"
                   >
                     Cancel
                   </button>
@@ -340,16 +340,16 @@ export default function SettingsPage() {
           </div>
         </div>
       ) : (
-        <form onSubmit={handlePasswordSubmit} className="space-y-6 bg-zinc-900/30 border border-zinc-900/80 rounded-2xl p-8 shadow-sm">
+        <form onSubmit={handlePasswordSubmit} className="space-y-6 bg-white border border-yc-border rounded-2xl p-8">
           {passwordError && (
-            <div className="bg-red-500/10 border border-red-500/20 text-red-400 text-xs p-4 rounded-xl flex items-center space-x-2">
+            <div className="bg-red-50 border border-red-200 text-red-600 text-xs p-4 rounded-xl flex items-center space-x-2">
               <AlertTriangle className="w-4 h-4" />
               <span>{passwordError}</span>
             </div>
           )}
 
           {passwordSuccess && (
-            <div className="bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs p-4 rounded-xl flex items-center space-x-2">
+            <div className="bg-emerald-50 border border-emerald-200 text-emerald-600 text-xs p-4 rounded-xl flex items-center space-x-2">
               <Check className="w-4 h-4" />
               <span>Password changed successfully!</span>
             </div>
@@ -357,37 +357,37 @@ export default function SettingsPage() {
 
           <div className="space-y-5">
             <div>
-              <label className="block text-xs font-semibold text-zinc-400 uppercase tracking-wider mb-2">Current Password</label>
+              <label className="block text-xs font-semibold text-yc-text-muted uppercase tracking-wider mb-2">Current Password</label>
               <input
                 type="password"
                 value={currentPassword}
                 onChange={(e) => setCurrentPassword(e.target.value)}
                 placeholder="••••••••"
-                className="w-full bg-zinc-950/80 border border-zinc-800 rounded-xl px-4 py-3 text-sm text-zinc-200 focus:outline-none focus:border-indigo-500 transition"
+                className="w-full bg-white border border-yc-border rounded-xl px-4 py-3 text-sm text-yc-text focus:outline-none focus:border-yc-accent transition"
                 required
               />
             </div>
 
             <div>
-              <label className="block text-xs font-semibold text-zinc-400 uppercase tracking-wider mb-2">New Password</label>
+              <label className="block text-xs font-semibold text-yc-text-muted uppercase tracking-wider mb-2">New Password</label>
               <input
                 type="password"
                 value={newPassword}
                 onChange={(e) => setNewPassword(e.target.value)}
                 placeholder="••••••••"
-                className="w-full bg-zinc-950/80 border border-zinc-800 rounded-xl px-4 py-3 text-sm text-zinc-200 focus:outline-none focus:border-indigo-500 transition"
+                className="w-full bg-white border border-yc-border rounded-xl px-4 py-3 text-sm text-yc-text focus:outline-none focus:border-yc-accent transition"
                 required
               />
             </div>
 
             <div>
-              <label className="block text-xs font-semibold text-zinc-400 uppercase tracking-wider mb-2">Confirm New Password</label>
+              <label className="block text-xs font-semibold text-yc-text-muted uppercase tracking-wider mb-2">Confirm New Password</label>
               <input
                 type="password"
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
                 placeholder="••••••••"
-                className="w-full bg-zinc-950/80 border border-zinc-800 rounded-xl px-4 py-3 text-sm text-zinc-200 focus:outline-none focus:border-indigo-500 transition"
+                className="w-full bg-white border border-yc-border rounded-xl px-4 py-3 text-sm text-yc-text focus:outline-none focus:border-yc-accent transition"
                 required
               />
             </div>
@@ -397,7 +397,7 @@ export default function SettingsPage() {
             <button
               type="submit"
               disabled={passwordLoading}
-              className="px-6 py-2.5 bg-indigo-600 hover:bg-indigo-500 disabled:bg-indigo-600/50 text-white rounded-xl text-sm font-semibold transition flex items-center space-x-2"
+              className="px-6 py-2.5 bg-yc-accent hover:bg-yc-accent-hover disabled:bg-yc-accent/50 text-white rounded-xl text-sm font-semibold transition flex items-center space-x-2"
             >
               {passwordLoading && <Loader2 className="w-4 h-4 animate-spin" />}
               <span>Update Password</span>
