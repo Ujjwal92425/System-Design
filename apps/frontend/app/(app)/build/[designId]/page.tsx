@@ -497,9 +497,9 @@ export default function CanvasWorkspace({ params }: { params: Promise<{ designId
         )}
 
         {/* Canvas + Simulation — stack vertically */}
-        <div className="flex flex-col flex-1 min-h-0">
+        <div className="flex flex-col flex-1 min-h-0 relative">
           {/* Canvas area: takes all remaining space via flex-1 */}
-          <div className="flex-1 min-h-[500px]">
+          <div className="flex-1 min-h-0 relative">
             <FlowCanvas
               initialNodes={rfNodes}
               initialEdges={rfEdges}

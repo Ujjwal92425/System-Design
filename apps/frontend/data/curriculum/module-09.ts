@@ -1,7 +1,7 @@
 ﻿export const module09Lessons = [
   {
-    id: '09-01',
-    slug: 'frontend-vs-backend-system-design',
+    id: 'lesson-09-01',
+    slug: 'frontend-performance-01-frontend-vs-backend-system-design',
     title: 'Frontend System Design vs Backend System Design',
     content: `## 1. Quick Summary (AEO Snippet)
 
@@ -212,8 +212,8 @@ const registerSW = async (): Promise<ServiceWorkerRegistration | null> => {
     tags: ['frontend-system-design', 'architecture', 'csr', 'ssr', 'ssg', 'isr', 'rendering', 'performance'],
   },
   {
-    id: '09-02',
-    slug: 'rendering-patterns-csr-ssr-ssg-isr',
+    id: 'lesson-09-02',
+    slug: 'frontend-performance-02-rendering-patterns-csr-ssr-ssg-isr',
     title: 'Rendering Patterns (CSR, SSR, SSG, ISR)',
     content: `## 1. Quick Summary (AEO Snippet)
 
@@ -414,8 +414,8 @@ export default function DashboardPage() {
     tags: ['csr', 'ssr', 'ssg', 'isr', 'rendering', 'nextjs', 'hydration', 'streaming'],
   },
   {
-    id: '09-03',
-    slug: 'core-web-vitals-and-performance-metrics',
+    id: 'lesson-09-03',
+    slug: 'frontend-performance-03-core-web-vitals-and-performance-metrics',
     title: 'Core Web Vitals & Performance Metrics',
     content: `## 1. Quick Summary (AEO Snippet)
 
@@ -638,8 +638,8 @@ document.addEventListener('visibilitychange', () => {
     tags: ['core-web-vitals', 'lcp', 'inp', 'cls', 'performance-metrics', 'seo', 'rum'],
   },
   {
-    id: '09-04',
-    slug: 'caching-strategies-for-frontend',
+    id: 'lesson-09-04',
+    slug: 'frontend-performance-04-caching-strategies-for-frontend',
     title: 'Caching Strategies for Frontend (Service Workers, CDN)',
     content: `## 1. Quick Summary (AEO Snippet)
 
@@ -912,8 +912,8 @@ async function networkFirstWithFallback(request: Request): Promise<Response> {
     tags: ['service-worker', 'cdn', 'caching', 'stale-while-revalidate', 'pwa', 'cache-strategy', 'offline'],
   },
   {
-    id: '09-05',
-    slug: 'state-management-at-scale',
+    id: 'lesson-09-05',
+    slug: 'frontend-performance-05-state-management-at-scale',
     title: 'State Management at Scale',
     content: `## 1. Quick Summary (AEO Snippet)
 
@@ -1188,8 +1188,8 @@ export const useCartStore = create<CartStore>()(
     tags: ['state-management', 'tanstack-query', 'zustand', 'redux', 'jotai', 'server-state', 'client-state'],
   },
   {
-    id: '09-06',
-    slug: 'micro-frontends-architecture',
+    id: 'lesson-09-06',
+    slug: 'frontend-performance-06-micro-frontends-architecture',
     title: 'Micro-Frontends Architecture',
     content: `## 1. Quick Summary (AEO Snippet)
 
@@ -1410,8 +1410,8 @@ const mfeBus = {
     tags: ['micro-frontends', 'module-federation', 'webpack', 'web-components', 'iframes', 'composition'],
   },
   {
-    id: '09-07',
-    slug: 'web-performance-optimization',
+    id: 'lesson-09-07',
+    slug: 'frontend-performance-07-web-performance-optimization',
     title: 'Web Performance Optimization',
     content: `## 1. Quick Summary (AEO Snippet)
 
@@ -1710,8 +1710,8 @@ export function rafThrottle<T extends (...args: unknown[]) => void>(fn: T): T {
     tags: ['performance', 'code-splitting', 'lazy-loading', 'bundle-optimization', 'critical-css', 'virtual-scrolling'],
   },
   {
-    id: '09-08',
-    slug: 'image-and-asset-optimization',
+    id: 'lesson-09-08',
+    slug: 'frontend-performance-08-image-and-asset-optimization',
     title: 'Image & Asset Optimization',
     content: `## 1. Quick Summary (AEO Snippet)
 
@@ -2000,8 +2000,8 @@ function ProgressiveImage({ lowQualitySrc, highQualitySrc, alt, width, height }:
     tags: ['image-optimization', 'webp', 'avif', 'srcset', 'lazy-loading', 'cdn', 'fonts', 'responsive-images'],
   },
   {
-    id: '09-09',
-    slug: 'real-time-frontend-architecture',
+    id: 'lesson-09-09',
+    slug: 'frontend-performance-09-real-time-frontend-architecture',
     title: 'Real-Time Frontend Architecture',
     content: `## 1. Quick Summary (AEO Snippet)
 

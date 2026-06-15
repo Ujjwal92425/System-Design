@@ -44,16 +44,19 @@ function StatCard({ label, value, icon: Icon }: { label: string; value: string; 
 export default function DashboardPage() {
   const { tracks, loading } = useTracks();
 
+  const validTracks = tracks.filter(t => t && t.slug);
+
   // Derived stats
-  const totalPct = tracks.length
-    ? tracks.reduce((s, t) => s + t.completedPct, 0) / tracks.length
+  const totalPct = validTracks.length
+    ? validTracks.reduce((s, t) => s + (t.completedPct || 0), 0) / validTracks.length
     : 0;
 
   // Find the first in-progress track to surface as "next" 
-  const activeTrack =
-    tracks.find(t => t.completedPct > 0 && t.completedPct < 1) ??
-    tracks.find(t => t.completedPct === 0) ??
-    tracks[0];
+  const activeTrack = validTracks.length
+    ? (validTracks.find(t => (t.completedPct || 0) > 0 && (t.completedPct || 0) < 1) ??
+       validTracks.find(t => (t.completedPct || 0) === 0) ??
+       validTracks[0])
+    : null;
 
   if (loading) {
     return (
@@ -91,7 +94,7 @@ export default function DashboardPage() {
         />
         <StatCard
           label="Tracks Active"
-          value={`${tracks.filter(t => t.completedPct > 0).length} / ${tracks.length}`}
+          value={`${validTracks.filter(t => t.completedPct > 0).length} / ${validTracks.length}`}
           icon={BookOpen}
         />
         <StatCard
@@ -165,7 +168,7 @@ export default function DashboardPage() {
           All Tracks
         </p>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '16px' }}>
-          {tracks.map(track => (
+          {validTracks.map(track => (
             <TrackProgressCard
               key={track.id}
               name={track.name}

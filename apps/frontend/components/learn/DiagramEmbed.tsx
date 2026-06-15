@@ -42,16 +42,16 @@ export function DiagramEmbed({ nodes: rawNodes = [], edges: rawEdges = [], heigh
 
   // Node Type Styling map
   const NODE_COLORS: Record<string, { bg: string; border: string; text: string; dot: string }> = {
-    client:   { bg: 'rgba(54,120,255,0.06)', border: '#2A3A58', text: '#E2E8F0', dot: '#3680FF' },
-    dns:      { bg: 'rgba(77,255,127,0.06)', border: '#2A3A58', text: '#E2E8F0', dot: '#4DFF7F' },
-    lb:       { bg: 'rgba(232,160,69,0.06)', border: '#2A3A58', text: '#E2E8F0', dot: '#E8A045' },
-    web:      { bg: 'rgba(54,120,255,0.06)', border: '#2A3A58', text: '#E2E8F0', dot: '#3680FF' },
-    app:      { bg: 'rgba(54,120,255,0.06)', border: '#2A3A58', text: '#E2E8F0', dot: '#3680FF' },
-    cache:    { bg: 'rgba(232,160,69,0.06)', border: '#2A3A58', text: '#E2E8F0', dot: '#E8A045' },
-    db:       { bg: 'rgba(77,255,127,0.06)', border: '#2A3A58', text: '#E2E8F0', dot: '#4DFF7F' },
-    queue:    { bg: 'rgba(232,160,69,0.06)', border: '#2A3A58', text: '#E2E8F0', dot: '#E8A045' },
-    worker:   { bg: 'rgba(54,120,255,0.06)', border: '#2A3A58', text: '#E2E8F0', dot: '#3680FF' },
-    storage:  { bg: 'rgba(77,255,127,0.06)', border: '#2A3A58', text: '#E2E8F0', dot: '#4DFF7F' },
+    client:   { bg: 'var(--bg-surface)', border: '#FF6600', text: 'var(--text-primary)', dot: '#FF6600' },
+    dns:      { bg: 'var(--bg-surface)', border: '#22c55e', text: 'var(--text-primary)', dot: '#22c55e' },
+    lb:       { bg: 'var(--bg-surface)', border: '#FF6600', text: 'var(--text-primary)', dot: '#FF6600' },
+    web:      { bg: 'var(--bg-surface)', border: '#FF6600', text: 'var(--text-primary)', dot: '#FF6600' },
+    app:      { bg: 'var(--bg-surface)', border: '#FF6600', text: 'var(--text-primary)', dot: '#FF6600' },
+    cache:    { bg: 'var(--bg-surface)', border: '#FF6600', text: 'var(--text-primary)', dot: '#FF6600' },
+    db:       { bg: 'var(--bg-surface)', border: '#22c55e', text: 'var(--text-primary)', dot: '#22c55e' },
+    queue:    { bg: 'var(--bg-surface)', border: '#FF6600', text: 'var(--text-primary)', dot: '#FF6600' },
+    worker:   { bg: 'var(--bg-surface)', border: '#FF6600', text: 'var(--text-primary)', dot: '#FF6600' },
+    storage:  { bg: 'var(--bg-surface)', border: '#22c55e', text: 'var(--text-primary)', dot: '#22c55e' },
   };
 
   const getNodeCenter = (nodeId: string) => {
@@ -62,23 +62,26 @@ export function DiagramEmbed({ nodes: rawNodes = [], edges: rawEdges = [], heigh
 
   return (
     <div style={{
-      background: '#080B14',
-      border: '1px solid #1E2A42',
-      borderRadius: '8px',
+      background: '#FAF9F5', // Warm paper color
+      border: '2px solid var(--border)',
+      borderRadius: '12px',
       overflow: 'hidden',
       position: 'relative',
-      margin: '24px 0'
+      margin: '24px 0',
+      backgroundImage: 'radial-gradient(var(--border) 1px, transparent 1px)',
+      backgroundSize: '16px 16px',
+      boxShadow: '0 2px 8px rgba(0,0,0,0.03)',
     }}>
       <div style={{
         position: 'absolute',
         top: '12px',
         left: '12px',
-        fontSize: '10px',
-        color: '#4F5E7B',
-        fontWeight: 600,
-        letterSpacing: '0.05em'
-      }} className="mono">
-        ARCHITECTURE GRAPH
+        fontSize: '9px',
+        color: '#FF6600',
+        fontWeight: 700,
+        letterSpacing: '0.08em'
+      }} className="mono animate-pulse-edge">
+        SYSTEM TOPOLOGY GRAPH
       </div>
 
       <svg
@@ -96,7 +99,7 @@ export function DiagramEmbed({ nodes: rawNodes = [], edges: rawEdges = [], heigh
             markerHeight="6"
             orient="auto-start-reverse"
           >
-            <path d="M 0 1 L 10 5 L 0 9 z" fill="#1E2A42" />
+            <path d="M 0 1 L 10 5 L 0 9 z" fill="#FF6600" />
           </marker>
         </defs>
 
@@ -133,7 +136,7 @@ export function DiagramEmbed({ nodes: rawNodes = [], edges: rawEdges = [], heigh
                 y1={y1}
                 x2={x2}
                 y2={y2}
-                stroke="#1E2A42"
+                stroke="#FF6600"
                 strokeWidth="1.5"
                 strokeDasharray={edge.dashed ? '4 4' : undefined}
                 markerEnd="url(#arrow)"
@@ -145,12 +148,14 @@ export function DiagramEmbed({ nodes: rawNodes = [], edges: rawEdges = [], heigh
                     y={-10}
                     width={80}
                     height={16}
-                    fill="#080B14"
+                    fill="#FAF9F5"
                     rx={2}
+                    stroke="var(--border)"
+                    strokeWidth="0.8"
                   />
                   <text
                     textAnchor="middle"
-                    fill="#4F5E7B"
+                    fill="var(--text-muted)"
                     fontSize="9"
                     fontFamily="monospace"
                   >
@@ -174,7 +179,7 @@ export function DiagramEmbed({ nodes: rawNodes = [], edges: rawEdges = [], heigh
                 rx="6"
                 fill={colors.bg}
                 stroke={colors.border}
-                strokeWidth="1.2"
+                strokeWidth="1.5"
               />
               {/* Type indicator dot */}
               <circle
@@ -188,9 +193,9 @@ export function DiagramEmbed({ nodes: rawNodes = [], edges: rawEdges = [], heigh
                 x="32"
                 y="28"
                 fill={colors.text}
-                fontSize="12"
+                fontSize="11"
                 fontFamily="sans-serif"
-                fontWeight="500"
+                fontWeight="700"
               >
                 {node.label}
               </text>
@@ -198,7 +203,7 @@ export function DiagramEmbed({ nodes: rawNodes = [], edges: rawEdges = [], heigh
               <text
                 x="32"
                 y="40"
-                fill="#4F5E7B"
+                fill="var(--text-muted)"
                 fontSize="9"
                 fontFamily="monospace"
               >

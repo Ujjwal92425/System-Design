@@ -1,7 +1,7 @@
 ﻿export const module02Lessons = [
   {
-    id: "lesson-api-01",
-    slug: "rest-api-design-principles",
+    id: "lesson-02-01",
+    slug: "apis-protocols-authentication-01-rest-api-design-principles",
     title: "REST API Design Principles",
     content: `## 1. Quick Summary
 
@@ -170,8 +170,8 @@ app.get("/users/:id", (req, res) => {
     tags: ["REST", "API-design", "HTTP", "CRUD", "stateless"]
   },
   {
-    id: "lesson-api-02",
-    slug: "graphql",
+    id: "lesson-02-02",
+    slug: "apis-protocols-authentication-02-graphql",
     title: "GraphQL",
     content: `## 1. Quick Summary
 
@@ -352,8 +352,8 @@ startStandaloneServer(server, { listen: { port: 4000 } });
     tags: ["GraphQL", "API", "schema", "resolvers", "Apollo"]
   },
   {
-    id: "lesson-api-03",
-    slug: "grpc-protocol-buffers",
+    id: "lesson-02-03",
+    slug: "apis-protocols-authentication-03-grpc-protocol-buffers",
     title: "gRPC & Protocol Buffers",
     content: `## 1. Quick Summary
 
@@ -513,8 +513,8 @@ server.bindAsync("0.0.0.0:50051", ServerCredentials.createInsecure(), () => serv
     tags: ["gRPC", "Protocol Buffers", "HTTP2", "RPC", "serialization"]
   },
   {
-    id: "lesson-api-04",
-    slug: "webhooks-vs-polling-vs-websockets",
+    id: "lesson-02-04",
+    slug: "apis-protocols-authentication-04-webhooks-vs-polling-vs-websockets",
     title: "WebHooks vs Polling vs WebSockets",
     content: `## 1. Quick Summary
 
@@ -685,8 +685,8 @@ app.get("/status", (req, res) => {
     tags: ["WebHooks", "WebSockets", "Polling", "real-time", "events"]
   },
   {
-    id: "lesson-api-05",
-    slug: "api-gateway",
+    id: "lesson-02-05",
+    slug: "apis-protocols-authentication-05-api-gateway",
     title: "API Gateway",
     content: `## 1. Quick Summary
 
@@ -833,8 +833,8 @@ app.listen(8080, () => console.log("API Gateway on :8080"));
     tags: ["API-Gateway", "microservices", "reverse-proxy", "routing"]
   },
   {
-    id: "lesson-api-06",
-    slug: "authentication-vs-authorization",
+    id: "lesson-02-06",
+    slug: "apis-protocols-authentication-06-authentication-vs-authorization",
     title: "Authentication vs Authorization",
     content: `## 1. Quick Summary
 
@@ -1023,8 +1023,8 @@ app.get("/public/data", (req, res) => {
     tags: ["authentication", "authorization", "RBAC", "ABAC", "security"]
   },
   {
-    id: "lesson-api-07",
-    slug: "oauth2-openid-connect",
+    id: "lesson-02-07",
+    slug: "apis-protocols-authentication-07-oauth2-openid-connect",
     title: "OAuth 2.0 & OpenID Connect",
     content: `## 1. Quick Summary
 
@@ -1214,8 +1214,8 @@ app.get("/callback", async (req, res) => {
     tags: ["OAuth2", "OpenID-Connect", "SSO", "authentication", "authorization"]
   },
   {
-    id: "lesson-api-08",
-    slug: "jwt-json-web-tokens",
+    id: "lesson-02-08",
+    slug: "apis-protocols-authentication-08-jwt-json-web-tokens",
     title: "JWT (JSON Web Tokens)",
     content: `## 1. Quick Summary
 
@@ -1390,8 +1390,8 @@ app.get("/me", authenticate, (req, res) => {
     tags: ["JWT", "tokens", "authentication", "RS256", "stateless"]
   },
   {
-    id: "lesson-api-09",
-    slug: "session-vs-token-auth",
+    id: "lesson-02-09",
+    slug: "apis-protocols-authentication-09-session-vs-token-auth",
     title: "Session-Based Auth vs Token-Based Auth",
     content: `## 1. Quick Summary
 
@@ -1553,8 +1553,8 @@ app.get("/token/profile", authenticateToken, (req, res) => {
     tags: ["session-auth", "token-auth", "JWT", "cookies", "stateful-vs-stateless"]
   },
   {
-    id: "lesson-api-10",
-    slug: "api-rate-limiting-throttling",
+    id: "lesson-02-10",
+    slug: "apis-protocols-authentication-10-api-rate-limiting-throttling",
     title: "API Rate Limiting & Throttling",
     content: `## 1. Quick Summary
 
@@ -1718,8 +1718,8 @@ class TokenBucket {
     tags: ["rate-limiting", "throttling", "Redis", "API-security", "429"]
   },
   {
-    id: "lesson-api-11",
-    slug: "api-versioning-strategies",
+    id: "lesson-02-11",
+    slug: "apis-protocols-authentication-11-api-versioning-strategies",
     title: "API Versioning Strategies",
     content: `## 1. Quick Summary
 
@@ -1866,8 +1866,8 @@ app.get("/api/v1/sunset", (req, res) => {
     tags: ["API-versioning", "backward-compatibility", "deprecation", "OpenAPI"]
   },
   {
-    id: "lesson-api-12",
-    slug: "idempotency-in-apis",
+    id: "lesson-02-12",
+    slug: "apis-protocols-authentication-12-idempotency-in-apis",
     title: "Idempotency in APIs",
     content: `## 1. Quick Summary
 

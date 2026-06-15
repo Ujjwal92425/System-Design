@@ -27,7 +27,7 @@ learnRouter.get('/tracks/:slug', async (req: AuthRequest, res, next) => {
 });
 
 // ─── LESSONS ─────────────────────────────────────────────────────────────────
-// Search lessons
+// Search lessons (reloaded)
 learnRouter.get('/lessons/search', async (req, res, next) => {
   try {
     const query = (req.query.q as string) || '';

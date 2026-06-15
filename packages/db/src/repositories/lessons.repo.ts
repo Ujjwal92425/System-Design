@@ -72,6 +72,13 @@ export const lessonsRepo = {
 
     return db.lesson.findMany({
       where: whereClause,
+      include: {
+        module: {
+          include: {
+            track: true
+          }
+        }
+      },
       orderBy: { order: 'asc' }
     });
   },

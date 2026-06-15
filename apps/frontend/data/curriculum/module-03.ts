@@ -1,7 +1,7 @@
 export const module03Lessons = [
   {
-    id: 301,
-    slug: "sql-vs-nosql",
+    id: "lesson-03-01",
+    slug: "databases-01-sql-vs-nosql",
     title: "SQL vs NoSQL — When to Use It",
     content: `
 ## 1. Quick Summary
@@ -81,8 +81,8 @@ const dbDecision = (requirements: {
     tags: ["SQL","NoSQL","RDBMS","polyglot-persistence"]
   },
   {
-    id: 302,
-    slug: "relational-database-internals",
+    id: "lesson-03-02",
+    slug: "databases-02-relational-database-internals",
     title: "Relational Database Internals (B-Trees, Indexing)",
     content: `
 ## 1. Quick Summary
@@ -159,8 +159,8 @@ class BPlusTreeNode<K, V> {
     tags: ["B+Tree","indexing","database-internals","storage-engine"]
   },
   {
-    id: 303,
-    slug: "acid-properties",
+    id: "lesson-03-03",
+    slug: "databases-03-acid-properties",
     title: "ACID Properties",
     content: `
 ## 1. Quick Summary
@@ -244,8 +244,8 @@ class TransactionManager {
     tags: ["ACID","transactions","WAL","concurrency-control"]
   },
   {
-    id: 304,
-    slug: "database-normalization-denormalization",
+    id: "lesson-03-04",
+    slug: "databases-04-database-normalization-denormalization",
     title: "Database Normalization & Denormalization",
     content: `
 ## 1. Quick Summary
@@ -326,8 +326,8 @@ class OrderService {
     tags: ["normalization","denormalization","database-design","OLTP","OLAP"]
   },
   {
-    id: 305,
-    slug: "database-indexing-deep-dive",
+    id: "lesson-03-05",
+    slug: "databases-05-database-indexing-deep-dive",
     title: "Database Indexing Deep Dive",
     content: `
 ## 1. Quick Summary
@@ -409,8 +409,8 @@ class IndexAdvisor {
     tags: ["indexing","B+Tree","query-optimization","postgresql"]
   },
   {
-    id: 306,
-    slug: "database-replication",
+    id: "lesson-03-06",
+    slug: "databases-06-database-replication",
     title: "Database Replication (Leader-Follower, Multi-Leader)",
     content: `
 ## 1. Quick Summary
@@ -488,8 +488,8 @@ class ReplicationManager {
     tags: ["replication","high-availability","failover","WAL","multi-leader"]
   },
   {
-    id: 307,
-    slug: "database-sharding-partitioning",
+    id: "lesson-03-07",
+    slug: "databases-07-database-sharding-partitioning",
     title: "Database Sharding & Partitioning",
     content: `
 ## 1. Quick Summary
@@ -566,8 +566,8 @@ class ShardManager {
     tags: ["sharding","horizontal-scaling","partitioning","distributed-database"]
   },
   {
-    id: 308,
-    slug: "consistent-hashing",
+    id: "lesson-03-08",
+    slug: "databases-08-consistent-hashing",
     title: "Consistent Hashing",
     content: `
 ## 1. Quick Summary
@@ -648,8 +648,8 @@ class ConsistentHashRing {
     tags: ["consistent-hashing","distributed-systems","sharding","dynamo"]
   },
   {
-    id: 309,
-    slug: "nosql-database-types",
+    id: "lesson-03-09",
+    slug: "databases-09-nosql-database-types",
     title: "NoSQL Database Types (Document, Key-Value, Column, Graph)",
     content: `
 ## 1. Quick Summary
@@ -724,8 +724,8 @@ function recommendNoSQL(options: {
     tags: ["NoSQL","document-database","key-value","column-family","graph-database"]
   },
   {
-    id: 310,
-    slug: "nosql-internals-lsm-trees",
+    id: "lesson-03-10",
+    slug: "databases-10-nosql-internals-lsm-trees",
     title: "NoSQL Internals (LSM Trees, SSTables, Compaction)",
     content: `
 ## 1. Quick Summary
@@ -810,8 +810,8 @@ class LSMTree {
     tags: ["LSM-tree","SSTable","compaction","write-optimized","rocksdb"]
   },
   {
-    id: 311,
-    slug: "cap-theorem",
+    id: "lesson-03-11",
+    slug: "databases-11-cap-theorem",
     title: "CAP Theorem",
     content: `
 ## 1. Quick Summary
@@ -887,8 +887,8 @@ class CAPAnalyzer {
     tags: ["CAP-theorem","distributed-systems","consistency","availability"]
   },
   {
-    id: 312,
-    slug: "pacelc-theorem",
+    id: "lesson-03-12",
+    slug: "databases-12-pacelc-theorem",
     title: "PACELC Theorem",
     content: `
 ## 1. Quick Summary
@@ -969,8 +969,8 @@ function categorize(config: {
     tags: ["PACELC","CAP-theorem","distributed-systems","consistency"]
   },
   {
-    id: 313,
-    slug: "database-transactions-isolation-levels",
+    id: "lesson-03-13",
+    slug: "databases-13-database-transactions-isolation-levels",
     title: "Database Transactions & Isolation Levels",
     content: `
 ## 1. Quick Summary
@@ -1052,8 +1052,8 @@ function getLockBehavior(isolation: Isolation) {
     tags: ["transactions","isolation-levels","MVCC","concurrency-control"]
   },
   {
-    id: 314,
-    slug: "time-series-databases",
+    id: "lesson-03-14",
+    slug: "databases-14-time-series-databases",
     title: "Time Series Databases",
     content: `
 ## 1. Quick Summary
@@ -1137,8 +1137,8 @@ class TimeSeriesDB {
     tags: ["time-series","TSDB","Prometheus","metrics","IoT"]
   },
   {
-    id: 315,
-    slug: "vector-databases",
+    id: "lesson-03-15",
+    slug: "databases-15-vector-databases",
     title: "Vector Databases",
     content: `
 ## 1. Quick Summary

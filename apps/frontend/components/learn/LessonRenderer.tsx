@@ -11,6 +11,136 @@ const COMPONENTS = {
   Callout: CalloutBlock,
   Diagram: DiagramEmbed,
   pre: (props: any) => <CodeBlock {...props} />,
+  h1: (props: any) => (
+    <h1
+      style={{
+        fontSize: '24px',
+        fontWeight: 800,
+        color: 'var(--text-primary)',
+        marginTop: '28px',
+        marginBottom: '12px',
+        letterSpacing: '-0.02em',
+        lineHeight: '1.3',
+      }}
+      {...props}
+    />
+  ),
+  h2: (props: any) => (
+    <h2
+      style={{
+        fontSize: '19px',
+        fontWeight: 700,
+        color: 'var(--text-primary)',
+        marginTop: '26px',
+        marginBottom: '10px',
+        borderBottom: '1px solid var(--border)',
+        paddingBottom: '6px',
+        lineHeight: '1.4',
+      }}
+      {...props}
+    />
+  ),
+  h3: (props: any) => (
+    <h3
+      style={{
+        fontSize: '16px',
+        fontWeight: 700,
+        color: 'var(--text-primary)',
+        marginTop: '20px',
+        marginBottom: '8px',
+      }}
+      {...props}
+    />
+  ),
+  p: (props: any) => (
+    <p
+      style={{
+        fontSize: '14.5px',
+        lineHeight: '1.75',
+        color: 'var(--text-secondary)',
+        marginTop: '0',
+        marginBottom: '14px',
+      }}
+      {...props}
+    />
+  ),
+  ul: (props: any) => (
+    <ul
+      style={{
+        paddingLeft: '22px',
+        marginTop: '0',
+        marginBottom: '14px',
+        listStyleType: 'disc',
+      }}
+      {...props}
+    />
+  ),
+  ol: (props: any) => (
+    <ol
+      style={{
+        paddingLeft: '22px',
+        marginTop: '0',
+        marginBottom: '14px',
+        listStyleType: 'decimal',
+      }}
+      {...props}
+    />
+  ),
+  li: (props: any) => (
+    <li
+      style={{
+        fontSize: '14.5px',
+        lineHeight: '1.7',
+        color: 'var(--text-secondary)',
+        marginBottom: '6px',
+      }}
+      {...props}
+    />
+  ),
+  strong: (props: any) => (
+    <strong
+      style={{
+        fontWeight: 700,
+        color: 'var(--text-primary)',
+      }}
+      {...props}
+    />
+  ),
+  code: (props: any) => (
+    <code
+      style={{
+        fontFamily: 'var(--font-mono)',
+        fontSize: '12px',
+        background: 'var(--bg-elevated)',
+        padding: '2px 5px',
+        borderRadius: '4px',
+        color: '#FF6600',
+        border: '1px solid var(--border)',
+        fontWeight: 600,
+      }}
+      {...props}
+    />
+  ),
+  hr: (props: any) => (
+    <hr
+      style={{
+        border: 'none',
+        borderTop: '1px solid var(--border)',
+        margin: '32px 0',
+      }}
+      {...props}
+    />
+  ),
+  a: (props: any) => (
+    <a
+      style={{
+        color: '#FF6600',
+        textDecoration: 'underline',
+        fontWeight: 500,
+      }}
+      {...props}
+    />
+  ),
 };
 
 interface LessonRendererProps {
@@ -40,18 +170,7 @@ export function LessonRenderer({ mdxSource }: LessonRendererProps) {
   }
 
   return (
-    <div className="prose prose-gray max-w-none
-      prose-headings:font-black prose-headings:tracking-tight
-      prose-h1:text-2xl prose-h2:text-xl prose-h2:mt-10 prose-h3:text-lg
-      prose-p:text-gray-700 prose-p:leading-relaxed
-      prose-a:text-indigo-600 prose-a:no-underline hover:prose-a:underline
-      prose-strong:text-gray-900
-      prose-code:text-indigo-700 prose-code:bg-gray-100 prose-code:px-1.5 prose-code:py-0.5 prose-code:rounded prose-code:text-sm prose-code:before:content-none prose-code:after:content-none
-      prose-blockquote:border-l-indigo-500 prose-blockquote:text-gray-500
-      prose-ul:text-gray-700 prose-ol:text-gray-700
-      prose-li:marker:text-indigo-500
-      prose-hr:border-gray-200
-    ">
+    <div style={{ maxWidth: 'none' }}>
       <MDXRemote {...compiled} components={COMPONENTS} />
     </div>
   );

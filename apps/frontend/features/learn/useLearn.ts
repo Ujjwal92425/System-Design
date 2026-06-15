@@ -53,14 +53,25 @@ export function useTracks() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    let cancelled = false;
     // Try API first, fall back to local curriculum data
     api.get('/learn/tracks')
-      .then(res => setTracks(res.data.data))
-      .catch(() => {
-        // Local curriculum fallback
-        setTracks(getAllTracks());
+      .then(res => {
+        if (cancelled) return;
+        const data = Array.isArray(res.data.data) ? res.data.data : (Array.isArray(res.data) ? res.data : []);
+        setTracks(data);
       })
-      .finally(() => setLoading(false));
+      .catch(() => {
+        if (cancelled) return;
+        try {
+          const local = getAllTracks();
+          setTracks(Array.isArray(local) ? local.filter(t => t && t.slug) : []);
+        } catch {
+          setTracks([]);
+        }
+      })
+      .finally(() => { if (!cancelled) setLoading(false); });
+    return () => { cancelled = true; };
   }, []);
 
   return { tracks, loading, error };

@@ -206,7 +206,7 @@ const tracks = [
 function buildModules(slug: string, lessonsArray: any[]): any[] {
   const track = tracks.find((t) => t.slug === slug);
   if (!track) return [];
-  const moduleLessons = lessonsArray.filter((l) => l.slug.startsWith(slug));
+  const moduleLessons = lessonsArray.filter((l) => l && l.slug && l.slug.startsWith(slug));
   return [
     {
       id: `${slug}-module`,
@@ -238,7 +238,7 @@ function buildModules(slug: string, lessonsArray: any[]): any[] {
 function buildLessonDetails(lessonsArray: any[], slug: string): Record<string, any> {
   const details: Record<string, any> = {};
   const track = tracks.find((t) => t.slug === slug);
-  const moduleLessons = lessonsArray.filter((l) => l.slug.startsWith(slug)).sort((a, b) => {
+  const moduleLessons = lessonsArray.filter((l) => l && l.slug && l.slug.startsWith(slug)).sort((a, b) => {
     const aNum = parseInt(a.slug.split('-').pop() || '0');
     const bNum = parseInt(b.slug.split('-').pop() || '0');
     return aNum - bNum;

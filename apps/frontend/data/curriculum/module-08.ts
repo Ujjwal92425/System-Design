@@ -1,7 +1,7 @@
 ﻿export const module08Lessons = [
   {
     id: 'lesson-08-01',
-    slug: 'design-url-shortener',
+    slug: 'system-design-interviews-01-design-url-shortener',
     title: 'Design URL Shortener (tinyurl)',
     content: `## 1. Quick Summary
 
@@ -202,10 +202,10 @@ CREATE TABLE clicks (
     difficulty: 'INTERMEDIATE',
     companies: ['TinyURL', 'bit.ly', 'Twitter', 'Rebrandly', 'YouTube', 'Amazon'],
     tags: ['url-shortener', 'base62', 'redirect', 'caching', 'analytics', 'key-generation']
-  },,
+  },
   {
     id: 'lesson-08-02',
-    slug: 'design-whatsapp-messenger',
+    slug: 'system-design-interviews-02-design-whatsapp-messenger',
     title: 'Design WhatsApp / Messenger (Chat)',
     content: `## 1. Quick Summary
 
@@ -413,10 +413,10 @@ CREATE TABLE group_participants (
     difficulty: 'INTERMEDIATE',
     companies: ['WhatsApp', 'Meta', 'Facebook Messenger', 'Telegram', 'Apple iMessage', 'Slack'],
     tags: ['chat', 'websocket', 'real-time', 'messaging', 'e2ee', 'fan-out']
-  },,
+  },
   {
     id: 'lesson-08-03',
-    slug: 'design-youtube-netflix',
+    slug: 'system-design-interviews-03-design-youtube-netflix',
     title: 'Design YouTube / Netflix (Video Streaming)',
     content: `## 1. Quick Summary
 
@@ -636,10 +636,10 @@ CREATE TABLE video_views (
     difficulty: 'ADVANCED',
     companies: ['YouTube', 'Netflix', 'Twitch', 'TikTok', 'Disney+', 'Google'],
     tags: ['video-streaming', 'cdn', 'transcoding', 'hls', 'abr', 'recommendation']
-  },,
+  },
   {
     id: 'lesson-08-04',
-    slug: 'design-uber-lyft',
+    slug: 'system-design-interviews-04-design-uber-lyft',
     title: 'Design Uber / Lyft (Ride Hailing)',
     content: `## 1. Quick Summary
 
@@ -873,10 +873,10 @@ CREATE TABLE fare_rules (
     difficulty: 'ADVANCED',
     companies: ['Uber', 'Lyft', 'Didi', 'Gojek', 'Grab'],
     tags: ['ride-hailing', 'spatial-indexing', 'h3', 'dispatch', 'dynamic-pricing', 'eta']
-  },,
+  },
   {
     id: 'lesson-08-05',
-    slug: 'design-twitter-facebook-newsfeed',
+    slug: 'system-design-interviews-05-design-twitter-facebook-newsfeed',
     title: 'Design Twitter / Facebook Feed (Newsfeed)',
     content: `## 1. Quick Summary
 
@@ -1078,10 +1078,10 @@ CREATE TABLE follows (
     difficulty: 'ADVANCED',
     companies: ['Twitter', 'Facebook', 'Instagram', 'LinkedIn', 'Reddit', 'Meta'],
     tags: ['newsfeed', 'timeline', 'social-network', 'fan-out', 'ranking', 'feed']
-  },,
+  },
   {
     id: 'lesson-08-06',
-    slug: 'design-instagram-pinterest',
+    slug: 'system-design-interviews-06-design-instagram-pinterest',
     title: 'Design Instagram / Pinterest (Photo Sharing)',
     content: `## 1. Quick Summary
 
@@ -1283,10 +1283,10 @@ CREATE TABLE media_likes (
     difficulty: 'ADVANCED',
     companies: ['Instagram', 'Pinterest', 'Facebook', 'Flickr', 'VSCO'],
     tags: ['photo-sharing', 'image-processing', 'cdn', 'feed', 'explore', 'storage']
-  },,
+  },
   {
     id: 'lesson-08-07',
-    slug: 'design-dropbox-google-drive',
+    slug: 'system-design-interviews-07-design-dropbox-google-drive',
     title: 'Design Dropbox / Google Drive (File Storage)',
     content: `## 1. Quick Summary
 
@@ -1514,10 +1514,10 @@ CREATE TABLE block_refcount (
     difficulty: 'ADVANCED',
     companies: ['Dropbox', 'Google Drive', 'OneDrive', 'iCloud', 'Box', 'MEGA'],
     tags: ['file-storage', 'sync', 'deduplication', 'versioning', 'block-store', 'collaboration']
-  },,
+  },
   {
     id: 'lesson-08-08',
-    slug: 'design-ecommerce-platform',
+    slug: 'system-design-interviews-08-design-ecommerce-platform',
     title: 'Design Amazon / E-Commerce Platform',
     content: `## 1. Quick Summary
 
@@ -1754,10 +1754,10 @@ CREATE TABLE order_items (
     difficulty: 'ADVANCED',
     companies: ['Amazon', 'Walmart', 'Shopify', 'eBay', 'Alibaba'],
     tags: ['ecommerce', 'catalog', 'cart', 'checkout', 'search', 'inventory', 'recommendation']
-  },,
+  },
   {
     id: 'lesson-08-09',
-    slug: 'design-web-crawler-search-engine',
+    slug: 'system-design-interviews-09-design-web-crawler-search-engine',
     title: 'Design Web Crawler / Search Engine',
     content: `## 1. Quick Summary
 
@@ -1966,10 +1966,10 @@ CREATE TABLE domain_stats (
     difficulty: 'ADVANCED',
     companies: ['Google', 'Bing', 'Microsoft', 'Baidu', 'Common Crawl', 'DuckDuckGo'],
     tags: ['web-crawler', 'search-engine', 'pagerank', 'inverted-index', 'crawling', 'indexing']
-  },,
+  },
   {
     id: 'lesson-08-10',
-    slug: 'design-rate-limiter',
+    slug: 'system-design-interviews-10-design-rate-limiter',
     title: 'Design Rate Limiter',
     content: `## 1. Quick Summary
 
@@ -2215,10 +2215,10 @@ ratelimit:fixed:{key}:{endpoint}:{window_start} -> Counter (INCR)
     difficulty: 'INTERMEDIATE',
     companies: ['Twitter', 'GitHub', 'Stripe', 'AWS', 'Cloudflare', 'Google'],
     tags: ['rate-limiter', 'token-bucket', 'sliding-window', 'redis', 'throttling', 'api-gateway']
-  },,
+  },
   {
     id: 'lesson-08-11',
-    slug: 'design-notification-system',
+    slug: 'system-design-interviews-11-design-notification-system',
     title: 'Design Notification System',
     content: `## 1. Quick Summary
 
@@ -2475,10 +2475,10 @@ CREATE TABLE notification_templates (
     difficulty: 'INTERMEDIATE',
     companies: ['Facebook', 'Twitter', 'Uber', 'Slack', 'Amazon', 'Airbnb'],
     tags: ['notification-system', 'push', 'email', 'sms', 'template-engine', 'delivery']
-  },,
+  },
   {
     id: 'lesson-08-12',
-    slug: 'design-distributed-key-value-store',
+    slug: 'system-design-interviews-12-design-distributed-key-value-store',
     title: 'Design Distributed Key-Value Store',
     content: `## 1. Quick Summary
 
@@ -2711,10 +2711,10 @@ POST   /v1/batch/get
     difficulty: 'ADVANCED',
     companies: ['Amazon DynamoDB', 'Cassandra', 'Redis', 'ScyllaDB', 'Google Bigtable', 'Azure Cosmos DB'],
     tags: ['key-value-store', 'dynamodb', 'consistent-hashing', 'vector-clocks', 'gossip', 'merkle-tree']
-  },,
+  },
   {
     id: 'lesson-08-13',
-    slug: 'design-real-time-leaderboard',
+    slug: 'system-design-interviews-13-design-real-time-leaderboard',
     title: 'Design Real-Time Leaderboard',
     content: `## 1. Quick Summary
 
@@ -2998,10 +2998,10 @@ leaderboard:cache:rank:alice_123:daily:2024-03-15  String (TTL: 1s)
     difficulty: 'INTERMEDIATE',
     companies: ['Redis', 'Twitch', 'Discord', 'EA Sports', 'Supercell', 'Strava'],
     tags: ['leaderboard', 'redis', 'sorted-set', 'gaming', 'ranking', 'real-time']
-  },,
+  },
   {
     id: 'lesson-08-14',
-    slug: 'design-parking-lot-system',
+    slug: 'system-design-interviews-14-design-parking-lot-system',
     title: 'Design Parking Lot System (OO Design + Scale)',
     content: `## 1. Quick Summary
 

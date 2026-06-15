@@ -1,7 +1,7 @@
 ﻿export const module04Lessons = [
   {
-    id: "lesson-cache-01",
-    slug: "caching-fundamentals-cache-hierarchy",
+    id: "lesson-04-01",
+    slug: "caching-cdns-01-caching-fundamentals-cache-hierarchy",
     title: "Caching Fundamentals & Cache Hierarchy",
     content: `## 1. Quick Summary
 
@@ -208,8 +208,8 @@ async function getCachedData(key: string, fetchFn: () => Promise<string>, ttl = 
     tags: ["caching", "cache-hierarchy", "performance", "latency", "locality"]
   },
   {
-    id: "lesson-cache-02",
-    slug: "cache-eviction-policies",
+    id: "lesson-04-02",
+    slug: "caching-cdns-02-cache-eviction-policies",
     title: "Cache Eviction Policies (LRU, LFU, FIFO)",
     content: `## 1. Quick Summary
 
@@ -441,8 +441,8 @@ class TTLCache<K, V> {
     tags: ["LRU", "LFU", "cache-eviction", "FIFO", "TTL"]
   },
   {
-    id: "lesson-cache-03",
-    slug: "caching-patterns",
+    id: "lesson-04-03",
+    slug: "caching-cdns-03-caching-patterns",
     title: "Cache-Aside, Read-Through, Write-Through, Write-Back",
     content: `## 1. Quick Summary
 
@@ -659,8 +659,8 @@ const product = await productCache.get("product-123");
     tags: ["cache-aside", "read-through", "write-through", "write-back", "caching-patterns"]
   },
   {
-    id: "lesson-cache-04",
-    slug: "distributed-caching-redis-memcached",
+    id: "lesson-04-04",
+    slug: "caching-cdns-04-distributed-caching-redis-memcached",
     title: "Distributed Caching (Redis, Memcached)",
     content: `## 1. Quick Summary
 
@@ -912,8 +912,8 @@ class DistributedCache {
     tags: ["Redis", "Memcached", "distributed-caching", "consistent-hashing", "Redis-Cluster"]
   },
   {
-    id: "lesson-cache-05",
-    slug: "cache-invalidation-strategies",
+    id: "lesson-04-05",
+    slug: "caching-cdns-05-cache-invalidation-strategies",
     title: "Cache Invalidation Strategies",
     content: `## 1. Quick Summary
 
@@ -1134,8 +1134,8 @@ class CacheInvalidator {
     tags: ["cache-invalidation", "TTL", "write-through", "event-driven", "consistency"]
   },
   {
-    id: "lesson-cache-06",
-    slug: "content-delivery-network-cdn",
+    id: "lesson-04-06",
+    slug: "caching-cdns-06-content-delivery-network-cdn",
     title: "Content Delivery Network (CDN)",
     content: `## 1. Quick Summary
 
@@ -1346,8 +1346,8 @@ const cdn = new cloudfront.Distribution(this, "CDN", {
     tags: ["CDN", "edge", "content-delivery", "Akamai", "CloudFront"]
   },
   {
-    id: "lesson-cache-07",
-    slug: "edge-computing",
+    id: "lesson-04-07",
+    slug: "caching-cdns-07-edge-computing",
     title: "Edge Computing",
     content: `## 1. Quick Summary
 
@@ -1558,8 +1558,8 @@ export default {
     tags: ["edge-computing", "Cloudflare-Workers", "Lambda@Edge", "CDN", "serverless"]
   },
   {
-    id: "lesson-cache-08",
-    slug: "cdn-cache-invalidation-purging",
+    id: "lesson-04-08",
+    slug: "caching-cdns-08-cdn-cache-invalidation-purging",
     title: "CDN Cache Invalidation & Purging",
     content: `## 1. Quick Summary
 
