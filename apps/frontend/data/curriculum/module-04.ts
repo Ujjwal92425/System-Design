@@ -1,4 +1,4 @@
-export const module04Lessons = [
+﻿export const module04Lessons = [
   {
     id: "lesson-cache-01",
     slug: "caching-fundamentals-cache-hierarchy",

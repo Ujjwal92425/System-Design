@@ -1,4 +1,4 @@
-export const module05Lessons = [
+﻿export const module05Lessons = [
   {
     id: 'lesson-05-01',
     slug: 'distributed-infrastructure-01-load-balancing-algorithms',

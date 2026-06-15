@@ -1,4 +1,4 @@
-export const module02Lessons = [
+ï»¿export const module02Lessons = [
   {
     id: "lesson-api-01",
     slug: "rest-api-design-principles",
@@ -181,9 +181,9 @@ app.get("/users/:id", (req, res) => {
 
 GraphQL is a **specification** with three core components:
 
-1. **Query Language** — Clients write declarative queries selecting specific fields, filtering, paginating, and mutating data.
-2. **Schema Definition Language (SDL)** — Defines types, queries, mutations, and subscriptions as a strongly-typed contract.
-3. **Runtime** — Executes queries against a graph of data sources by invoking **resolvers** — functions that fetch each field's data.
+1. **Query Language** Â— Clients write declarative queries selecting specific fields, filtering, paginating, and mutating data.
+2. **Schema Definition Language (SDL)** Â— Defines types, queries, mutations, and subscriptions as a strongly-typed contract.
+3. **Runtime** Â— Executes queries against a graph of data sources by invoking **resolvers** Â— functions that fetch each field's data.
 
 ## 3. Why It Exists / Problem It Solves
 
@@ -205,11 +205,11 @@ GraphQL solves these by allowing clients to request exactly the fields they need
 
 ## 5. When NOT to Use It / Tradeoffs
 
-- **Simple CRUD apps** — REST is simpler and sufficient
-- **High-performance internal services** — gRPC outperforms GraphQL
-- **File uploads** — GraphQL has no native file handling (use REST endpoints alongside)
-- **Caching** — HTTP caching (ETags, Cache-Control) does not apply naturally to POST-based queries
-- **Complex queries with high depth** — Malicious nested queries can cause DDoS (require query complexity analysis)
+- **Simple CRUD apps** Â— REST is simpler and sufficient
+- **High-performance internal services** Â— gRPC outperforms GraphQL
+- **File uploads** Â— GraphQL has no native file handling (use REST endpoints alongside)
+- **Caching** Â— HTTP caching (ETags, Cache-Control) does not apply naturally to POST-based queries
+- **Complex queries with high depth** Â— Malicious nested queries can cause DDoS (require query complexity analysis)
 
 Tradeoffs: Increased server complexity, query cost analysis needed, N+1 problem requires DataLoader batching, learning curve for teams.
 
@@ -277,7 +277,7 @@ const resolvers = {
 
 ## 8. Real-World Flow Example
 
-**GitHub's GraphQL API — Dashboard Feed:**
+**GitHub's GraphQL API Â— Dashboard Feed:**
 1. Client queries: viewer { login repositories(first: 10) { nodes { name stargazerCount } } }
 2. GitHub validates OAuth token
 3. Viewer resolver fetches authenticated user
@@ -323,10 +323,10 @@ startStandaloneServer(server, { listen: { port: 4000 } });
 
 ## 10. Real Company Use Cases
 
-- **GitHub** — Migrated public API v4 to GraphQL. Powers GitHub.com frontend, GitHub Mobile, and third-party integrations.
-- **Shopify** — Storefront API is GraphQL-only. Merchants query exactly the product/cart data needed.
-- **Meta** — Originally built for Facebook News Feed. Used across Instagram, WhatsApp, and Oculus.
-- **Netflix** — Uses GraphQL (via Apollo Federation) for their TV UI, unifying data from dozens of microservices.
+- **GitHub** Â— Migrated public API v4 to GraphQL. Powers GitHub.com frontend, GitHub Mobile, and third-party integrations.
+- **Shopify** Â— Storefront API is GraphQL-only. Merchants query exactly the product/cart data needed.
+- **Meta** Â— Originally built for Facebook News Feed. Used across Instagram, WhatsApp, and Oculus.
+- **Netflix** Â— Uses GraphQL (via Apollo Federation) for their TV UI, unifying data from dozens of microservices.
 
 ## 11. Common Interview Questions
 
@@ -340,12 +340,12 @@ startStandaloneServer(server, { listen: { port: 4000 } });
 
 ## 12. Related Topics & Next Steps
 
-- **Apollo Federation** — Composing multiple GraphQL services into one
-- **Relay** — Meta's GraphQL client with pagination and caching primitives
-- **GraphQL Subscriptions** — Real-time via WebSockets
-- **DataLoader** — Batching and caching for GraphQL resolvers
-- **Schema Stitching** — Merging remote GraphQL schemas
-- **Persisted Queries** — Whitelisting approved queries for security`,
+- **Apollo Federation** Â— Composing multiple GraphQL services into one
+- **Relay** Â— Meta's GraphQL client with pagination and caching primitives
+- **GraphQL Subscriptions** Â— Real-time via WebSockets
+- **DataLoader** Â— Batching and caching for GraphQL resolvers
+- **Schema Stitching** Â— Merging remote GraphQL schemas
+- **Persisted Queries** Â— Whitelisting approved queries for security`,
     estimatedMin: 14,
     difficulty: "INTERMEDIATE" as const,
     companies: ["Meta", "GitHub", "Shopify", "Netflix"],
@@ -362,10 +362,10 @@ startStandaloneServer(server, { listen: { port: 4000 } });
 ## 2. Definition
 
 **gRPC** (gRPC Remote Procedure Calls) is a modern RPC framework based on the **protobuf** binary serialization format. It defines service contracts in \`.proto\` files and generates client/server stubs in 11+ languages. gRPC supports four service types:
-1. **Unary RPC** — Single request, single response (like REST)
-2. **Server Streaming** — Single request, stream of responses
-3. **Client Streaming** — Stream of requests, single response
-4. **Bidirectional Streaming** — Both sides stream independently
+1. **Unary RPC** Â— Single request, single response (like REST)
+2. **Server Streaming** Â— Single request, stream of responses
+3. **Client Streaming** Â— Stream of requests, single response
+4. **Bidirectional Streaming** Â— Both sides stream independently
 
 **Protocol Buffers** (protobuf) is Google's language-neutral, platform-neutral binary serialization format. It is smaller (3-10x), faster (20-100x), and more type-safe than JSON.
 
@@ -373,10 +373,10 @@ startStandaloneServer(server, { listen: { port: 4000 } });
 
 REST/JSON APIs have significant overhead:
 - **Text serialization** is verbose and slow to parse
-- **No type safety** — JSON schemas (if they exist) are separate from implementation
-- **HTTP/1.1 overhead** — Headers repeated per request, no multiplexing
-- **Manual client generation** — Must hand-write HTTP clients per language
-- **Streaming** — REST has no standardized streaming mechanism
+- **No type safety** Â— JSON schemas (if they exist) are separate from implementation
+- **HTTP/1.1 overhead** Â— Headers repeated per request, no multiplexing
+- **Manual client generation** Â— Must hand-write HTTP clients per language
+- **Streaming** Â— REST has no standardized streaming mechanism
 
 gRPC solves these with binary protobuf, HTTP/2 multiplexing, code generation, and built-in streaming.
 
@@ -384,17 +384,17 @@ gRPC solves these with binary protobuf, HTTP/2 multiplexing, code generation, an
 
 - **Microservice-to-microservice** communication (high throughput, low latency)
 - **Polyglot environments** where services use different languages
-- **Streaming data** — real-time feeds, logs, IoT sensor data, chat
-- **Low-bandwidth / high-latency networks** — mobile, edge devices
-- **Performance-critical paths** — ad serving, financial trading, gaming backends
+- **Streaming data** Â— real-time feeds, logs, IoT sensor data, chat
+- **Low-bandwidth / high-latency networks** Â— mobile, edge devices
+- **Performance-critical paths** Â— ad serving, financial trading, gaming backends
 
 ## 5. When NOT to Use It / Tradeoffs
 
-- **Public-facing browser APIs** — Browsers lack native gRPC support (use gRPC-Web or REST/GraphQL)
-- **Simple CRUD** — REST is simpler and tooling is more mature
-- **Human-readable debugging** — Protobuf is binary; need \`protoc --decode\` to read
-- **Rapid prototyping** — Defining .proto files adds friction vs ad-hoc JSON endpoints
-- **Small teams** — Learning curve for protobuf, code generation, and gRPC tooling
+- **Public-facing browser APIs** Â— Browsers lack native gRPC support (use gRPC-Web or REST/GraphQL)
+- **Simple CRUD** Â— REST is simpler and tooling is more mature
+- **Human-readable debugging** Â— Protobuf is binary; need \`protoc --decode\` to read
+- **Rapid prototyping** Â— Defining .proto files adds friction vs ad-hoc JSON endpoints
+- **Small teams** Â— Learning curve for protobuf, code generation, and gRPC tooling
 
 Tradeoffs: Larger payloads for tiny messages (protobuf overhead), no built-in caching (use Redis), limited browser support, schema evolution requires discipline.
 
@@ -444,7 +444,7 @@ gRPC Client                    gRPC Server
 
 ## 8. Real-World Flow Example
 
-**Netflix — Internal Service Communication:**
+**Netflix Â— Internal Service Communication:**
 1. Playback Service calls \`titleService.GetTitleMetadata(titleId)\` via gRPC
 2. protobuf serializes request (~50 bytes vs ~250 bytes JSON)
 3. HTTP/2 multiplexes this call alongside 50 other active RPCs on one TCP connection
@@ -485,10 +485,10 @@ server.bindAsync("0.0.0.0:50051", ServerCredentials.createInsecure(), () => serv
 
 ## 10. Real Company Use Cases
 
-- **Google** — gRPC powers virtually all internal Google services (AdWords, Search, YouTube, Gmail). Google Cloud API surface uses gRPC alongside REST.
-- **Netflix** — gRPC for service-to-service calls. Java API layer uses gRPC to talk to backend microservices with strict contracts.
-- **Uber** — Uses gRPC for real-time ride matching and driver location streaming. Protobuf schemas reduce bandwidth on mobile networks.
-- **Square** — Migrated from JSON/HTTP to gRPC for internal services, reducing latency by 40% and error rates by 15%.
+- **Google** Â— gRPC powers virtually all internal Google services (AdWords, Search, YouTube, Gmail). Google Cloud API surface uses gRPC alongside REST.
+- **Netflix** Â— gRPC for service-to-service calls. Java API layer uses gRPC to talk to backend microservices with strict contracts.
+- **Uber** Â— Uses gRPC for real-time ride matching and driver location streaming. Protobuf schemas reduce bandwidth on mobile networks.
+- **Square** Â— Migrated from JSON/HTTP to gRPC for internal services, reducing latency by 40% and error rates by 15%.
 
 ## 11. Common Interview Questions
 
@@ -502,11 +502,11 @@ server.bindAsync("0.0.0.0:50051", ServerCredentials.createInsecure(), () => serv
 
 ## 12. Related Topics & Next Steps
 
-- **HTTP/2 & HTTP/3** — Underlying transport protocols
-- **gRPC Gateway** — Generating REST APIs from protobuf definitions
-- **Service Mesh (Istio, Linkerd)** — gRPC-aware traffic management
-- **Connect-Go** — Lightweight gRPC alternative for Go
-- **Cap'n Proto / FlatBuffers** — Alternative zero-copy serialization formats`,
+- **HTTP/2 & HTTP/3** Â— Underlying transport protocols
+- **gRPC Gateway** Â— Generating REST APIs from protobuf definitions
+- **Service Mesh (Istio, Linkerd)** Â— gRPC-aware traffic management
+- **Connect-Go** Â— Lightweight gRPC alternative for Go
+- **Cap'n Proto / FlatBuffers** Â— Alternative zero-copy serialization formats`,
     estimatedMin: 15,
     difficulty: "ADVANCED" as const,
     companies: ["Google", "Netflix", "Uber", "Square"],
@@ -655,11 +655,11 @@ app.get("/status", (req, res) => {
 
 ## 10. Real Company Use Cases
 
-- **Stripe** — WebHooks for payment events (charge.succeeded, invoice.paid). Customers register endpoints. Retries with exponential backoff up to 3 days.
-- **GitHub** — WebHooks for push, PR, issue events. Polling API for non-realtime needs. WebSockets for live collaboration.
-- **Slack** — WebSockets (RTM API) for real-time messaging. WebHooks for outgoing integrations.
-- **Figma** — WebSockets for collaborative editing. Each cursor movement pushed via WS.
-- **WhatsApp** — WebSockets for message delivery. Persistent connection with keepalive pings.
+- **Stripe** Â— WebHooks for payment events (charge.succeeded, invoice.paid). Customers register endpoints. Retries with exponential backoff up to 3 days.
+- **GitHub** Â— WebHooks for push, PR, issue events. Polling API for non-realtime needs. WebSockets for live collaboration.
+- **Slack** Â— WebSockets (RTM API) for real-time messaging. WebHooks for outgoing integrations.
+- **Figma** Â— WebSockets for collaborative editing. Each cursor movement pushed via WS.
+- **WhatsApp** Â— WebSockets for message delivery. Persistent connection with keepalive pings.
 
 ## 11. Common Interview Questions
 
@@ -673,12 +673,12 @@ app.get("/status", (req, res) => {
 
 ## 12. Related Topics & Next Steps
 
-- **Server-Sent Events (SSE)** — Simpler one-directional push over HTTP
-- **WebSocket Security** — wss://, origin checking, rate limiting
-- **WebHook Retry Policies** — Exponential backoff, idempotency keys, dead letter queues
-- **gRPC Streaming** — Bidirectional streaming alternative
-- **Message Queues (RabbitMQ, Kafka)** — Durable event delivery between services
-- **Socket.IO** — WebSocket abstraction layer with fallbacks`,
+- **Server-Sent Events (SSE)** Â— Simpler one-directional push over HTTP
+- **WebSocket Security** Â— wss://, origin checking, rate limiting
+- **WebHook Retry Policies** Â— Exponential backoff, idempotency keys, dead letter queues
+- **gRPC Streaming** Â— Bidirectional streaming alternative
+- **Message Queues (RabbitMQ, Kafka)** Â— Durable event delivery between services
+- **Socket.IO** Â— WebSocket abstraction layer with fallbacks`,
     estimatedMin: 13,
     difficulty: "INTERMEDIATE" as const,
     companies: ["Stripe", "Slack", "GitHub", "Figma"],
@@ -695,13 +695,13 @@ An **API Gateway** is a central entry point that sits between clients and backen
 ## 2. Definition
 
 An **API Gateway** is a server (or layer) that acts as a **reverse proxy**, accepting API calls, applying policies, and forwarding requests to appropriate backend services. Key capabilities include:
-- **Routing** — Map incoming requests to specific services based on path, headers, or query params
-- **Authentication & Authorization** — Validate tokens (JWT, OAuth), enforce policies
-- **Rate Limiting & Throttling** — Enforce per-client or per-API usage quotas
-- **Caching** — Cache responses to reduce backend load
-- **Protocol Translation** — Convert REST to gRPC, HTTP to WebSocket
-- **Request/Response Transformation** — Modify headers, merge responses, strip sensitive fields
-- **Observability** — Logging, metrics, distributed tracing
+- **Routing** Â— Map incoming requests to specific services based on path, headers, or query params
+- **Authentication & Authorization** Â— Validate tokens (JWT, OAuth), enforce policies
+- **Rate Limiting & Throttling** Â— Enforce per-client or per-API usage quotas
+- **Caching** Â— Cache responses to reduce backend load
+- **Protocol Translation** Â— Convert REST to gRPC, HTTP to WebSocket
+- **Request/Response Transformation** Â— Modify headers, merge responses, strip sensitive fields
+- **Observability** Â— Logging, metrics, distributed tracing
 
 ## 3. Why It Exists / Problem It Solves
 
@@ -713,14 +713,14 @@ Without an API Gateway, clients must know the location of every microservice, im
 - **Public-facing APIs** needing unified auth, rate limiting, and documentation
 - **Multi-protocol environments** (REST + gRPC + WebSocket under one domain)
 - **Multi-tenant SaaS platforms** needing per-tenant routing and quotas
-- **Legacy system integration** — expose legacy SOAP services as REST through the gateway
+- **Legacy system integration** Â— expose legacy SOAP services as REST through the gateway
 
 ## 5. When NOT to Use It / Tradeoffs
 
-- **Monolithic applications** with single service — adds unnecessary complexity
-- **Simple 2-3 service architectures** — direct communication is simpler
-- **Latency-critical paths** — Gateway adds network hop (typically 2-5ms)
-- **Small teams** — Gateway is another system to maintain and operate
+- **Monolithic applications** with single service Â— adds unnecessary complexity
+- **Simple 2-3 service architectures** Â— direct communication is simpler
+- **Latency-critical paths** Â— Gateway adds network hop (typically 2-5ms)
+- **Small teams** Â— Gateway is another system to maintain and operate
 
 Tradeoffs: Single point of failure (mitigate with HA deployment), added latency, configuration complexity, potential bottleneck under high traffic.
 
@@ -770,7 +770,7 @@ app.get("/api/v1/dashboard/:userId", async (req, res) => {
 
 ## 8. Real-World Flow Example
 
-**Netflix API Gateway (Zuul) — Browse Homepage:**
+**Netflix API Gateway (Zuul) Â— Browse Homepage:**
 1. Client sends \`GET /api/browse\` to Netflix.com
 2. DNS resolves to AWS CloudFront + ALB
 3. Traffic hits **Zuul** (Netflix's API Gateway)
@@ -805,11 +805,11 @@ app.listen(8080, () => console.log("API Gateway on :8080"));
 
 ## 10. Real Company Use Cases
 
-- **Netflix (Zuul)** — Handles 1M+ requests/second. Routes to 500+ microservices. Implements circuit breakers, retries, timeouts.
-- **Amazon (AWS API Gateway)** — Managed service. Integrates with Lambda, DynamoDB, Step Functions. Supports canary deployments.
-- **Kong** — Open-source gateway used by Yahoo Japan, Samsung, NASA. 500+ plugins.
-- **Apigee (Google)** — Used by Walmart, BMO, ADP for API monetization and developer portals.
-- **Shopify** — Custom gateway handles 600K+ requests/second during Black Friday. Routes to 300+ services.
+- **Netflix (Zuul)** Â— Handles 1M+ requests/second. Routes to 500+ microservices. Implements circuit breakers, retries, timeouts.
+- **Amazon (AWS API Gateway)** Â— Managed service. Integrates with Lambda, DynamoDB, Step Functions. Supports canary deployments.
+- **Kong** Â— Open-source gateway used by Yahoo Japan, Samsung, NASA. 500+ plugins.
+- **Apigee (Google)** Â— Used by Walmart, BMO, ADP for API monetization and developer portals.
+- **Shopify** Â— Custom gateway handles 600K+ requests/second during Black Friday. Routes to 300+ services.
 
 ## 11. Common Interview Questions
 
@@ -822,11 +822,11 @@ app.listen(8080, () => console.log("API Gateway on :8080"));
 
 ## 12. Related Topics & Next Steps
 
-- **Backend-for-Frontend (BFF)** — Per-client-type gateway specialization
-- **Service Mesh (Istio, Linkerd)** — Sidecar proxy for service-to-service
-- **GraphQL Gateway** — Merging multiple GraphQL services (Apollo Federation)
-- **Kong, Traefik, Envoy** — Popular gateway implementations
-- **API Management Platforms** — Monetization, developer portals, analytics`,
+- **Backend-for-Frontend (BFF)** Â— Per-client-type gateway specialization
+- **Service Mesh (Istio, Linkerd)** Â— Sidecar proxy for service-to-service
+- **GraphQL Gateway** Â— Merging multiple GraphQL services (Apollo Federation)
+- **Kong, Traefik, Envoy** Â— Popular gateway implementations
+- **API Management Platforms** Â— Monetization, developer portals, analytics`,
     estimatedMin: 13,
     difficulty: "INTERMEDIATE" as const,
     companies: ["Netflix", "Amazon", "Kong", "Shopify"],
@@ -838,7 +838,7 @@ app.listen(8080, () => console.log("API Gateway on :8080"));
     title: "Authentication vs Authorization",
     content: `## 1. Quick Summary
 
-**Authentication (AuthN)** verifies *who you are* — identity. **Authorization (AuthZ)** verifies *what you are allowed to do* — permissions. AuthN happens first: "Are you who you claim to be?" (password, biometrics, SSO). AuthZ follows: "Can you read this resource?" (roles, policies, ACLs). Confusing these two is the most common security design mistake in system design interviews and production systems.
+**Authentication (AuthN)** verifies *who you are* Â— identity. **Authorization (AuthZ)** verifies *what you are allowed to do* Â— permissions. AuthN happens first: "Are you who you claim to be?" (password, biometrics, SSO). AuthZ follows: "Can you read this resource?" (roles, policies, ACLs). Confusing these two is the most common security design mistake in system design interviews and production systems.
 
 ## 2. Definition
 
@@ -849,15 +849,15 @@ app.listen(8080, () => console.log("API Gateway on :8080"));
 ## 3. Why It Exists / Problem It Solves
 
 Without AuthN, anyone could impersonate anyone else. Without AuthZ, every authenticated user has unlimited access. The separation ensures:
-- **Defense in depth** — Compromised credentials do not grant automatic access to everything
-- **Least privilege** — Users get only the permissions they need
-- **Auditability** — Log who accessed what, separate from who authenticated
-- **Scalable permission management** — Roles and policies scale better than per-user grants
+- **Defense in depth** Â— Compromised credentials do not grant automatic access to everything
+- **Least privilege** Â— Users get only the permissions they need
+- **Auditability** Â— Log who accessed what, separate from who authenticated
+- **Scalable permission management** Â— Roles and policies scale better than per-user grants
 
 ## 4. When to Use It
 
-- **AuthN**: Every application that needs user identity — login pages, API endpoints, mobile apps, CLI tools
-- **AuthZ**: Every application with multiple user roles or varying permission levels — admin panels, multi-tenant SaaS, document sharing, payment systems
+- **AuthN**: Every application that needs user identity Â— login pages, API endpoints, mobile apps, CLI tools
+- **AuthZ**: Every application with multiple user roles or varying permission levels Â— admin panels, multi-tenant SaaS, document sharing, payment systems
 
 Use **RBAC** when permissions map well to job functions (admin, editor, viewer). Use **ABAC** when permissions depend on context (time, location, resource type, relationship).
 
@@ -995,10 +995,10 @@ app.get("/public/data", (req, res) => {
 
 ## 10. Real Company Use Cases
 
-- **Okta** — Identity-as-a-Service. Handles AuthN (SSO, MFA) and AuthZ (policies, app assignment) for thousands of enterprises.
-- **Auth0** — AuthN and AuthZ platform. Social login, enterprise federation, passwordless, fine-grained RBAC/ABAC.
-- **AWS IAM** — Fine-grained authorization for AWS. Combines user policies, group policies, roles, resource policies, permission boundaries, SCPs.
-- **Google Zanzibar** — Global authorization system for Search, Drive, YouTube, Calendar. Inspired SpiceDB.
+- **Okta** Â— Identity-as-a-Service. Handles AuthN (SSO, MFA) and AuthZ (policies, app assignment) for thousands of enterprises.
+- **Auth0** Â— AuthN and AuthZ platform. Social login, enterprise federation, passwordless, fine-grained RBAC/ABAC.
+- **AWS IAM** Â— Fine-grained authorization for AWS. Combines user policies, group policies, roles, resource policies, permission boundaries, SCPs.
+- **Google Zanzibar** Â— Global authorization system for Search, Drive, YouTube, Calendar. Inspired SpiceDB.
 
 ## 11. Common Interview Questions
 
@@ -1011,12 +1011,12 @@ app.get("/public/data", (req, res) => {
 
 ## 12. Related Topics & Next Steps
 
-- **OAuth 2.0 & OIDC** — Delegated authorization and identity protocols
-- **SAML** — Enterprise SSO protocol
-- **WebAuthn / FIDO2** — Passwordless authentication
-- **RBAC vs ABAC vs ReBAC** — Authorization model comparison
-- **Policy-as-Code (OPA, Cedar)** — Declarative authorization policies
-- **Zero Trust Architecture** — "Never trust, always verify"`,
+- **OAuth 2.0 & OIDC** Â— Delegated authorization and identity protocols
+- **SAML** Â— Enterprise SSO protocol
+- **WebAuthn / FIDO2** Â— Passwordless authentication
+- **RBAC vs ABAC vs ReBAC** Â— Authorization model comparison
+- **Policy-as-Code (OPA, Cedar)** Â— Declarative authorization policies
+- **Zero Trust Architecture** Â— "Never trust, always verify"`,
     estimatedMin: 10,
     difficulty: "BEGINNER" as const,
     companies: ["Okta", "Auth0", "AWS", "Google"],
@@ -1028,51 +1028,51 @@ app.get("/public/data", (req, res) => {
     title: "OAuth 2.0 & OpenID Connect",
     content: `## 1. Quick Summary
 
-**OAuth 2.0** is a **delegated authorization framework** that allows a third-party application to obtain limited access to a user's resources without exposing credentials. **OpenID Connect (OIDC)** is an **identity layer** on top of OAuth 2.0 that adds authentication — it lets the client verify the user's identity and obtain basic profile information. Together they power "Login with Google/Facebook/GitHub" and most modern API authorization flows.
+**OAuth 2.0** is a **delegated authorization framework** that allows a third-party application to obtain limited access to a user's resources without exposing credentials. **OpenID Connect (OIDC)** is an **identity layer** on top of OAuth 2.0 that adds authentication Â— it lets the client verify the user's identity and obtain basic profile information. Together they power "Login with Google/Facebook/GitHub" and most modern API authorization flows.
 
 ## 2. Definition
 
 **OAuth 2.0** defines four roles:
-1. **Resource Owner** — The user who owns the data
-2. **Client** — The application requesting access
-3. **Authorization Server** — Issues tokens after authenticating the resource owner
-4. **Resource Server** — Hosts protected resources; validates access tokens
+1. **Resource Owner** Â— The user who owns the data
+2. **Client** Â— The application requesting access
+3. **Authorization Server** Â— Issues tokens after authenticating the resource owner
+4. **Resource Server** Â— Hosts protected resources; validates access tokens
 
 **OAuth 2.0 Grant Types:**
-- **Authorization Code** — Most common; web and mobile apps
-- **Authorization Code + PKCE** — Mobile/native apps (no client secret)
-- **Client Credentials** — Server-to-server (no user involved)
-- **Device Code** — Smart TVs, CLI tools, IoT
-- **Refresh Token** — Obtain new access tokens without re-authentication
+- **Authorization Code** Â— Most common; web and mobile apps
+- **Authorization Code + PKCE** Â— Mobile/native apps (no client secret)
+- **Client Credentials** Â— Server-to-server (no user involved)
+- **Device Code** Â— Smart TVs, CLI tools, IoT
+- **Refresh Token** Â— Obtain new access tokens without re-authentication
 
 **OpenID Connect** adds:
-- **ID Token** — A JWT containing identity claims (sub, name, email, picture)
-- **UserInfo Endpoint** — Fetch additional profile data
-- **Discovery Document** — Standardized metadata endpoint (\`/.well-known/openid-configuration\`)
+- **ID Token** Â— A JWT containing identity claims (sub, name, email, picture)
+- **UserInfo Endpoint** Â— Fetch additional profile data
+- **Discovery Document** Â— Standardized metadata endpoint (\`/.well-known/openid-configuration\`)
 
 ## 3. Why It Exists / Problem It Solves
 
 Before OAuth: sharing access meant giving your password to third-party apps (password anti-pattern). OAuth solves:
-- **Credential exposure** — Never share passwords with third parties
-- **Scoped access** — Limit what an app can do (read-only vs read-write)
-- **Revocability** — Revoke app access without changing your password
-- **Federation** — Single identity across multiple services (SSO)
+- **Credential exposure** Â— Never share passwords with third parties
+- **Scoped access** Â— Limit what an app can do (read-only vs read-write)
+- **Revocability** Â— Revoke app access without changing your password
+- **Federation** Â— Single identity across multiple services (SSO)
 
-OpenID Connect solves: "How does the client know who the user is?" OAuth alone only provides an access token — the client has no standard way to authenticate the user.
+OpenID Connect solves: "How does the client know who the user is?" OAuth alone only provides an access token Â— the client has no standard way to authenticate the user.
 
 ## 4. When to Use It
 
-- **OAuth 2.0**: Any time you need delegated access — "Allow this app to post on my behalf"
-- **OIDC**: Any time you need user identity — "Sign in with Google", enterprise SSO
+- **OAuth 2.0**: Any time you need delegated access Â— "Allow this app to post on my behalf"
+- **OIDC**: Any time you need user identity Â— "Sign in with Google", enterprise SSO
 - **Authorization Code + PKCE**: Default for mobile and SPA applications
 - **Client Credentials**: Backend microservices calling each other, cron jobs
 
 ## 5. When NOT to Use It / Tradeoffs
 
-- **First-party apps** — Simple session-based auth or JWT is simpler
-- **Internal APIs** — API keys or mutual TLS are simpler
-- **Resource-constrained devices** — OAuth handshake is chatty
-- **Real-time low-latency scenarios** — Token validation adds latency
+- **First-party apps** Â— Simple session-based auth or JWT is simpler
+- **Internal APIs** Â— API keys or mutual TLS are simpler
+- **Resource-constrained devices** Â— OAuth handshake is chatty
+- **Real-time low-latency scenarios** Â— Token validation adds latency
 
 Tradeoffs: Complexity (multiple endpoints, grant types), token storage security (XSS/CSRF risks), refresh token rotation complexity, state management for CSRF (PKCE + state parameter).
 
@@ -1186,10 +1186,10 @@ app.get("/callback", async (req, res) => {
 
 ## 10. Real Company Use Cases
 
-- **Google** — OAuth 2.0 + OIDC for Google Sign-In. Millions of apps. Tokens signed with RS256; JWKS endpoint rotates keys periodically.
-- **Microsoft** — Azure AD / Microsoft Identity Platform. OAuth 2.0 + OIDC for Microsoft 365 and Azure.
-- **Meta** — Facebook Login. Custom OAuth 2.0. Returns user data via Graph API.
-- **GitHub** — OAuth 2.0 for third-party integration. Scopes for repo, read:org, workflow. No OIDC.
+- **Google** Â— OAuth 2.0 + OIDC for Google Sign-In. Millions of apps. Tokens signed with RS256; JWKS endpoint rotates keys periodically.
+- **Microsoft** Â— Azure AD / Microsoft Identity Platform. OAuth 2.0 + OIDC for Microsoft 365 and Azure.
+- **Meta** Â— Facebook Login. Custom OAuth 2.0. Returns user data via Graph API.
+- **GitHub** Â— OAuth 2.0 for third-party integration. Scopes for repo, read:org, workflow. No OIDC.
 
 ## 11. Common Interview Questions
 
@@ -1203,11 +1203,11 @@ app.get("/callback", async (req, res) => {
 
 ## 12. Related Topics & Next Steps
 
-- **JWT** — The token format used by OIDC
-- **SAML 2.0** — Enterprise SSO alternative
-- **OAuth 2.1** — Simplified (deprecates implicit grant, password grant)
-- **Token Exchange** — OAuth extension for impersonation
-- **FAPI** — Financial-grade API security profile`,
+- **JWT** Â— The token format used by OIDC
+- **SAML 2.0** Â— Enterprise SSO alternative
+- **OAuth 2.1** Â— Simplified (deprecates implicit grant, password grant)
+- **Token Exchange** Â— OAuth extension for impersonation
+- **FAPI** Â— Financial-grade API security profile`,
     estimatedMin: 16,
     difficulty: "ADVANCED" as const,
     companies: ["Google", "Microsoft", "Meta", "GitHub"],
@@ -1219,7 +1219,7 @@ app.get("/callback", async (req, res) => {
     title: "JWT (JSON Web Tokens)",
     content: `## 1. Quick Summary
 
-**JSON Web Token (JWT)** is a compact, URL-safe token format for representing claims between two parties. It consists of three Base64-encoded segments: **header**, **payload**, and **signature**. JWTs are **self-contained** — the token carries all necessary information (user ID, roles, expiration) without requiring server-side session storage. They are widely used for **stateless authentication**, **OIDC ID tokens**, and **signed API requests**.
+**JSON Web Token (JWT)** is a compact, URL-safe token format for representing claims between two parties. It consists of three Base64-encoded segments: **header**, **payload**, and **signature**. JWTs are **self-contained** Â— the token carries all necessary information (user ID, roles, expiration) without requiring server-side session storage. They are widely used for **stateless authentication**, **OIDC ID tokens**, and **signed API requests**.
 
 ## 2. Definition
 
@@ -1238,26 +1238,26 @@ XbQlCRXET2iNCmICfS-OxVc_XhPKAQFH3_KZpMm_9M0
 ## 3. Why It Exists / Problem It Solves
 
 Traditional session-based auth stores session IDs in server memory or Redis. Problems:
-- **Server memory** — Each session consumes memory
-- **Sticky sessions** — Requests must route to the same server
-- **Horizontal scaling** — Every new server needs access to session store
-- **Mobile/API** — Sessions work poorly for non-browser clients
+- **Server memory** Â— Each session consumes memory
+- **Sticky sessions** Â— Requests must route to the same server
+- **Horizontal scaling** Â— Every new server needs access to session store
+- **Mobile/API** Â— Sessions work poorly for non-browser clients
 
-JWTs solve these by encoding all session data in the token — no database lookup needed per request.
+JWTs solve these by encoding all session data in the token Â— no database lookup needed per request.
 
 ## 4. When to Use It
 
-- **Stateless authentication** — API servers that scale horizontally
-- **OAuth 2.0 / OIDC** — ID tokens are JWTs by spec
-- **Single-use tokens** — Password reset links, email verification, magic links
-- **Service-to-service auth** — Signed requests between microservices
+- **Stateless authentication** Â— API servers that scale horizontally
+- **OAuth 2.0 / OIDC** Â— ID tokens are JWTs by spec
+- **Single-use tokens** Â— Password reset links, email verification, magic links
+- **Service-to-service auth** Â— Signed requests between microservices
 
 ## 5. When NOT to Use It / Tradeoffs
 
-- **Large payloads** — JWTs are sent with every request
-- **Revocation** — Cannot revoke before expiration without a blocklist
-- **Sensitive data** — Payload is Base64-encoded, not encrypted
-- **Short-lived tokens** — Refresh token complexity increases
+- **Large payloads** Â— JWTs are sent with every request
+- **Revocation** Â— Cannot revoke before expiration without a blocklist
+- **Sensitive data** Â— Payload is Base64-encoded, not encrypted
+- **Short-lived tokens** Â— Refresh token complexity increases
 
 Tradeoffs: Token size (500-2000 bytes), no built-in revocation, signature verification cost, clock skew issues.
 
@@ -1318,7 +1318,7 @@ JWT STRUCTURE:
 **Auth0-powered SaaS App:**
 1. User logs in via Auth0's hosted login page (OIDC)
 2. Auth0 issues: access_token + id_token (JWT) + refresh_token
-3. SPA stores tokens in memory (not localStorage — XSS risk)
+3. SPA stores tokens in memory (not localStorage Â— XSS risk)
 4. SPA calls API with \`Authorization: Bearer eyJ...\`
 5. API Gateway validates JWT using Auth0's JWKS endpoint
 6. Gateway extracts \`sub\` from JWT, calls user service
@@ -1362,10 +1362,10 @@ app.get("/me", authenticate, (req, res) => {
 
 ## 10. Real Company Use Cases
 
-- **Auth0** — Issues JWTs for millions of users. JWKS endpoint for token verification.
-- **Google** — OIDC ID tokens are JWTs signed with RS256. JWKS rotates keys periodically.
-- **Amazon Cognito** — Issues JWTs for user pools. Tokens include \`cognito:groups\` for authorization.
-- **Microsoft Azure AD** — JWTs for access and ID tokens. Include \`tid\`, \`oid\`, \`roles\` claims.
+- **Auth0** Â— Issues JWTs for millions of users. JWKS endpoint for token verification.
+- **Google** Â— OIDC ID tokens are JWTs signed with RS256. JWKS rotates keys periodically.
+- **Amazon Cognito** Â— Issues JWTs for user pools. Tokens include \`cognito:groups\` for authorization.
+- **Microsoft Azure AD** Â— JWTs for access and ID tokens. Include \`tid\`, \`oid\`, \`roles\` claims.
 
 ## 11. Common Interview Questions
 
@@ -1379,11 +1379,11 @@ app.get("/me", authenticate, (req, res) => {
 
 ## 12. Related Topics & Next Steps
 
-- **OAuth 2.0 & OIDC** — Protocols that use JWTs as tokens
-- **JWKS (JSON Web Key Set)** — Public key distribution
-- **JWE (JSON Web Encryption)** — Encrypted JWT
-- **PASETO** — Alternative to JWT with fewer footguns
-- **Session vs Token Auth** — Comparing approaches`,
+- **OAuth 2.0 & OIDC** Â— Protocols that use JWTs as tokens
+- **JWKS (JSON Web Key Set)** Â— Public key distribution
+- **JWE (JSON Web Encryption)** Â— Encrypted JWT
+- **PASETO** Â— Alternative to JWT with fewer footguns
+- **Session vs Token Auth** Â— Comparing approaches`,
     estimatedMin: 12,
     difficulty: "INTERMEDIATE" as const,
     companies: ["Auth0", "Google", "Amazon", "Microsoft"],
@@ -1406,9 +1406,9 @@ app.get("/me", authenticate, (req, res) => {
 ## 3. Why It Exists / Problem It Solves
 
 Session auth problems with modern architectures:
-- **Scaling** — Session data must be shared across servers
-- **Mobile/API clients** — Cookies do not work naturally for mobile apps
-- **SPA/cross-origin** — CORS + cookies adds complexity
+- **Scaling** Â— Session data must be shared across servers
+- **Mobile/API clients** Â— Cookies do not work naturally for mobile apps
+- **SPA/cross-origin** Â— CORS + cookies adds complexity
 
 Token auth eliminates server-side session state. Any server can verify a token independently.
 
@@ -1525,10 +1525,10 @@ app.get("/token/profile", authenticateToken, (req, res) => {
 
 ## 10. Real Company Use Cases
 
-- **Stripe** — Token-based (API keys + JWTs for Connect)
-- **GitHub** — Both: session cookie for web, tokens for API
-- **Stack Overflow** — Session-based for web. Sessions in Redis cluster.
-- **Shopify** — Both: session for admin (Rails + Redis), tokens for Storefront API
+- **Stripe** Â— Token-based (API keys + JWTs for Connect)
+- **GitHub** Â— Both: session cookie for web, tokens for API
+- **Stack Overflow** Â— Session-based for web. Sessions in Redis cluster.
+- **Shopify** Â— Both: session for admin (Rails + Redis), tokens for Storefront API
 
 ## 11. Common Interview Questions
 
@@ -1541,12 +1541,12 @@ app.get("/token/profile", authenticateToken, (req, res) => {
 
 ## 12. Related Topics & Next Steps
 
-- **JWT** — The most common token format
-- **HTTP-Only Cookies** — Secure token storage for SPAs
-- **CSRF Protection** — Required for cookie-based auth
-- **SameSite Cookies** — Modern CSRF mitigation
-- **Refresh Token Rotation** — Security best practices
-- **OAuth 2.0 BFF** — Hybrid pattern`,
+- **JWT** Â— The most common token format
+- **HTTP-Only Cookies** Â— Secure token storage for SPAs
+- **CSRF Protection** Â— Required for cookie-based auth
+- **SameSite Cookies** Â— Modern CSRF mitigation
+- **Refresh Token Rotation** Â— Security best practices
+- **OAuth 2.0 BFF** Â— Hybrid pattern`,
     estimatedMin: 12,
     difficulty: "INTERMEDIATE" as const,
     companies: ["Stripe", "GitHub", "Stack Overflow", "Shopify"],
@@ -1558,7 +1558,7 @@ app.get("/token/profile", authenticateToken, (req, res) => {
     title: "API Rate Limiting & Throttling",
     content: `## 1. Quick Summary
 
-**Rate limiting** controls how many requests a client can make to an API within a given time window. **Throttling** is the server's response when a limit is exceeded — requests are delayed or rejected. Rate limiting protects APIs from abuse, ensures fair resource allocation, and maintains quality of service. Common algorithms: **Token Bucket**, **Leaky Bucket**, **Fixed Window**, **Sliding Window Log**, and **Sliding Window Counter**.
+**Rate limiting** controls how many requests a client can make to an API within a given time window. **Throttling** is the server's response when a limit is exceeded Â— requests are delayed or rejected. Rate limiting protects APIs from abuse, ensures fair resource allocation, and maintains quality of service. Common algorithms: **Token Bucket**, **Leaky Bucket**, **Fixed Window**, **Sliding Window Log**, and **Sliding Window Counter**.
 
 ## 2. Definition
 
@@ -1580,17 +1580,17 @@ Without rate limiting: abusive clients exhaust server resources, DDoS attacks ta
 
 ## 4. When to Use It
 
-- **Public APIs** — Essential for all public-facing APIs (GitHub, Stripe, Twitter)
-- **Login endpoints** — Prevent brute-force password guessing
-- **Resource-intensive operations** — Search, reports, data exports
-- **Multi-tenant SaaS** — Enforce per-tenant quotas
-- **Free tier plans** — Differentiate free vs paid usage
+- **Public APIs** Â— Essential for all public-facing APIs (GitHub, Stripe, Twitter)
+- **Login endpoints** Â— Prevent brute-force password guessing
+- **Resource-intensive operations** Â— Search, reports, data exports
+- **Multi-tenant SaaS** Â— Enforce per-tenant quotas
+- **Free tier plans** Â— Differentiate free vs paid usage
 
 ## 5. When NOT to Use It / Tradeoffs
 
-- **Internal low-traffic APIs** — Overhead may not be justified
-- **WebSocket connections** — Rate limiting is per-message, not per-request
-- **Streaming responses** — Hard to apply traditional rate limiting
+- **Internal low-traffic APIs** Â— Overhead may not be justified
+- **WebSocket connections** Â— Rate limiting is per-message, not per-request
+- **Streaming responses** Â— Hard to apply traditional rate limiting
 
 Tradeoffs: Adds latency (checking limits), distributed rate limiting is complex (Redis consistency), user experience impact (throttled requests fail), configuration management.
 
@@ -1691,10 +1691,10 @@ class TokenBucket {
 
 ## 10. Real Company Use Cases
 
-- **GitHub** — Tiered limits: 60/hr (unauth), 5,000/hr (auth), 5,000/min (Apps). Conditional requests exempt.
-- **Twitter/X** — 450 requests/15-min for v2 API. Separate limits for media, DMs, search.
-- **Stripe** — 100 read ops/s, 100 write ops/s per key. Idempotent requests do not count.
-- **Google Maps API** — Per-key quota with $200/month free. 300 req/min rate limit.
+- **GitHub** Â— Tiered limits: 60/hr (unauth), 5,000/hr (auth), 5,000/min (Apps). Conditional requests exempt.
+- **Twitter/X** Â— 450 requests/15-min for v2 API. Separate limits for media, DMs, search.
+- **Stripe** Â— 100 read ops/s, 100 write ops/s per key. Idempotent requests do not count.
+- **Google Maps API** Â— Per-key quota with $200/month free. 300 req/min rate limit.
 
 ## 11. Common Interview Questions
 
@@ -1707,11 +1707,11 @@ class TokenBucket {
 
 ## 12. Related Topics & Next Steps
 
-- **API Quotas** — Long-term usage limits (daily, monthly)
-- **Concurrency Limiting** — Limiting simultaneous connections
-- **Circuit Breakers** — Protecting downstream services
-- **Backpressure** — Flow control in distributed systems
-- **Redis Lua Scripts** — Atomic rate limit operations`,
+- **API Quotas** Â— Long-term usage limits (daily, monthly)
+- **Concurrency Limiting** Â— Limiting simultaneous connections
+- **Circuit Breakers** Â— Protecting downstream services
+- **Backpressure** Â— Flow control in distributed systems
+- **Redis Lua Scripts** Â— Atomic rate limit operations`,
     estimatedMin: 12,
     difficulty: "INTERMEDIATE" as const,
     companies: ["GitHub", "Twitter", "Stripe", "Google"],
@@ -1728,11 +1728,11 @@ class TokenBucket {
 ## 2. Definition
 
 API versioning allows multiple API versions to coexist. Strategies:
-1. **URI Path** — \`/api/v1/users\`. Most common, simplest to route.
-2. **Request Header** — \`Accept: application/vnd.myapp.v2+json\`. Clean URLs, harder to test.
-3. **Query Parameter** — \`/api/users?version=2\`. Simple but clutters URLs.
-4. **Custom Header** — \`X-API-Version: 2\`. No standard, hidden from docs.
-5. **No Versioning** — Add fields but never remove. Requires strict discipline.
+1. **URI Path** Â— \`/api/v1/users\`. Most common, simplest to route.
+2. **Request Header** Â— \`Accept: application/vnd.myapp.v2+json\`. Clean URLs, harder to test.
+3. **Query Parameter** Â— \`/api/users?version=2\`. Simple but clutters URLs.
+4. **Custom Header** Â— \`X-API-Version: 2\`. No standard, hidden from docs.
+5. **No Versioning** Â— Add fields but never remove. Requires strict discipline.
 
 ## 3. Why It Exists / Problem It Solves
 
@@ -1743,13 +1743,13 @@ Without versioning: every API change breaks existing clients, mobile apps on old
 - **Public APIs** consumed by third parties (Stripe, Twilio, GitHub)
 - **Mobile backends** where app versions are out of your control
 - **APIs with long-lived integrations** (enterprise customers)
-- **Breaking changes** — removing fields, changing types, altering behavior
+- **Breaking changes** Â— removing fields, changing types, altering behavior
 
 ## 5. When NOT to Use It / Tradeoffs
 
-- **Internal microservices** — Use backward compatibility and contract testing
-- **Early-stage products** — Premature versioning adds complexity
-- **GraphQL APIs** — Schema evolution via deprecation (no separate versions)
+- **Internal microservices** Â— Use backward compatibility and contract testing
+- **Early-stage products** Â— Premature versioning adds complexity
+- **GraphQL APIs** Â— Schema evolution via deprecation (no separate versions)
 
 Tradeoffs: Multiple code paths to maintain, increased testing surface, legacy version tech debt.
 
@@ -1839,10 +1839,10 @@ app.get("/api/v1/sunset", (req, res) => {
 
 ## 10. Real Company Use Cases
 
-- **Stripe** — Date-based header versioning. Weekly releases. Versions maintained for 2+ years.
-- **Twilio** — URI path: \`/2010-04-01/Accounts/\`. Version as date in URL.
-- **GitHub** — Media type: \`Accept: application/vnd.github.v3+json\`. V3 active 10+ years.
-- **Salesforce** — URI path with major.minor: \`/services/data/v58.0/\`.
+- **Stripe** Â— Date-based header versioning. Weekly releases. Versions maintained for 2+ years.
+- **Twilio** Â— URI path: \`/2010-04-01/Accounts/\`. Version as date in URL.
+- **GitHub** Â— Media type: \`Accept: application/vnd.github.v3+json\`. V3 active 10+ years.
+- **Salesforce** Â— URI path with major.minor: \`/services/data/v58.0/\`.
 
 ## 11. Common Interview Questions
 
@@ -1855,11 +1855,11 @@ app.get("/api/v1/sunset", (req, res) => {
 
 ## 12. Related Topics & Next Steps
 
-- **OpenAPI Versioning** — Documenting versioned APIs
-- **Semantic Versioning** — MAJOR.MINOR.PATCH for APIs
-- **Backward Compatibility** — Field addition, nullable fields, defaults
-- **API Deprecation Policies** — Sunset headers, deprecation notices
-- **Contract Testing** — Pact, Spring Cloud Contract`,
+- **OpenAPI Versioning** Â— Documenting versioned APIs
+- **Semantic Versioning** Â— MAJOR.MINOR.PATCH for APIs
+- **Backward Compatibility** Â— Field addition, nullable fields, defaults
+- **API Deprecation Policies** Â— Sunset headers, deprecation notices
+- **Contract Testing** Â— Pact, Spring Cloud Contract`,
     estimatedMin: 10,
     difficulty: "BEGINNER" as const,
     companies: ["Stripe", "Twilio", "GitHub", "Google"],
@@ -1895,17 +1895,17 @@ Idempotency solves: duplicate processing, inconsistent state, financial errors, 
 
 ## 4. When to Use It
 
-- **Payment processing** — Charge, refund, transfer operations (critical)
-- **Order creation** — Prevent duplicate orders on retry
-- **Resource creation** — POST endpoints where duplicates are harmful
-- **Any side-effect operation** — Sending emails, provisioning resources
-- **Client retry logic** — All non-idempotent mutating endpoints
+- **Payment processing** Â— Charge, refund, transfer operations (critical)
+- **Order creation** Â— Prevent duplicate orders on retry
+- **Resource creation** Â— POST endpoints where duplicates are harmful
+- **Any side-effect operation** Â— Sending emails, provisioning resources
+- **Client retry logic** Â— All non-idempotent mutating endpoints
 
 ## 5. When NOT to Use It / Tradeoffs
 
-- **Read operations** — GET is already idempotent
-- **Operations that should repeat** — Logging, analytics tracking
-- **High-throughput, low-risk operations** — Cost may not justify guarantee
+- **Read operations** Â— GET is already idempotent
+- **Operations that should repeat** Â— Logging, analytics tracking
+- **High-throughput, low-risk operations** Â— Cost may not justify guarantee
 
 Tradeoffs: Storage cost (keys + responses), lookup latency, key management (expiration, cleanup), key collision risk.
 
@@ -1918,7 +1918,7 @@ Client                                    Server
   |<-- 200 { id: "ch_1" }                   |
   |  (Store response by key)                |
   |                                         |
-  |  [Network failure — retry]              |
+  |  [Network failure Â— retry]              |
   |                                         |
   |-- POST /charges (idempotency-key: u1) -->|
   |  (Key found ? return cached response)   |
@@ -2030,10 +2030,10 @@ async function createChargeWithRetry(chargeData: any, maxRetries = 3): Promise<a
 
 ## 10. Real Company Use Cases
 
-- **Stripe** — Gold standard. Every mutating endpoint supports \`Idempotency-Key\`. 24-hour TTL. Returns \`Idempotent-Replayed: true\`.
-- **Square** — \`idempotency_key\` required for all payment endpoints. 45-day retention.
-- **PayPal** — \`PayPal-Request-Id\` header. Used across Payments, Payouts, Invoicing.
-- **AWS** — \`IdempotencyToken\` for certain EC2 and Step Functions API calls.
+- **Stripe** Â— Gold standard. Every mutating endpoint supports \`Idempotency-Key\`. 24-hour TTL. Returns \`Idempotent-Replayed: true\`.
+- **Square** Â— \`idempotency_key\` required for all payment endpoints. 45-day retention.
+- **PayPal** Â— \`PayPal-Request-Id\` header. Used across Payments, Payouts, Invoicing.
+- **AWS** Â— \`IdempotencyToken\` for certain EC2 and Step Functions API calls.
 
 ## 11. Common Interview Questions
 
@@ -2047,12 +2047,12 @@ async function createChargeWithRetry(chargeData: any, maxRetries = 3): Promise<a
 
 ## 12. Related Topics & Next Steps
 
-- **Exactly-Once Delivery** — Guaranteeing message delivery semantics
-- **Distributed Transactions** — Two-phase commit, Saga pattern
-- **Retry Strategies** — Exponential backoff, jitter, circuit breakers
-- **Optimistic Locking** — Version-based concurrency control
-- **Saga Pattern** — Long-running transactions with compensation
-- **Webhook Retries** — Idempotent webhook delivery`,
+- **Exactly-Once Delivery** Â— Guaranteeing message delivery semantics
+- **Distributed Transactions** Â— Two-phase commit, Saga pattern
+- **Retry Strategies** Â— Exponential backoff, jitter, circuit breakers
+- **Optimistic Locking** Â— Version-based concurrency control
+- **Saga Pattern** Â— Long-running transactions with compensation
+- **Webhook Retries** Â— Idempotent webhook delivery`,
     estimatedMin: 13,
     difficulty: "ADVANCED" as const,
     companies: ["Stripe", "Square", "PayPal", "AWS"],

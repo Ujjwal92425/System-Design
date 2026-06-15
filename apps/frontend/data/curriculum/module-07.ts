@@ -1,4 +1,4 @@
-export const module07Lessons = [
+﻿export const module07Lessons = [
   {
     id: 'lesson-07-01',
     slug: 'advanced-distributed-systems-01-distributed-consensus',

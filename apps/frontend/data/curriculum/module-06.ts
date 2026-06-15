@@ -1,4 +1,4 @@
-export const module06Lessons = [
+﻿export const module06Lessons = [
   {
     id: 'lesson-06-01',
     slug: 'architecture-patterns-01-monolithic-vs-microservices',

@@ -1,4 +1,4 @@
-export const module08Lessons = [
+﻿export const module08Lessons = [
   {
     id: 'lesson-08-01',
     slug: 'design-url-shortener',
