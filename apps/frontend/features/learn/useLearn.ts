@@ -1,7 +1,12 @@
 'use client';
 
 import { api } from '../../lib/api';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
+import {
+  getAllTracks,
+  getTrackBySlug,
+  getLessonBySlug,
+} from '../../data/curriculum/index';
 
 export interface TrackSummary {
   id: string;
@@ -48,9 +53,13 @@ export function useTracks() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    // Try API first, fall back to local curriculum data
     api.get('/learn/tracks')
       .then(res => setTracks(res.data.data))
-      .catch(err => setError(err.message))
+      .catch(() => {
+        // Local curriculum fallback
+        setTracks(getAllTracks());
+      })
       .finally(() => setLoading(false));
   }, []);
 
@@ -66,7 +75,10 @@ export function useTrack(slug: string) {
     if (!slug) return;
     api.get(`/learn/tracks/${slug}`)
       .then(res => setTrack(res.data.data))
-      .catch(err => setError(err.message))
+      .catch(() => {
+        // Local curriculum fallback
+        setTrack(getTrackBySlug(slug));
+      })
       .finally(() => setLoading(false));
   }, [slug]);
 
@@ -117,48 +129,61 @@ export function useLesson(slug: string) {
 
   useEffect(() => {
     if (!slug) return;
+    // Try API first, fall back to local curriculum data
     api.get(`/learn/lessons/${slug}`)
       .then(res => setLesson(res.data.data))
-      .catch(err => setError(err.message))
+      .catch(() => {
+        // Local curriculum fallback
+        const local = getLessonBySlug(slug);
+        if (local) {
+          setLesson(local as LessonDetail);
+        } else {
+          setError(`Lesson "${slug}" not found`);
+        }
+      })
       .finally(() => setLoading(false));
   }, [slug]);
 
-  /**
-   * General-purpose state updater — sends only the fields provided.
-   * Covers IN_PROGRESS marking, resumeState persistence, notes, and COMPLETE.
-   */
-  const updateState = async (
+  const updateState = useCallback(async (
     status?: 'NOT_STARTED' | 'IN_PROGRESS' | 'COMPLETE',
     resumeState?: { scrollPercent: number } | null,
     notes?: string
   ) => {
     if (!lesson) return;
-    await api.post('/learn/progress/state', {
-      lessonId: lesson.id,
-      ...(status      !== undefined ? { status }      : {}),
-      ...(resumeState !== undefined ? { resumeState } : {}),
-      ...(notes       !== undefined ? { notes }       : {}),
-    });
+    try {
+      await api.post('/learn/progress/state', {
+        lessonId: lesson.id,
+        ...(status !== undefined ? { status } : {}),
+        ...(resumeState !== undefined ? { resumeState } : {}),
+        ...(notes !== undefined ? { notes } : {}),
+      });
+    } catch {
+      // Silently fail for local content — progress isn't persisted
+    }
     setLesson(prev => {
       if (!prev) return null;
       const next = { ...prev.userState };
-      if (status      !== undefined) next.status      = status;
+      if (status !== undefined) next.status = status;
       if (resumeState !== undefined) next.resumeState = resumeState;
-      if (notes       !== undefined) next.notes       = notes;
+      if (notes !== undefined) next.notes = notes;
       return { ...prev, userState: next };
     });
-  };
+  }, [lesson]);
 
-  const markComplete = () => updateState('COMPLETE');
+  const markComplete = useCallback(() => updateState('COMPLETE'), [updateState]);
 
-  const toggleBookmark = async () => {
+  const toggleBookmark = useCallback(async () => {
     if (!lesson) return;
     const newVal = !lesson.userState.bookmarked;
-    await api.post('/learn/progress/bookmark', { lessonId: lesson.id, bookmarked: newVal });
+    try {
+      await api.post('/learn/progress/bookmark', { lessonId: lesson.id, bookmarked: newVal });
+    } catch {
+      // Silently fail for local content
+    }
     setLesson(prev =>
       prev ? { ...prev, userState: { ...prev.userState, bookmarked: newVal } } : null
     );
-  };
+  }, [lesson]);
 
   return { lesson, loading, error, updateState, markComplete, toggleBookmark };
 }
