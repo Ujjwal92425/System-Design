@@ -9,6 +9,7 @@ import { useSimulation } from '@/features/simulation/useSimulation';
 import { FlowCanvas } from '@/components/canvas/FlowCanvas';
 import { CanvasSidebar } from '@/components/canvas/CanvasSidebar';
 import { SimulationPanel } from '@/components/canvas/panels/SimulationPanel';
+import { InspectorPanel } from '@/components/canvas/panels/InspectorPanel';
 import { useInterviewSession } from '@/features/interview/useInterviewSession';
 import { Timer } from '@/components/interview/Timer';
 import { RequirementsPanel } from '@/components/interview/RequirementsPanel';
@@ -84,7 +85,6 @@ export default function CanvasWorkspace({ params }: { params: Promise<{ designId
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(true);
-  const [selectedNodeData, setSelectedNodeData] = useState<any>(null);
   const [simHeight, setSimHeight] = useState(DEFAULT_SIM_HEIGHT);
   const [inspectorOpen, setInspectorOpen] = useState(true);
 
@@ -119,11 +119,6 @@ export default function CanvasWorkspace({ params }: { params: Promise<{ designId
       window.removeEventListener('canvas-redo', handleRedo);
     };
   }, [undo, redo]);
-
-  useEffect(() => {
-    const sel = nodes.find((n) => n.selected);
-    setSelectedNodeData(sel || null);
-  }, [nodes]);
 
   const loadDesign = async () => {
     try {
@@ -185,12 +180,24 @@ export default function CanvasWorkspace({ params }: { params: Promise<{ designId
     } catch { alert('Failed to update workspace settings'); }
   };
 
+  const NODE_DEFAULTS: Record<string, Record<string, any>> = {
+    LOAD_BALANCER: { routingAlgorithm: 'round_robin' },
+    CDN: { hitRatioOverride: 90 },
+    WEB_SERVER: { threadPoolSize: 200, requestTimeoutMs: 10000 },
+    RATE_LIMITER: { rateLimitQps: 2000, rateLimiterType: 'token_bucket' },
+    DATABASE_SQL: { readReplicaCount: 0, connectionPoolSize: 50, replicationLagMs: 100 },
+    DATABASE_NOSQL: { readReplicaCount: 0, connectionPoolSize: 50, replicationLagMs: 100 },
+    CACHE: { evictionPolicy: 'lru', ttlSeconds: 3600 },
+    QUEUE: { processingRate: 3000 },
+  };
+
   const handleAddNode = useCallback((item: NodeCategoryItem) => {
+    const defaults = NODE_DEFAULTS[item.type] || {};
     const newNode: CanvasNode = {
       id: `node-${Date.now()}`,
       type: item.type,
       position: { x: 200 + Math.random() * 200, y: 150 + Math.random() * 200 },
-      data: { label: `${item.label} ${nodes.length + 1}`, qps: 1000, latency: 10 },
+      data: { label: `${item.label} ${nodes.length + 1}`, qps: 1000, latency: 10, ...defaults },
     };
     addNode(newNode);
   }, [nodes.length, addNode]);
@@ -285,16 +292,6 @@ export default function CanvasWorkspace({ params }: { params: Promise<{ designId
     link.click();
   }, []);
 
-  const handleInspectorChange = useCallback((field: string, value: any) => {
-    if (!selectedNodeData) return;
-    const updated = nodes.map((n) =>
-      n.id === selectedNodeData.id
-        ? { ...n, data: { ...n.data, [field]: value } }
-        : n
-    );
-    setNodes(updated);
-  }, [selectedNodeData, nodes, setNodes]);
-
   const handleRestoreVersion = async (vNum: number) => {
     if (!confirm(`Restore to version v${vNum}? This creates a new checkpoint.`)) return;
     try {
@@ -331,8 +328,6 @@ export default function CanvasWorkspace({ params }: { params: Promise<{ designId
       </div>
     );
   }
-
-  const selected = nodes.find((n) => n.selected);
 
   return (
     <div className="flex flex-col h-dvh overflow-hidden bg-yc-bg">
@@ -551,93 +546,8 @@ export default function CanvasWorkspace({ params }: { params: Promise<{ designId
                 <PanelRight className="w-4 h-4" />
               </button>
             </div>
-
-          <div className="p-4">
-            {!selected ? (
-              <div className="text-center py-12 text-yc-text-muted">
-                <Settings className="w-7 h-7 mx-auto mb-3 opacity-40" />
-                <p className="text-xs">No element selected</p>
-                <p className="text-[11px] text-yc-text-muted mt-1">Click any node to inspect and configure.</p>
-              </div>
-            ) : (
-              <div className="space-y-4">
-                <div className="flex items-center gap-2.5 pb-3 border-b border-yc-border">
-                  <div className="text-yc-accent">
-                    <Sparkles className="w-4 h-4" />
-                  </div>
-                  <div>
-                    <h4 className="text-xs font-semibold text-yc-text capitalize">
-                      {selected.type.toLowerCase().replace(/_/g, ' ')}
-                    </h4>
-                    <span className="text-[9px] text-yc-text-muted font-mono">ID: {selected.id}</span>
-                  </div>
-                </div>
-
-                <div className="space-y-3">
-                  <div>
-                    <label className="text-[10px] text-yc-text-muted font-semibold font-mono block mb-1">DISPLAY LABEL</label>
-                    <input
-                      type="text"
-                      value={selected.data.label || ''}
-                      onChange={(e) => handleInspectorChange('label', e.target.value)}
-                      className="w-full px-2.5 py-1.5 text-xs bg-yc-bg border border-yc-border rounded-lg text-yc-text focus:outline-none focus:border-yc-accent"
-                    />
-                  </div>
-                  <div>
-                    <label className="text-[10px] text-yc-text-muted font-semibold font-mono block mb-1">CAPACITY (QPS)</label>
-                    <input
-                      type="number"
-                      value={selected.data.qps || 1000}
-                      onChange={(e) => handleInspectorChange('qps', parseInt(e.target.value) || 0)}
-                      className="w-full px-2.5 py-1.5 text-xs bg-yc-bg border border-yc-border rounded-lg text-yc-text focus:outline-none focus:border-yc-accent"
-                    />
-                  </div>
-                  <div>
-                    <label className="text-[10px] text-yc-text-muted font-semibold font-mono block mb-1">LATENCY (MS)</label>
-                    <input
-                      type="number"
-                      value={selected.data.latency || 10}
-                      onChange={(e) => handleInspectorChange('latency', parseInt(e.target.value) || 0)}
-                      className="w-full px-2.5 py-1.5 text-xs bg-yc-bg border border-yc-border rounded-lg text-yc-text focus:outline-none focus:border-yc-accent"
-                    />
-                  </div>
-                </div>
-
-                <div className="pt-3 border-t border-yc-border">
-                  <span className="text-[10px] text-yc-text-muted font-semibold font-mono block mb-2">CONNECTED PATHS</span>
-                  <div className="space-y-1">
-                    {edges.filter(e => e.source === selected.id || e.target === selected.id).map(e => {
-                      const src = nodes.find(n => n.id === e.source);
-                      const tgt = nodes.find(n => n.id === e.target);
-                      return (
-                        <div key={e.id} className="flex items-center justify-between px-2.5 py-1.5 bg-yc-bg rounded-lg border border-yc-border">
-                          <span className="text-[10px] text-yc-text-muted font-mono truncate">
-                            {src?.data?.label || '?'} &rarr; {tgt?.data?.label || '?'}
-                          </span>
-                          <button
-                            onClick={() => setEdges(edges.filter(ed => ed.id !== e.id))}
-                            className="text-yc-text-muted hover:text-red-500 transition ml-2 flex-shrink-0"
-                            aria-label="Delete edge"
-                          >
-                            <Trash className="w-3 h-3" />
-                          </button>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-
-                <button
-                  onClick={deleteSelected}
-                  className="w-full py-2 bg-red-50 border border-red-200 text-red-600 rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 hover:bg-red-100 transition"
-                >
-                  <Trash className="w-3.5 h-3.5" />
-                  Delete Element
-                </button>
-              </div>
-            )}
-          </div>
-        </aside>
+            <InspectorPanel />
+          </aside>
         )}
 
         {/* Mobile inspector toggle button */}

@@ -36,6 +36,9 @@ const workerCode = `
       trafficQps = payload.trafficQps ?? trafficQps;
       scenario = payload.scenario ?? scenario;
       failedNodes = payload.failedNodes ?? failedNodes;
+    } else if (type === 'UPDATE_GRAPH') {
+      graphNodes = payload.nodes || [];
+      graphEdges = payload.edges || [];
     }
   };
 
@@ -47,184 +50,215 @@ const workerCode = `
     }, 1000);
   }
 
+  function erlangC(lmbda, mu, c) {
+    var rho = lmbda / (c * mu);
+    if (rho >= 1) return 1;
+    function fact(n) { if (n <= 1) return 1; var r = 1; for (var i = 2; i <= n; i++) r *= i; return r; }
+    var sum = 0;
+    for (var k = 0; k < c; k++) sum += Math.pow(c * rho, k) / fact(k);
+    var top = Math.pow(c * rho, c) / (fact(c) * (1 - rho));
+    return top / (sum + top);
+  }
+
   function runSimulationTick() {
-    // 1. Calculate active QPS based on scenario
-    let currentInputQps = trafficQps;
+    var currentInputQps = trafficQps;
     if (scenario === 'spike') {
-      // Periodic traffic spikes every 15 ticks
-      const phase = tickCount % 15;
-      if (phase >= 3 && phase <= 7) {
-        currentInputQps = trafficQps * 3.5; // 3.5x traffic surge
-      }
+      var phase = tickCount % 15;
+      if (phase >= 3 && phase <= 7) currentInputQps = trafficQps * 3.5;
     }
 
-    // 2. Build adjacency mapping
-    const adj = {};
-    const incomingCount = {};
-    
-    graphNodes.forEach(n => {
-      adj[n.id] = [];
-      incomingCount[n.id] = 0;
+    var adj = {}, incomingCount = {};
+    graphNodes.forEach(function(n) { adj[n.id] = []; incomingCount[n.id] = 0; });
+    graphEdges.forEach(function(e) {
+      if (adj[e.source]) adj[e.source].push(e.target);
+      if (incomingCount[e.target] !== undefined) incomingCount[e.target]++;
     });
 
-    graphEdges.forEach(e => {
-      if (adj[e.source]) {
-        adj[e.source].push(e.target);
-      }
-      if (incomingCount[e.target] !== undefined) {
-        incomingCount[e.target]++;
-      }
-    });
+    var entrypoints = graphNodes.filter(function(n) { return incomingCount[n.id] === 0; });
+    if (entrypoints.length === 0 && graphNodes.length > 0) entrypoints = [graphNodes[0]];
 
-    // Find entrypoint nodes (nodes with 0 incoming connections or Load Balancers)
-    let entrypoints = graphNodes.filter(n => incomingCount[n.id] === 0);
-    if (entrypoints.length === 0 && graphNodes.length > 0) {
-      // Fallback: use first node
-      entrypoints = [graphNodes[0]];
-    }
-
-    // 3. Traversal traffic routing
-    const nodeMetrics = {};
-    graphNodes.forEach(n => {
+    var nodeMetrics = {};
+    graphNodes.forEach(function(n) {
       nodeMetrics[n.id] = {
-        id: n.id,
-        label: n.data.label || n.type,
-        type: n.type,
-        qps: 0,
-        latency: 0,
-        errorRate: 0,
-        cpu: 0,
-        memory: 0
+        id: n.id, label: n.data && n.data.label || n.type, type: n.type,
+        qps: 0, latency: 0, errorRate: 0, cpu: 0, memory: 0, queueDepth: 0,
+        cacheHitRate: 0, readReplicasUsed: 0
       };
     });
 
-    // BFS queue for traffic propagation
-    const queue = [];
-    entrypoints.forEach(ep => {
-      queue.push({ id: ep.id, load: currentInputQps / entrypoints.length });
-    });
-
-    const visited = {};
+    var queue = [];
+    entrypoints.forEach(function(ep) { queue.push({ id: ep.id, load: currentInputQps / entrypoints.length }); });
+    var visited = {};
+    var lbRoundRobinCounter = {};
 
     while (queue.length > 0) {
-      const { id, load } = queue.shift();
-      const node = graphNodes.find(n => n.id === id);
+      var item = queue.shift();
+      var id = item.id;
+      var load = item.load;
+      var node = graphNodes.find(function(n) { return n.id === id; });
       if (!node) continue;
 
-      // Accumulate load on this node
       nodeMetrics[id].qps += load;
-      
       if (visited[id]) continue;
       visited[id] = true;
 
-      // Compute individual node degradation
-      const isFailed = failedNodes.includes(id);
-      const isChaosActive = scenario === 'chaos' && (tickCount % 10 >= 6);
-      
-      // Node specifications
-      const nodeSpecType = node.type || '';
-      let capacity = 3000;
-      let baseLatency = 5;
-      
-      if (nodeSpecType.includes('DATABASE')) {
-        capacity = 800;
-        baseLatency = 40;
-      } else if (nodeSpecType.includes('CACHE')) {
-        capacity = 10000;
-        baseLatency = 2;
-      } else if (nodeSpecType.includes('WEB_SERVER')) {
-        capacity = 2500;
-        baseLatency = 10;
-      }
+      var nodeData = node.data || {};
+      var isFailed = failedNodes.indexOf(id) >= 0;
+      var isChaosActive = scenario === 'chaos' && (tickCount % 10 >= 6);
+      var nodeSpecType = node.type || '';
+      var capacity = 3000, baseLatency = 5;
 
-      // Compute outputs
-      let nodeQps = nodeMetrics[id].qps;
-      let nodeLatency = baseLatency;
-      let nodeErrorRate = 0;
+      if (nodeSpecType.indexOf('DATABASE') >= 0) { capacity = 800; baseLatency = 40; }
+      else if (nodeSpecType.indexOf('CACHE') >= 0) { capacity = 10000; baseLatency = 2; }
+      else if (nodeSpecType.indexOf('WEB_SERVER') >= 0 || nodeSpecType === 'WEB_SERVER') { capacity = 2500; baseLatency = 10; }
+
+      var nodeQps = nodeMetrics[id].qps;
+      var nodeLatency = baseLatency;
+      var nodeErrorRate = 0;
+      var queueDepth = 0;
 
       if (isFailed) {
-        nodeErrorRate = 100;
-        nodeLatency = 5000;
+        nodeErrorRate = 100; nodeLatency = 5000;
       } else {
-        // Overload check
-        if (nodeQps > capacity) {
-          const excess = nodeQps - capacity;
+        // --- RATE LIMITER ---
+        if (nodeSpecType === 'RATE_LIMITER') {
+          var limit = nodeData.rateLimitQps || 2000;
+          var dropped = Math.max(0, nodeQps - limit);
+          nodeQps = Math.min(nodeQps, limit);
+          nodeErrorRate = nodeQps > 0 ? (dropped / (nodeQps + dropped)) * 100 : 0;
+          nodeLatency = 1;
+        }
+
+        // --- M/M/c QUEUING (thread/connection pool) ---
+        var poolSize = 0;
+        if (nodeSpecType.indexOf('DATABASE') >= 0) poolSize = nodeData.connectionPoolSize || 50;
+        else if (nodeSpecType.indexOf('WEB_SERVER') >= 0 || nodeSpecType === 'WEB_SERVER') poolSize = nodeData.threadPoolSize || 200;
+
+        if (poolSize > 0 && nodeQps > 0) {
+          var mu = capacity / poolSize;
+          var rho = nodeQps / (poolSize * mu);
+          if (rho >= 1) {
+            queueDepth = nodeQps - capacity;
+            nodeErrorRate = Math.min(90, ((nodeQps - capacity) / nodeQps) * 100);
+            nodeLatency += (rho - 1) * 1000;
+          } else {
+            var cProb = erlangC(nodeQps, mu, poolSize);
+            var avgWait = (cProb * mu) / (poolSize * mu - nodeQps);
+            queueDepth = Math.round(avgWait * nodeQps);
+            nodeLatency += avgWait;
+          }
+        }
+
+        // --- QUEUE node type ---
+        if (nodeSpecType === 'QUEUE') {
+          var processingRate = nodeData.processingRate || 3000;
+          queueDepth = Math.max(0, nodeQps - processingRate);
+          nodeQps = Math.min(nodeQps, processingRate);
+        }
+
+        // --- OVERLOAD CHECK ---
+        if (nodeErrorRate === 0 && nodeQps > capacity) {
+          var excess = nodeQps - capacity;
           nodeErrorRate = Math.min(95, (excess / nodeQps) * 100);
           nodeLatency = baseLatency + (excess * 0.1);
         }
 
-        // Retry / backoff calculation (failed requests retry 3x with exponential delay)
+        // --- RETRY / BACKOFF ---
         if (nodeErrorRate > 0) {
-          const errRatio = nodeErrorRate / 100;
-          // Retries amplify incoming load on the node
-          const retryAmplifier = 1 + errRatio + Math.pow(errRatio, 2) + Math.pow(errRatio, 3);
-          nodeQps = nodeQps * retryAmplifier;
-          
-          // Exponential backoff delays: 50ms, 150ms, 450ms for attempts 1, 2, 3
-          const backoffDelay = (errRatio * 50) + (Math.pow(errRatio, 2) * 150) + (Math.pow(errRatio, 3) * 450);
+          var errRatio = nodeErrorRate / 100;
+          nodeQps *= (1 + errRatio + errRatio * errRatio + errRatio * errRatio * errRatio);
+          var backoffDelay = (errRatio * 50) + (errRatio * errRatio * 150) + (errRatio * errRatio * errRatio * 450);
           nodeLatency += backoffDelay;
-
-          // Recalculate degradation under the amplified retry storm
           if (nodeQps > capacity) {
-            const excess = nodeQps - capacity;
-            nodeErrorRate = Math.min(99, (excess / nodeQps) * 100);
+            nodeErrorRate = Math.min(99, ((nodeQps - capacity) / nodeQps) * 100);
           }
         }
 
-        // Cache hit logic
-        if (nodeSpecType.includes('CACHE')) {
-          let hitRate = 0.85; // 85% cache hit
-          if (isChaosActive) {
-            hitRate = 0.05; // Simulate cache stampede / failure
-          }
-          // Only forward cache misses (15%) downstream
-          const misses = nodeQps * (1 - hitRate);
+        // --- CDN HIT RATIO OVERRIDE ---
+        if (nodeSpecType.indexOf('CDN') >= 0 || nodeSpecType === 'CDN') {
+          var hitRatio = nodeData.hitRatioOverride !== undefined ? nodeData.hitRatioOverride / 100 : 0.90;
+          var misses = nodeQps * (1 - hitRatio);
+          nodeLatency = (2 * hitRatio) + (80 * (1 - hitRatio));
+          nodeErrorRate = 0;
+          nodeMetrics[id].cacheHitRate = Math.round(hitRatio * 100);
+          var cdnTargets = adj[id] || [];
+          cdnTargets.forEach(function(tgt) { queue.push({ id: tgt, load: misses / cdnTargets.length }); });
+          continue;
+        }
+
+        // --- CACHE (with TTL / eviction decay) ---
+        if (nodeSpecType.indexOf('CACHE') >= 0) {
+          var hitRate = 0.85;
+          if (isChaosActive) hitRate = 0.05;
+          var ttlSec = nodeData.ttlSeconds || 3600;
+          var ttlDecay = Math.max(0, 1 - (nodeQps / (ttlSec * 100)));
+          hitRate = Math.min(0.99, hitRate * (0.5 + 0.5 * ttlDecay));
+          if (nodeData.evictionPolicy === 'lfu') hitRate *= 0.95;
+          else if (nodeData.evictionPolicy === 'fifo') hitRate *= 0.90;
+          var cacheMisses = nodeQps * (1 - hitRate);
           nodeLatency = (baseLatency * hitRate) + (40 * (1 - hitRate));
-          
-          const targets = adj[id] || [];
-          targets.forEach(tgt => {
-            queue.push({ id: tgt, load: misses / targets.length });
-          });
+          nodeErrorRate = 0;
+          nodeMetrics[id].cacheHitRate = Math.round(hitRate * 100);
+          var cacheTargets = adj[id] || [];
+          cacheTargets.forEach(function(tgt) { queue.push({ id: tgt, load: cacheMisses / cacheTargets.length }); });
+          continue;
+        }
+
+        // --- LOAD BALANCER (routing algorithm) ---
+        if (nodeSpecType.indexOf('LOAD_BALANCER') >= 0 || nodeSpecType === 'LOAD_BALANCER') {
+          var algo = nodeData.routingAlgorithm || 'round_robin';
+          var lbTargets = adj[id] || [];
+          if (lbTargets.length > 0) {
+            if (algo === 'least_connections') {
+              var loads = lbTargets.map(function(t) { return { id: t, load: nodeMetrics[t] && nodeMetrics[t].qps || 0 }; });
+              loads.sort(function(a, b) { return a.load - b.load; });
+              loads[0].load += nodeQps;
+              loads.forEach(function(t) { queue.push({ id: t.id, load: t.load }); });
+            } else if (algo === 'ip_hash') {
+              if (!lbRoundRobinCounter[id]) lbRoundRobinCounter[id] = 0;
+              var idx = lbRoundRobinCounter[id] % lbTargets.length;
+              lbRoundRobinCounter[id]++;
+              queue.push({ id: lbTargets[idx], load: nodeQps });
+            } else {
+              lbTargets.forEach(function(tgt) { queue.push({ id: tgt, load: nodeQps / lbTargets.length }); });
+            }
+          }
           continue;
         }
       }
 
+      // --- DATABASE with read replicas ---
+      if (nodeSpecType.indexOf('DATABASE') >= 0) {
+        var replicaCount = nodeData.readReplicaCount || 0;
+        var replicaLag = nodeData.replicationLagMs || 100;
+        if (replicaCount > 0) {
+          nodeLatency += (replicaLag * 0.1);
+          nodeMetrics[id].readReplicasUsed = replicaCount;
+        }
+      }
+
       nodeMetrics[id].qps = Math.round(nodeQps);
-      nodeMetrics[id].latency = Math.round(nodeLatency);
+      nodeMetrics[id].latency = Math.round(nodeLatency + baseLatency);
       nodeMetrics[id].errorRate = Math.round(nodeErrorRate);
       nodeMetrics[id].cpu = Math.min(100, Math.round((nodeQps / capacity) * 100));
+      nodeMetrics[id].queueDepth = Math.round(queueDepth);
 
-      // Forward traffic downstream
-      const targets = adj[id] || [];
-      const outgoingLoad = isFailed ? 0 : nodeQps;
-      
-      targets.forEach(tgt => {
-        queue.push({ id: tgt, load: outgoingLoad / targets.length });
-      });
+      var targets = adj[id] || [];
+      var outgoingLoad = isFailed ? 0 : nodeQps;
+      targets.forEach(function(tgt) { queue.push({ id: tgt, load: outgoingLoad / targets.length }); });
     }
 
-    // Convert metrics map to array
-    const nodesArray = Object.values(nodeMetrics);
-    
-    // Overall system status
-    let totalErrors = 0;
-    let maxLatency = 0;
-    nodesArray.forEach(m => {
+    var nodesArray = Object.values(nodeMetrics);
+    var totalErrors = 0, maxLatency = 0;
+    nodesArray.forEach(function(m) {
       if (m.errorRate > 0) totalErrors += m.errorRate;
       if (m.latency > maxLatency) maxLatency = m.latency;
     });
-
-    const isSystemFailing = totalErrors > 40 || maxLatency > 800;
-    const isSystemDegraded = totalErrors > 10 || maxLatency > 150;
-    const systemHealth = isSystemFailing ? 'RED' : isSystemDegraded ? 'YELLOW' : 'GREEN';
+    var systemHealth = (totalErrors > 40 || maxLatency > 800) ? 'RED' : (totalErrors > 10 || maxLatency > 150) ? 'YELLOW' : 'GREEN';
 
     return {
-      tick: tickCount,
-      timestamp: Date.now(),
-      nodes: nodesArray,
-      systemHealth,
-      inputQps: currentInputQps,
-      activeScenario: scenario
+      tick: tickCount, timestamp: Date.now(), nodes: nodesArray,
+      systemHealth, inputQps: currentInputQps, activeScenario: scenario
     };
   }
 `;
@@ -251,6 +285,13 @@ export class SimulationWorkerBridge {
     this.worker?.postMessage({
       type: 'INIT',
       payload: { nodes, edges, trafficQps, scenario, failedNodes }
+    });
+  }
+
+  updateGraph(nodes: any[], edges: any[]) {
+    this.worker?.postMessage({
+      type: 'UPDATE_GRAPH',
+      payload: { nodes, edges }
     });
   }
 

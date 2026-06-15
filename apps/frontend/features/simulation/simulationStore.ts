@@ -26,6 +26,7 @@ interface SimulationState {
   updateTraffic: (qps: number) => void;
   updateScenario: (scen: string) => void;
   toggleNodeFailure: (nodeId: string) => void;
+  updateGraph: (nodes: any[], edges: any[]) => void;
   resetSimulation: () => void;
   addEvent: (type: string, message: string, severity?: 'INFO' | 'WARNING' | 'ERROR') => void;
 }
@@ -147,6 +148,13 @@ export const useSimulationStore = create<SimulationState>((set, get) => ({
     set({ failedNodes: updated });
     if (bridge) {
       bridge.updateParams(undefined, undefined, updated);
+    }
+  },
+
+  updateGraph: (nodes: any[], edges: any[]) => {
+    const { bridge } = get();
+    if (bridge) {
+      bridge.updateGraph(nodes, edges);
     }
   },
 

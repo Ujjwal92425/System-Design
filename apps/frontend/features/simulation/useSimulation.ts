@@ -20,10 +20,18 @@ export function useSimulation(nodes: any[] = [], edges: any[] = []) {
     resetSimulation
   } = useSimulationStore();
 
-  // Sync node changes or failures with the worker if it's running
+  const updateGraph = useSimulationStore((s) => s.updateGraph);
+
+  // Sync node/edge changes with the worker if simulation is running
+  useEffect(() => {
+    if (isRunning) {
+      updateGraph(nodes, edges);
+    }
+  }, [nodes, edges, isRunning, updateGraph]);
+
+  // Auto-stop simulation on unmount
   useEffect(() => {
     return () => {
-      // Auto-stop simulation on unmount
       stopSimulation();
     };
   }, [stopSimulation]);
