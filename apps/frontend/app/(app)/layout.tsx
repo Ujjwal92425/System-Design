@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useAuth } from '../../features/auth/useAuth';
 import { AppSidebar } from '../../components/layouts/AppSidebar';
 import { AppHeader } from '../../components/layouts/AppHeader';
+import { analytics } from '../../lib/analytics';
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const { user, loading, fetchMe } = useAuth();
@@ -16,6 +17,16 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       router.push('/login');
     });
   }, []);
+
+  useEffect(() => {
+    if (user) {
+      analytics.identify(user.id, {
+        email: user.email,
+        name: user.name,
+        role: user.role,
+      });
+    }
+  }, [user?.id]);
 
   if (loading && !user) {
     return (

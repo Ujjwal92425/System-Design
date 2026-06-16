@@ -1,7 +1,7 @@
 'use client';
 
-import { memo, useCallback } from 'react';
-import { EdgeProps, getBezierPath, EdgeLabelRenderer, BaseEdge } from '@xyflow/react';
+import { memo, useCallback, useState } from 'react';
+import { EdgeProps, getSmoothStepPath, EdgeLabelRenderer, BaseEdge } from '@xyflow/react';
 
 const EDGE_LABELS = ['HTTP', 'HTTPS', 'gRPC', 'TCP', 'UDP', 'Kafka', 'Redis', 'WebSocket'];
 
@@ -19,20 +19,21 @@ function FlowEdge({
   selected,
   markerEnd,
 }: EdgeProps) {
-  const [edgePath, labelX, labelY] = getBezierPath({
+  const [edgePath, labelX, labelY] = getSmoothStepPath({
     sourceX,
     sourceY,
     sourcePosition,
     targetX,
     targetY,
     targetPosition,
+    borderRadius: 8,
   });
 
   const label = String(data?.label || 'HTTP');
   const isSimulating = Boolean(data?.isSimulating);
   const errorRate = Number(data?.errorRate || 0);
+  const [hovered, setHovered] = useState(false);
 
-  // Health-based coloring (simulation)
   const strokeColor = !isSimulating
     ? '#FF6600'
     : errorRate > 50
@@ -64,6 +65,18 @@ function FlowEdge({
         />
       )}
 
+      {/* Hover glow */}
+      {hovered && (
+        <path
+          d={edgePath}
+          fill="none"
+          stroke="#FF6600"
+          strokeWidth={10}
+          strokeOpacity={0.15}
+          strokeLinecap="round"
+        />
+      )}
+
       <BaseEdge
         id={id}
         path={edgePath}
@@ -71,15 +84,32 @@ function FlowEdge({
           stroke: strokeColor,
           strokeWidth,
           strokeLinecap: 'round',
-          strokeDasharray: isSimulating ? '6 3' : 'none',
-          transition: 'stroke 300ms ease',
+          transition: 'stroke 300ms ease, stroke-width 200ms ease',
         }}
         className={cn(
           'hover:!stroke-[4px] transition-all',
-          isSimulating && 'animate-pulse-edge'
+          isSimulating && 'animate-pulse-edge animate-flow-dash'
         )}
         markerEnd={markerEnd}
+        onMouseEnter={() => setHovered(true)}
+        onMouseLeave={() => setHovered(false)}
       />
+
+      {/* Hover tooltip */}
+      {hovered && (
+        <EdgeLabelRenderer>
+          <div
+            className="pointer-events-none absolute"
+            style={{
+              transform: `translate(-50%, -100%) translate(${labelX}px,${labelY - 12}px)`,
+            }}
+          >
+            <div className="bg-gray-900 text-white text-[9px] font-mono px-2 py-1 rounded-md shadow-lg whitespace-nowrap">
+              {label} {isSimulating && errorRate > 0 ? `· ${errorRate}% err` : ''}
+            </div>
+          </div>
+        </EdgeLabelRenderer>
+      )}
 
       {/* Label */}
       <EdgeLabelRenderer>

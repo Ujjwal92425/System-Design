@@ -1,4 +1,8 @@
 import { interviewsRepo } from '@sd-os/db';
+import { aiService } from '../ai/ai.service';
+import { scoreDesign, mergeAiIntoScores } from './scoring.service';
+import { Errors } from '../../utils/errors';
+import type { InterviewPrompt, RubricCriteria } from '@sd-os/shared';
 
 export const interviewService = {
   async getPrompts(filters?: { difficulty?: string; tag?: string }) {
@@ -12,62 +16,78 @@ export const interviewService = {
   async startSession(userId: string, promptId: string) {
     const prompt = await interviewsRepo.findPromptById(promptId);
     if (!prompt) {
-      throw new Error('Interview prompt not found');
+      throw Errors.notFound('Interview prompt');
     }
     return interviewsRepo.createSession(userId, promptId, prompt.timeLimitMin);
   },
 
-  async getSession(id: string) {
-    const session = await interviewsRepo.getSession(id);
+  async getSession(id: string, userId?: string) {
+    const session = await interviewsRepo.getSession(id, userId);
     if (!session) {
-      throw new Error('Interview session not found');
+      throw Errors.notFound('Interview session');
     }
     return session;
   },
 
-  async useHint(id: string) {
-    const session = await interviewsRepo.getSession(id);
+  async useHint(id: string, userId?: string) {
+    const session = await interviewsRepo.getSession(id, userId);
     if (!session) {
-      throw new Error('Interview session not found');
+      throw Errors.notFound('Interview session');
     }
-    // Limit to maximum available hints
     const maxHints = session.prompt?.hints?.length || 0;
     if (session.hintsUsed >= maxHints) {
-      throw new Error('No hints remaining');
+      throw Errors.conflict('No hints remaining');
     }
     return interviewsRepo.incrementHintsUsed(id);
   },
 
-  async linkDesign(id: string, designId: string) {
+  async linkDesign(id: string, designId: string, userId?: string) {
+    const session = await interviewsRepo.getSession(id, userId);
+    if (!session) {
+      throw Errors.notFound('Interview session');
+    }
     return interviewsRepo.linkDesignToSession(id, designId);
   },
 
-  async submitSession(id: string, design: any) {
-    const session = await interviewsRepo.getSession(id);
+  async submitSession(id: string, design: any, userId?: string) {
+    const session = await interviewsRepo.getSession(id, userId);
     if (!session) {
-      throw new Error('Interview session not found');
+      throw Errors.notFound('Interview session');
     }
 
-    // Retrieve rubric from prompt
-    const rubric = (session.prompt?.rubric as any[]) || [];
-    
-    // Evaluate design using the scoring engine rules
-    const { scoreDesign } = require('./scoring.service');
-    const evaluation = scoreDesign(design, rubric);
+    const rubric = ((session.prompt?.rubric as any) || []) as RubricCriteria[];
+    const prompt = session.prompt as unknown as InterviewPrompt;
 
-    // Save evaluation to DB
+    // Step 1: Rules-based scoring
+    const rulesEvaluation = scoreDesign(design, rubric);
+
+    // Step 2: AI analysis with interview context
+    let aiResult;
+    try {
+      aiResult = await aiService.analyzeInterviewDesign(
+        { nodes: design.nodes || [], edges: design.edges || [] },
+        { prompt, rubric }
+      );
+    } catch {
+      aiResult = { scores: {}, issues: [], overallScore: 0, overallAssessment: '' };
+    }
+
+    // Step 3: Merge rules + AI scores
+    const finalResult = mergeAiIntoScores(rulesEvaluation, aiResult);
+
+    // Step 4: Save evaluation to DB
     const score = await interviewsRepo.saveScore({
       sessionId: id,
-      totalScore: evaluation.totalScore,
-      rubricResults: evaluation.results,
-      missedItems: evaluation.missed,
-      aiFeedback: 'AI evaluation queued.' // Placeholder for async AI analysis
+      totalScore: finalResult.totalScore,
+      rubricResults: finalResult.results,
+      missedItems: finalResult.missed,
+      aiFeedback: finalResult.aiFeedback,
     });
 
     return {
       session,
       score,
-      evaluation
+      evaluation: finalResult,
     };
   },
 

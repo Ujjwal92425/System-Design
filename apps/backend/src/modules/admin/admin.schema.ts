@@ -74,3 +74,36 @@ export const CreateQuestionBody = z.object({
 });
 
 export const UpdateQuestionBody = CreateQuestionBody.partial().omit({ quizId: true });
+
+// ── User management schemas ─────────────────────────────────────────────────
+
+export const AdminUpdateUserBody = z.object({
+  name: z.string().min(1).max(120).optional(),
+  role: z.enum(['USER', 'PRO', 'INSTRUCTOR', 'ADMIN']).optional(),
+  emailVerified: z.boolean().optional(),
+});
+
+export const AdminCreateUserBody = z.object({
+  email: z.string().email(),
+  name: z.string().min(1).max(120).optional(),
+  password: z.string().min(8).optional(),
+  role: z.enum(['USER', 'PRO', 'INSTRUCTOR', 'ADMIN']).default('USER'),
+});
+
+export const AdminImportUsersBody = z.object({
+  users: z.array(z.object({
+    email: z.string().email(),
+    name: z.string().min(1).max(120).optional(),
+    role: z.enum(['USER', 'PRO', 'INSTRUCTOR', 'ADMIN']).default('USER'),
+  })).min(1).max(1000),
+});
+
+// ── Blueprint moderation schemas ──────────────────────────────────────────────
+
+export const FeatureBlueprintBody = z.object({
+  featured: z.boolean(),
+});
+
+export const ReviewReportBody = z.object({
+  status: z.enum(['reviewed', 'dismissed']),
+});

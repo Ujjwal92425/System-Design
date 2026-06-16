@@ -12,6 +12,8 @@
  *
  * Endpoint map:
  *  GET    /api/admin/overview                    — platform stats
+ *  GET    /api/admin/analytics/overview          — analytics platform stats (includes 7d trends)
+ *  GET    /api/admin/analytics/events            — recent analytics events
  *  GET    /api/admin/tracks                      — list all tracks (incl. drafts)
  *  POST   /api/admin/tracks                      — create track
  *  GET    /api/admin/tracks/:id                  — track detail + modules + lessons
@@ -43,6 +45,8 @@ import {
   CreateLessonBody, UpdateLessonBody,
   CreateQuizBody,
   CreateQuestionBody, UpdateQuestionBody,
+  AdminUpdateUserBody, AdminCreateUserBody, AdminImportUsersBody,
+  FeatureBlueprintBody, ReviewReportBody,
 } from './admin.schema';
 
 export const adminRouter = Router();
@@ -58,6 +62,22 @@ adminRouter.get('/overview', adminOnly, async (_req: AuthRequest, res, next) => 
   } catch (err) { next(err); }
 });
 
+// ── Analytics ─────────────────────────────────────────────────────────────────
+adminRouter.get('/analytics/overview', adminOnly, async (_req: AuthRequest, res, next) => {
+  try {
+    const stats = await adminService.getPlatformOverview();
+    success(res, stats);
+  } catch (err) { next(err); }
+});
+
+adminRouter.get('/analytics/events', adminOnly, async (req: AuthRequest, res, next) => {
+  try {
+    const limit = Math.min(parseInt(req.query.limit as string) || 20, 100);
+    const events = await adminService.getRecentEvents(limit);
+    success(res, events);
+  } catch (err) { next(err); }
+});
+
 // ── Tracks ────────────────────────────────────────────────────────────────────
 adminRouter.get('/tracks', adminOnly, async (_req: AuthRequest, res, next) => {
   try {
@@ -68,7 +88,7 @@ adminRouter.get('/tracks', adminOnly, async (_req: AuthRequest, res, next) => {
 
 adminRouter.post('/tracks', adminOnly, validate(CreateTrackBody), async (req: AuthRequest, res, next) => {
   try {
-    const track = await adminService.createTrack(req.body);
+    const track = await adminService.createTrack(req.body, req.user?.id);
     res.status(201).json({ success: true, data: track });
   } catch (err) { next(err); }
 });
@@ -82,14 +102,14 @@ adminRouter.get('/tracks/:id', adminOnly, async (req: AuthRequest, res, next) =>
 
 adminRouter.patch('/tracks/:id', adminOnly, validate(UpdateTrackBody), async (req: AuthRequest, res, next) => {
   try {
-    const track = await adminService.updateTrack(req.params.id, req.body);
+    const track = await adminService.updateTrack(req.params.id, req.body, req.user?.id);
     success(res, track);
   } catch (err) { next(err); }
 });
 
 adminRouter.delete('/tracks/:id', adminOnly, async (req: AuthRequest, res, next) => {
   try {
-    await adminService.deleteTrack(req.params.id);
+    await adminService.deleteTrack(req.params.id, req.user?.id);
     success(res, { deleted: true });
   } catch (err) { next(err); }
 });
@@ -97,21 +117,21 @@ adminRouter.delete('/tracks/:id', adminOnly, async (req: AuthRequest, res, next)
 // ── Modules ───────────────────────────────────────────────────────────────────
 adminRouter.post('/modules', adminOnly, validate(CreateModuleBody), async (req: AuthRequest, res, next) => {
   try {
-    const mod = await adminService.createModule(req.body);
+    const mod = await adminService.createModule(req.body, req.user?.id);
     res.status(201).json({ success: true, data: mod });
   } catch (err) { next(err); }
 });
 
 adminRouter.patch('/modules/:id', adminOnly, validate(UpdateModuleBody), async (req: AuthRequest, res, next) => {
   try {
-    const mod = await adminService.updateModule(req.params.id, req.body);
+    const mod = await adminService.updateModule(req.params.id, req.body, req.user?.id);
     success(res, mod);
   } catch (err) { next(err); }
 });
 
 adminRouter.delete('/modules/:id', adminOnly, async (req: AuthRequest, res, next) => {
   try {
-    await adminService.deleteModule(req.params.id);
+    await adminService.deleteModule(req.params.id, req.user?.id);
     success(res, { deleted: true });
   } catch (err) { next(err); }
 });
@@ -123,7 +143,6 @@ adminRouter.get('/lessons', adminOnly, async (req: AuthRequest, res, next) => {
     const limit      = Math.min(parseInt(req.query.limit as string) || 20, 100);
     const search     = req.query.search as string | undefined;
     const difficulty = req.query.difficulty as string | undefined;
-    // Allow filtering by published status: ?published=true|false
     const isPublished = req.query.published !== undefined
       ? req.query.published === 'true'
       : undefined;
@@ -135,7 +154,7 @@ adminRouter.get('/lessons', adminOnly, async (req: AuthRequest, res, next) => {
 
 adminRouter.post('/lessons', adminOnly, validate(CreateLessonBody), async (req: AuthRequest, res, next) => {
   try {
-    const lesson = await adminService.createLesson(req.body);
+    const lesson = await adminService.createLesson(req.body, req.user?.id);
     res.status(201).json({ success: true, data: lesson });
   } catch (err) { next(err); }
 });
@@ -149,14 +168,14 @@ adminRouter.get('/lessons/:id', adminOnly, async (req: AuthRequest, res, next) =
 
 adminRouter.patch('/lessons/:id', adminOnly, validate(UpdateLessonBody), async (req: AuthRequest, res, next) => {
   try {
-    const lesson = await adminService.updateLesson(req.params.id, req.body);
+    const lesson = await adminService.updateLesson(req.params.id, req.body, req.user?.id);
     success(res, lesson);
   } catch (err) { next(err); }
 });
 
 adminRouter.delete('/lessons/:id', adminOnly, async (req: AuthRequest, res, next) => {
   try {
-    await adminService.deleteLesson(req.params.id);
+    await adminService.deleteLesson(req.params.id, req.user?.id);
     success(res, { deleted: true });
   } catch (err) { next(err); }
 });
@@ -164,28 +183,136 @@ adminRouter.delete('/lessons/:id', adminOnly, async (req: AuthRequest, res, next
 // ── Quizzes & Questions ───────────────────────────────────────────────────────
 adminRouter.post('/quizzes', adminOnly, validate(CreateQuizBody), async (req: AuthRequest, res, next) => {
   try {
-    const quiz = await adminService.createQuiz(req.body);
+    const quiz = await adminService.createQuiz(req.body, req.user?.id);
     res.status(201).json({ success: true, data: quiz });
   } catch (err) { next(err); }
 });
 
 adminRouter.post('/questions', adminOnly, validate(CreateQuestionBody), async (req: AuthRequest, res, next) => {
   try {
-    const question = await adminService.createQuestion(req.body);
+    const question = await adminService.createQuestion(req.body, req.user?.id);
     res.status(201).json({ success: true, data: question });
   } catch (err) { next(err); }
 });
 
 adminRouter.patch('/questions/:id', adminOnly, validate(UpdateQuestionBody), async (req: AuthRequest, res, next) => {
   try {
-    const question = await adminService.updateQuestion(req.params.id, req.body);
+    const question = await adminService.updateQuestion(req.params.id, req.body, req.user?.id);
     success(res, question);
   } catch (err) { next(err); }
 });
 
 adminRouter.delete('/questions/:id', adminOnly, async (req: AuthRequest, res, next) => {
   try {
-    await adminService.deleteQuestion(req.params.id);
+    await adminService.deleteQuestion(req.params.id, req.user?.id);
     success(res, { deleted: true });
+  } catch (err) { next(err); }
+});
+
+// ── User Management ───────────────────────────────────────────────────────────
+adminRouter.get('/users', adminOnly, async (req: AuthRequest, res, next) => {
+  try {
+    const page   = parseInt(req.query.page as string) || 1;
+    const limit  = Math.min(parseInt(req.query.limit as string) || 20, 100);
+    const search = req.query.search as string | undefined;
+    const role   = req.query.role as string | undefined;
+    const status = req.query.status as string | undefined;
+    const result = await adminService.listAllUsers({ page, limit, search, role, status });
+    success(res, result);
+  } catch (err) { next(err); }
+});
+
+adminRouter.get('/users/export', adminOnly, async (_req: AuthRequest, res, next) => {
+  try {
+    const result = await adminService.exportUsersCSV();
+    res.setHeader('Content-Type', 'text/csv');
+    res.setHeader('Content-Disposition', 'attachment; filename="users-export.csv"');
+    res.status(200).send(result.csv);
+  } catch (err) { next(err); }
+});
+
+adminRouter.post('/users', adminOnly, validate(AdminCreateUserBody), async (req: AuthRequest, res, next) => {
+  try {
+    const user = await adminService.createUser(req.body);
+    res.status(201).json({ success: true, data: user });
+  } catch (err) { next(err); }
+});
+
+adminRouter.post('/users/import', adminOnly, validate(AdminImportUsersBody), async (req: AuthRequest, res, next) => {
+  try {
+    const result = await adminService.importUsers(req.body.users);
+    success(res, result);
+  } catch (err) { next(err); }
+});
+
+adminRouter.get('/users/:id', adminOnly, async (req: AuthRequest, res, next) => {
+  try {
+    const user = await adminService.getUserById(req.params.id);
+    success(res, user);
+  } catch (err) { next(err); }
+});
+
+adminRouter.patch('/users/:id', adminOnly, validate(AdminUpdateUserBody), async (req: AuthRequest, res, next) => {
+  try {
+    const user = await adminService.updateUser(req.params.id, req.body);
+    success(res, user);
+  } catch (err) { next(err); }
+});
+
+adminRouter.post('/users/:id/suspend', adminOnly, async (req: AuthRequest, res, next) => {
+  try {
+    const durationMin = parseInt(req.body.durationMin as string) || 1440;
+    const result = await adminService.suspendUser(req.params.id, durationMin);
+    success(res, result);
+  } catch (err) { next(err); }
+});
+
+adminRouter.post('/users/:id/unsuspend', adminOnly, async (req: AuthRequest, res, next) => {
+  try {
+    const result = await adminService.unsuspendUser(req.params.id);
+    success(res, result);
+  } catch (err) { next(err); }
+});
+
+adminRouter.delete('/users/:id', adminOnly, async (req: AuthRequest, res, next) => {
+  try {
+    const result = await adminService.deleteUser(req.params.id);
+    success(res, result);
+  } catch (err) { next(err); }
+});
+
+// ── Blueprint Moderation ─────────────────────────────────────────────────────
+adminRouter.get('/blueprints', adminOnly, async (req: AuthRequest, res, next) => {
+  try {
+    const result = await adminService.listAllBlueprints();
+    success(res, result);
+  } catch (err) { next(err); }
+});
+
+adminRouter.patch('/blueprints/:id/feature', adminOnly, validate(FeatureBlueprintBody), async (req: AuthRequest, res, next) => {
+  try {
+    const bp = await adminService.featureBlueprint(req.params.id, req.body.featured);
+    success(res, bp);
+  } catch (err) { next(err); }
+});
+
+adminRouter.delete('/blueprints/:id', adminOnly, async (req: AuthRequest, res, next) => {
+  try {
+    const result = await adminService.removeBlueprint(req.params.id);
+    success(res, result);
+  } catch (err) { next(err); }
+});
+
+adminRouter.get('/reports', adminOnly, async (req: AuthRequest, res, next) => {
+  try {
+    const reports = await adminService.listPendingReports();
+    success(res, reports);
+  } catch (err) { next(err); }
+});
+
+adminRouter.patch('/reports/:id/review', adminOnly, validate(ReviewReportBody), async (req: AuthRequest, res, next) => {
+  try {
+    const result = await adminService.reviewReport(req.params.id, req.body.status);
+    success(res, result);
   } catch (err) { next(err); }
 });

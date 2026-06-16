@@ -1,10 +1,12 @@
 'use client';
 
-import { useCallback, useRef, useState, useEffect } from 'react';
+import { useCallback, useRef, useState, useEffect, useMemo } from 'react';
+import { toPng } from 'html-to-image';
 import {
   ReactFlow,
   Background,
   BackgroundVariant,
+  MiniMap,
   useNodesState,
   useEdgesState,
   Connection,
@@ -26,15 +28,15 @@ import '@xyflow/react/dist/style.css';
 
 import NodeWithHandles from './nodes/NodeWithHandles';
 import NoteNode from './nodes/NoteNode';
+import GroupNode from './nodes/GroupNode';
 import FlowEdge from './edges/FlowEdge';
 import { CanvasControls } from './panels/CanvasControls';
 import { ContextMenu } from './panels/ContextMenu';
 import { useAutoLayout } from '@/features/canvas/useAutoLayout';
+import { PacketFlowOverlay } from '../simulation/PacketFlowOverlay';
 
-const nodeTypes: NodeTypes = { architectureNode: NodeWithHandles, noteNode: NoteNode };
+const nodeTypes: NodeTypes = { architectureNode: NodeWithHandles, noteNode: NoteNode, groupNode: GroupNode };
 const edgeTypes: EdgeTypes = { architectureEdge: FlowEdge };
-
-const PROTOCOL_LABELS = ['HTTP', 'HTTPS', 'gRPC', 'TCP', 'UDP', 'Kafka', 'Redis', 'WebSocket'];
 
 interface FlowCanvasProps {
   initialNodes: Node[];
@@ -76,7 +78,13 @@ function FlowCanvasInner({
   const [edges, setEdges, onEdgesChangeRF] = useEdgesState(externalEdges);
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number; nodeId: string | null } | null>(null);
   const [zoom, setZoom] = useState(1);
+  const [showMiniMap, setShowMiniMap] = useState(false);
+  const [showGrid, setShowGrid] = useState(true);
+  const [isLocked, setIsLocked] = useState(false);
+  const [viewport, setViewport] = useState({ x: 0, y: 0, zoom: 1 });
   const syncVersionRef = useRef(0);
+
+  useOnViewportChange({ onChange: (vp) => setViewport(vp) });
 
   useEffect(() => {
     syncVersionRef.current++;
@@ -105,6 +113,17 @@ function FlowCanvasInner({
       onAddEdge(newEdge);
     },
     [onAddEdge]
+  );
+
+  const isValidConnection = useCallback(
+    (connection: any) => {
+      if (connection.source === connection.target) return false;
+      const sourceNode = nodes.find((n: Node) => n.id === connection.source);
+      const targetNode = nodes.find((n: Node) => n.id === connection.target);
+      if (!sourceNode || !targetNode) return false;
+      return true;
+    },
+    [nodes]
   );
 
   const handleNodesChange = useCallback(
@@ -147,21 +166,6 @@ function FlowCanvasInner({
     [onDeleteNode]
   );
 
-  const onEdgeClick = useCallback(
-    (_event: any, edge: Edge) => {
-      const currentLabel = String(edge.data?.label || 'HTTP');
-      const idx = PROTOCOL_LABELS.indexOf(currentLabel);
-      const nextLabel = PROTOCOL_LABELS[(idx + 1) % PROTOCOL_LABELS.length];
-      onEdgeLabelChange(edge.id, nextLabel);
-      setEdges((eds) =>
-        eds.map((e) =>
-          e.id === edge.id ? { ...e, data: { ...e.data, label: nextLabel } } : e
-        )
-      );
-    },
-    [onEdgeLabelChange]
-  );
-
   const onNodeContextMenu = useCallback((event: React.MouseEvent, node: Node) => {
     event.preventDefault();
     setContextMenu({ x: event.clientX, y: event.clientY, nodeId: node.id });
@@ -193,15 +197,12 @@ function FlowCanvasInner({
     try {
       const container = document.querySelector('.react-flow') as HTMLElement;
       if (!container) return;
-      const svgData = new XMLSerializer().serializeToString(
-        container.querySelector('.react-flow__renderer') || container
-      );
-      const dataUrl = 'data:image/svg+xml;base64,' + btoa(unescape(encodeURIComponent(svgData)));
+      const dataUrl = await toPng(container, { backgroundColor: '#FCF9F2', pixelRatio: 2 });
       if (onExportImage) {
         onExportImage(dataUrl);
       } else {
         const link = document.createElement('a');
-        link.download = `architecture-${Date.now()}.svg`;
+        link.download = `architecture-${Date.now()}.png`;
         link.href = dataUrl;
         link.click();
       }
@@ -209,12 +210,6 @@ function FlowCanvasInner({
       console.error('Export failed', err);
     }
   }, [onExportImage]);
-
-  useEffect(() => {
-    (window as any).__canvasAutoLayoutH = handleAutoLayoutHorizontal;
-    (window as any).__canvasAutoLayoutV = handleAutoLayoutVertical;
-    (window as any).__canvasExport = handleExport;
-  }, [handleAutoLayoutHorizontal, handleAutoLayoutVertical, handleExport]);
 
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
@@ -229,17 +224,78 @@ function FlowCanvasInner({
         e.preventDefault();
         window.dispatchEvent(new CustomEvent('canvas-redo'));
       }
-      if (e.key === 'Delete' || e.key === 'Backspace') {
+
+      if (e.key === 'Tab') {
+        e.preventDefault();
         const selected = nodes.filter((n) => n.selected);
-        selected.forEach((n) => onDeleteNode(n.id));
+        const currentIdx = selected.length === 1 ? nodes.findIndex((n) => n.id === selected[0].id) : -1;
+        const nextIdx = e.shiftKey
+          ? (currentIdx - 1 + nodes.length) % nodes.length
+          : (currentIdx + 1) % nodes.length;
+        const nextNode = nodes[nextIdx];
+        if (nextNode) {
+          setNodes((nds) =>
+            nds.map((n) => ({ ...n, selected: n.id === nextNode.id }))
+          );
+          reactFlowInstance.setCenter(nextNode.position!.x + 100, nextNode.position!.y + 50, { zoom: 1, duration: 200 });
+        }
+        return;
+      }
+
+      const selectedNodes = nodes.filter((n) => n.selected);
+      if (selectedNodes.length > 0 && ['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.key)) {
+        e.preventDefault();
+        const step = e.shiftKey ? 20 : 5;
+        const dx = e.key === 'ArrowLeft' ? -step : e.key === 'ArrowRight' ? step : 0;
+        const dy = e.key === 'ArrowUp' ? -step : e.key === 'ArrowDown' ? step : 0;
+        const updatedNodes = nodes.map((n) =>
+          n.selected
+            ? { ...n, position: { x: n.position.x + dx, y: n.position.y + dy } }
+            : n
+        );
+        setNodes(updatedNodes);
+        onNodesChange(updatedNodes);
       }
     };
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
-  }, [nodes, onDeleteNode]);
+  }, [nodes, setNodes, reactFlowInstance, onNodesChange]);
+
+  const packetEdges = useMemo(() => {
+    if (!simulation?.isRunning || !simulation?.currentMetrics) return [];
+    return edges
+      .filter((e) => {
+        const sourceNode = nodes.find((n) => n.id === e.source);
+        const targetNode = nodes.find((n) => n.id === e.target);
+        return sourceNode && targetNode;
+      })
+      .map((e) => {
+        const sourceNode = nodes.find((n) => n.id === e.source)!;
+        const targetNode = nodes.find((n) => n.id === e.target)!;
+        const sx = (sourceNode.position.x + (sourceNode.width || 160) / 2) * viewport.zoom + viewport.x;
+        const sy = (sourceNode.position.y + (sourceNode.height || 60) / 2) * viewport.zoom + viewport.y;
+        const tx = (targetNode.position.x + (targetNode.width || 160) / 2) * viewport.zoom + viewport.x;
+        const ty = (targetNode.position.y + (targetNode.height || 60) / 2) * viewport.zoom + viewport.y;
+        const metrics = simulation.currentMetrics?.nodes?.find((m: any) => m.id === e.source);
+        return {
+          id: e.id,
+          source: { x: sx, y: sy },
+          target: { x: tx, y: ty },
+          sourcePosition: e.sourceHandle?.replace('-handle', ''),
+          targetPosition: e.targetHandle?.replace('-handle', ''),
+          qps: metrics?.qps || 0,
+          errorRate: metrics?.errorRate || 0,
+        };
+      });
+  }, [edges, nodes, simulation, viewport]);
 
   return (
-    <div className="w-full h-full">
+    <div className="w-full h-full relative">
+      <PacketFlowOverlay
+        edges={packetEdges}
+        isRunning={Boolean(simulation?.isRunning)}
+        qps={simulation?.currentMetrics?.inputQps || 0}
+      />
       <ReactFlow
         nodes={nodes.map((n) => ({
           ...n,
@@ -261,18 +317,19 @@ function FlowCanvasInner({
         onNodesChange={handleNodesChange}
         onEdgesChange={handleEdgesChange}
         onConnect={onConnect}
+        isValidConnection={isValidConnection}
         onNodeDragStop={onNodeDragStop}
         onNodesDelete={onNodesDelete}
-        onEdgeClick={onEdgeClick}
         onNodeContextMenu={onNodeContextMenu}
         onPaneClick={onPaneClick}
         nodeTypes={nodeTypes}
         edgeTypes={edgeTypes}
         selectionMode={SelectionMode.Partial}
         selectionOnDrag
-        panOnDrag
-        zoomOnScroll
-        zoomOnPinch
+        panOnDrag={!isLocked}
+        nodesDraggable={!isLocked}
+        zoomOnScroll={!isLocked}
+        zoomOnPinch={!isLocked}
         fitView
         minZoom={0.1}
         maxZoom={4}
@@ -281,19 +338,39 @@ function FlowCanvasInner({
           markerEnd: { type: MarkerType.ArrowClosed, color: '#FF6600', width: 20, height: 20 },
           animated: true,
         }}
-        deleteKeyCode={['Delete', 'Backspace']}
+        deleteKeyCode={isLocked ? [] : ['Delete', 'Backspace']}
         multiSelectionKeyCode="Shift"
-        snapToGrid
+        snapToGrid={showGrid}
         snapGrid={[20, 20]}
         colorMode="light"
         proOptions={{ hideAttribution: true }}
       >
-        <Background
-          variant={BackgroundVariant.Dots}
-          gap={24}
-          size={1.5}
-          color="#E5E2D9"
-        />
+        {showGrid && (
+          <Background
+            variant={BackgroundVariant.Dots}
+            gap={24}
+            size={1.5}
+            color="#E5E2D9"
+          />
+        )}
+        {showMiniMap && (
+          <MiniMap
+            nodeStrokeColor="#FF6600"
+            nodeColor={(node) => {
+              const type = node.data?.nodeType as string;
+              const colors: Record<string, string> = {
+                LOAD_BALANCER: '#93C5FD', CDN: '#A5B4FC', CACHE: '#FDA4AF',
+                DATABASE_SQL: '#86EFAC', DATABASE_NOSQL: '#86EFAC',
+                QUEUE: '#FCD34D', API_GATEWAY: '#C4B5FD',
+                WEB_SERVER: '#BAE6FD', CLIENT: '#CBD5E1',
+                RATE_LIMITER: '#FDBA74', WAF: '#FDBA74',
+              };
+              return colors[type] || '#CBD5E1';
+            }}
+            maskColor="rgba(0,0,0,0.08)"
+            style={{ border: '1px solid #E5E2D9', borderRadius: 8 }}
+          />
+        )}
       </ReactFlow>
 
       <CanvasControls
@@ -302,6 +379,12 @@ function FlowCanvasInner({
         onZoomOut={handleZoomOut}
         onFitView={handleFitView}
         onReset={handleReset}
+        showMiniMap={showMiniMap}
+        onToggleMiniMap={() => setShowMiniMap((v) => !v)}
+        showGrid={showGrid}
+        onToggleGrid={() => setShowGrid((v) => !v)}
+        isLocked={isLocked}
+        onToggleLock={() => setIsLocked((v) => !v)}
       />
 
       {contextMenu && (

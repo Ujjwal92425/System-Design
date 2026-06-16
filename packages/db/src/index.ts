@@ -4,3 +4,8 @@ export * from './repositories/designs.repo';
 export * from './repositories/lessons.repo';
 export * from './repositories/progress.repo';
 export * from './repositories/interviews.repo';
+export * from './repositories/blueprints.repo';
+export * from './repositories/comments.repo';
+export * from './repositories/votes.repo';
+export * from './repositories/collections.repo';
+export * from './repositories/reports.repo';

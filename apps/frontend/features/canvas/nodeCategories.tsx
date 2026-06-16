@@ -4,7 +4,7 @@ import {
   Monitor, Globe, Network, ArrowUpDown, Shield, Server, Cpu, Zap,
   Database, HardDrive, Activity, Search, Bell, BookOpen, Key,
   ShieldCheck, Cloud, Box, FileJson, Layers, Wifi, Lock,
-  Eye, BarChart, CpuIcon, BrainCircuit, Users,
+  Eye, BarChart, CpuIcon, BrainCircuit, Users, Shuffle,
 } from 'lucide-react';
 import type { ReactNode } from 'react';
 
@@ -45,6 +45,8 @@ export const NODE_CATEGORIES: NodeCategory[] = [
       { type: 'API_GATEWAY', label: 'API Gateway', icon: <Shield className="w-4 h-4" />, color: 'text-purple-600', borderColor: 'border-purple-300 bg-purple-50' },
       { type: 'REVERSE_PROXY', label: 'Reverse Proxy', icon: <Network className="w-4 h-4" />, color: 'text-cyan-600', borderColor: 'border-cyan-300 bg-cyan-50' },
       { type: 'WAF', label: 'WAF', icon: <Lock className="w-4 h-4" />, color: 'text-orange-600', borderColor: 'border-orange-300 bg-orange-50' },
+      { type: 'CIRCUIT_BREAKER', label: 'Circuit Breaker', icon: <Shield className="w-4 h-4" />, color: 'text-orange-600', borderColor: 'border-orange-300 bg-orange-50' },
+      { type: 'SERVICE_MESH', label: 'Service Mesh', icon: <Network className="w-4 h-4" />, color: 'text-cyan-600', borderColor: 'border-cyan-300 bg-cyan-50' },
     ],
   },
   {
@@ -89,6 +91,7 @@ export const NODE_CATEGORIES: NodeCategory[] = [
       { type: 'QUEUE', label: 'SQS', icon: <Activity className="w-4 h-4" />, color: 'text-amber-600', borderColor: 'border-amber-300 bg-amber-50' },
       { type: 'PUBSUB', label: 'PubSub', icon: <Activity className="w-4 h-4" />, color: 'text-yellow-600', borderColor: 'border-yellow-300 bg-yellow-50' },
       { type: 'QUEUE', label: 'Queue', icon: <Activity className="w-4 h-4" />, color: 'text-amber-600', borderColor: 'border-amber-300 bg-amber-50' },
+      { type: 'DEAD_LETTER_QUEUE', label: 'Dead Letter Queue', icon: <Activity className="w-4 h-4" />, color: 'text-red-600', borderColor: 'border-red-300 bg-red-50' },
     ],
   },
   {
@@ -120,6 +123,8 @@ export const NODE_CATEGORIES: NodeCategory[] = [
       { type: 'JWT', label: 'JWT', icon: <Shield className="w-4 h-4" />, color: 'text-purple-600', borderColor: 'border-purple-300 bg-purple-50' },
       { type: 'RATE_LIMITER', label: 'Rate Limiter', icon: <ShieldCheck className="w-4 h-4" />, color: 'text-amber-600', borderColor: 'border-amber-300 bg-amber-50' },
       { type: 'SECRETS_MANAGER', label: 'Secrets Manager', icon: <Lock className="w-4 h-4" />, color: 'text-red-600', borderColor: 'border-red-300 bg-red-50' },
+      { type: 'NOTIFICATION_SERVICE', label: 'Notification Service', icon: <Bell className="w-4 h-4" />, color: 'text-pink-600', borderColor: 'border-pink-300 bg-pink-50' },
+      { type: 'SEARCH_ENGINE', label: 'Search Engine', icon: <Search className="w-4 h-4" />, color: 'text-yellow-600', borderColor: 'border-yellow-300 bg-yellow-50' },
     ],
   },
   {
@@ -131,6 +136,16 @@ export const NODE_CATEGORIES: NodeCategory[] = [
       { type: 'VECTOR_DB', label: 'Vector DB', icon: <Database className="w-4 h-4" />, color: 'text-indigo-600', borderColor: 'border-indigo-300 bg-indigo-50' },
       { type: 'RAG_SERVICE', label: 'RAG Service', icon: <Search className="w-4 h-4" />, color: 'text-blue-600', borderColor: 'border-blue-300 bg-blue-50' },
       { type: 'INFERENCE_SVC', label: 'Inference Service', icon: <Cpu className="w-4 h-4" />, color: 'text-cyan-600', borderColor: 'border-cyan-300 bg-cyan-50' },
+    ],
+  },
+  {
+    name: 'Groups',
+    icon: <Shuffle className="w-3.5 h-3.5" />,
+    items: [
+      { type: 'GROUP', label: 'Availability Zone', icon: <Shuffle className="w-4 h-4" />, color: 'text-blue-600', borderColor: 'border-blue-300 bg-blue-50' },
+      { type: 'GROUP', label: 'Region', icon: <Globe className="w-4 h-4" />, color: 'text-violet-600', borderColor: 'border-violet-300 bg-violet-50' },
+      { type: 'GROUP', label: 'Service Boundary', icon: <Box className="w-4 h-4" />, color: 'text-emerald-600', borderColor: 'border-emerald-300 bg-emerald-50' },
+      { type: 'GROUP', label: 'VPC', icon: <Lock className="w-4 h-4" />, color: 'text-amber-600', borderColor: 'border-amber-300 bg-amber-50' },
     ],
   },
 ];

@@ -1,21 +1,37 @@
-/**
- * apps/backend/src/jobs/email.job.ts
- *
- * BullMQ worker for email sending.
- * Skipped entirely when DISABLE_QUEUES is set.
- */
-
-import type { Job } from 'bullmq';
+import { Worker, type Job } from 'bullmq';
+import { env } from '../config/env';
 import { logger } from '../utils/logger';
+import nodemailer from 'nodemailer';
 
-const queuesEnabled = !process.env.DISABLE_QUEUES || process.env.DISABLE_QUEUES === 'false';
+const queuesEnabled = !env.DISABLE_QUEUES;
 
 if (queuesEnabled) {
-  const { Worker } = require('bullmq');
-  const { env } = require('../config/env');
+  const transporter = nodemailer.createTransport({
+    host: env.SMTP_HOST || 'localhost',
+    port: env.SMTP_PORT || 587,
+    auth: env.SMTP_USER && env.SMTP_PASS
+      ? { user: env.SMTP_USER, pass: env.SMTP_PASS }
+      : undefined,
+    secure: false,
+  });
 
   const worker = new Worker('emails', async (job: Job) => {
-    logger.info({ jobId: job.id, data: job.data }, 'Processing email job');
+    const { to, subject, text, html } = job.data;
+    logger.info({ jobId: job.id, to, subject }, 'Processing email job');
+
+    try {
+      await transporter.sendMail({
+        from: env.EMAIL_FROM,
+        to,
+        subject,
+        text,
+        html,
+      });
+      logger.info({ jobId: job.id, to }, 'Email sent successfully');
+    } catch (err: any) {
+      logger.error({ jobId: job.id, err }, 'Email send failed');
+      throw err;
+    }
   }, {
     connection: { url: env.REDIS_URL },
     concurrency: 1,

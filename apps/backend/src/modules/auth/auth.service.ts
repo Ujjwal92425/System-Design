@@ -6,6 +6,7 @@ import { usersRepo } from '@sd-os/db';
 import { AppError } from '../../utils/errors';
 import { logger } from '../../utils/logger';
 import { emailQueue } from '../../jobs/queues';
+import { analyticsService } from '../analytics/analytics.service';
 
 // Helper to hash token for secure DB storage (AUTH-04)
 function hashToken(token: string): string {
@@ -48,8 +49,12 @@ export const authService = {
       logger.error({ err, userId: user.id }, 'Failed to queue verification email');
     }
 
-    // Logging token for testing/local setup debugging
-    logger.info({ userId: user.id, email: user.email, verificationToken }, 'User registered. Verification token created.');
+    analyticsService.track(user.id, 'user:registered', {
+      email: user.email, name: user.name, role: user.role,
+    });
+    analyticsService.identify(user.id, { email: user.email, name: user.name, role: user.role });
+
+    logger.debug({ userId: user.id, email: user.email }, 'User registered. Verification token created.');
 
     return { user, verificationToken };
   },
@@ -111,6 +116,10 @@ export const authService = {
 
     // Update last login
     await usersRepo.update(user.id, { lastLoginAt: new Date() });
+
+    analyticsService.track(user.id, 'user:logged_in', {
+      email: user.email, role: user.role,
+    });
 
     logger.info({ userId: user.id }, 'User logged in successfully.');
 
@@ -182,8 +191,7 @@ export const authService = {
       logger.error({ err, userId: user.id }, 'Failed to queue password reset email');
     }
 
-    // Logging reset token for testing/local debug purposes
-    logger.info({ userId: user.id, resetToken: token }, 'Password reset token created.');
+    logger.debug({ userId: user.id }, 'Password reset token created.');
 
     return { success: true, resetToken: token };
   },

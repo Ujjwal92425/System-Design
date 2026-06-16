@@ -1,6 +1,7 @@
 import './globals.css';
 import type { Metadata } from 'next';
 import { Inter, Fraunces } from 'next/font/google';
+import { PostHogProvider } from '../components/providers/PostHogProvider';
 
 const inter = Inter({
   subsets: ['latin'],
@@ -28,7 +29,9 @@ export default function RootLayout({
   return (
     <html lang="en" className={`${inter.variable} ${fraunces.variable}`}>
       <body className="antialiased min-h-screen flex flex-col bg-yc-bg text-yc-text font-sans">
-        {children}
+        <PostHogProvider>
+          {children}
+        </PostHogProvider>
       </body>
     </html>
   );

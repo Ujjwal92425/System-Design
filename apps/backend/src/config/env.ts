@@ -50,6 +50,17 @@ const EnvSchema = z.object({
   // ── AI Providers ─────────────────────────────────────────────────────────────
   ANTHROPIC_API_KEY: z.string().optional(),
   OPENAI_API_KEY: z.string().optional(),
+  AI_PROVIDER: z.enum(['anthropic', 'openai', 'fallback']).optional(),
+
+  // ── PostHog Analytics ────────────────────────────────────────────────────────
+  POSTHOG_API_KEY: z.string().optional(),
+  POSTHOG_HOST: z.string().url().optional(),
+
+  // ── Background Jobs ──────────────────────────────────────────────────────────
+  DISABLE_QUEUES: z
+    .string()
+    .optional()
+    .transform((v) => v === 'true'),
 
   // ── Stripe Billing ────────────────────────────────────────────────────────────
   STRIPE_SECRET_KEY: z.string().optional(),

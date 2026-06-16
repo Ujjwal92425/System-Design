@@ -6,8 +6,20 @@ import { useRouter } from 'next/navigation';
 import { api } from '@/lib/api';
 import { 
   FolderPlus, Loader2, AlertCircle, Compass, History, 
-  Trash2, ChevronRight, Layers, LayoutGrid, FileJson
+  Trash2, ChevronRight, Layers, LayoutGrid, FileJson,
+  Sparkles, Link as LinkIcon, MessageCircle, Video, Navigation, MessageSquare, CreditCard
 } from 'lucide-react';
+import { SCENARIO_TEMPLATES } from '@/data/scenarios';
+
+const ICON_MAP: Record<string, any> = {
+  Link: LinkIcon,
+  MessageCircle,
+  Video,
+  Navigation,
+  MessageSquare,
+  CreditCard,
+  Sparkles,
+};
 
 interface Design {
   id: string;
@@ -49,7 +61,7 @@ export default function BuildListPage() {
   // Filters for templates
   const [activeCategory, setActiveCategory] = useState<string>('All');
 
-  const categories = ['All', 'Messaging', 'Storage', 'Social', 'Infrastructure'];
+  const categories = ['All', 'Messaging', 'Storage', 'Social', 'Infrastructure', 'Real-Time', 'E-Commerce', 'AI/ML'];
 
   useEffect(() => {
     Promise.all([
@@ -321,7 +333,14 @@ export default function BuildListPage() {
             ))}
           </div>
 
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+          <div style={{ 
+            display: 'flex', 
+            flexDirection: 'column', 
+            gap: '12px',
+            maxHeight: '340px',
+            overflowY: 'auto',
+            paddingRight: '6px'
+          }}>
             {filteredTemplates.length === 0 ? (
               <p style={{ color: 'var(--text-muted)', fontSize: '12px', textAlign: 'center', padding: '24px 0' }}>
                 No blueprints in this category.
@@ -371,6 +390,103 @@ export default function BuildListPage() {
           </div>
         </div>
 
+      </div>
+
+      {/* Predefined Scenario Blueprints Section */}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', borderTop: '1px solid var(--border)', paddingTop: '32px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <Sparkles style={{ width: '18px', height: '18px', color: 'var(--accent-amber)' }} />
+          <h2 className="bricolage" style={{ fontSize: '20px', color: 'var(--text-primary)', margin: 0, fontWeight: 700 }}>
+            Simulation Blueprints
+          </h2>
+        </div>
+        <p style={{ fontSize: '13px', color: 'var(--text-secondary)', margin: 0 }}>
+          Choose a pre-wired system design template to jumpstart your architecture. Each comes with realistic node configurations, performance properties, and service topology.
+        </p>
+
+        <div style={{ 
+          display: 'grid', 
+          gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', 
+          gap: '16px',
+          marginTop: '8px'
+        }}>
+          {SCENARIO_TEMPLATES.map((t) => {
+            const Icon = ICON_MAP[t.icon] || Sparkles;
+            return (
+              <div
+                key={t.id}
+                onClick={() => {
+                  setNewTitle(`My ${t.name}`);
+                  setSelectedTemplateId(t.id);
+                  setShowCreateModal(true);
+                }}
+                style={{
+                  padding: '20px',
+                  background: 'var(--bg-surface)',
+                  border: '1px solid var(--border)',
+                  borderRadius: '12px',
+                  cursor: 'pointer',
+                  transition: 'all 150ms ease',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '8px',
+                  position: 'relative'
+                }}
+                onMouseOver={e => {
+                  e.currentTarget.style.borderColor = 'var(--accent-amber)';
+                  e.currentTarget.style.transform = 'translateY(-2px)';
+                }}
+                onMouseOut={e => {
+                  e.currentTarget.style.borderColor = 'var(--border)';
+                  e.currentTarget.style.transform = 'none';
+                }}
+              >
+                <div style={{ display: 'flex', gap: '12px', alignItems: 'flex-start' }}>
+                  <div style={{ 
+                    width: '36px', 
+                    height: '36px', 
+                    borderRadius: '8px', 
+                    background: 'rgba(255,102,0,0.08)', 
+                    display: 'flex', 
+                    alignItems: 'center', 
+                    justifyContent: 'center',
+                    flexShrink: 0
+                  }}>
+                    <Icon style={{ width: '18px', height: '18px', color: 'var(--accent-amber)' }} />
+                  </div>
+                  <div style={{ minWidth: 0, flex: 1 }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '8px' }}>
+                      <h4 style={{ margin: 0, fontSize: '14px', color: 'var(--text-primary)', fontWeight: 700, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        {t.name}
+                      </h4>
+                    </div>
+                    <p style={{ margin: '4px 0 0', fontSize: '11px', color: 'var(--text-muted)', lineHeight: 1.4, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
+                      {t.description}
+                    </p>
+                  </div>
+                </div>
+
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '4px' }}>
+                  <span className="mono" style={{ 
+                    fontSize: '9px', 
+                    color: t.difficulty === 'Advanced' ? '#F87171' : t.difficulty === 'Intermediate' ? 'var(--accent-amber)' : 'var(--accent-blue)',
+                    fontWeight: 600,
+                    textTransform: 'uppercase',
+                    background: 'rgba(255,102,0,0.04)',
+                    padding: '2px 6px',
+                    borderRadius: '4px',
+                    border: '1px solid var(--border)'
+                  }}>
+                    {t.difficulty}
+                  </span>
+                  <span className="mono" style={{ fontSize: '9px', color: 'var(--text-muted)', padding: '2px 0' }}>
+                    Scale: {t.scale}
+                  </span>
+                </div>
+              </div>
+            );
+          })}
+        </div>
       </div>
 
       {/* Creation Modal */}

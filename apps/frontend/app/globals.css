@@ -552,3 +552,12 @@ body.no-scroll {
 .animate-pulse-edge {
   animation: pulse-edge 1.5s ease-in-out infinite;
 }
+
+/* ── FlowCanvas: traffic flow animation on edges ─────────────────────── */
+@keyframes flow-dash {
+  to { stroke-dashoffset: -24; }
+}
+.animate-flow-dash {
+  stroke-dasharray: 6 4;
+  animation: flow-dash 0.8s linear infinite;
+}

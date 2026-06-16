@@ -6,7 +6,8 @@ import { TrafficSlider } from '../../simulation/TrafficSlider';
 import { MetricsChart } from '../../simulation/MetricsChart';
 import { SystemHealthBadge } from '../../simulation/SystemHealthBadge';
 import { ChaosPanel } from '../../simulation/ChaosPanel';
-import { ChevronDown, ChevronUp, Radio, Sparkles, GripHorizontal } from 'lucide-react';
+import { ObservabilityDashboard } from '../../simulation/ObservabilityDashboard';
+import { ChevronDown, ChevronUp, Radio, Sparkles, GripHorizontal, LayoutDashboard, BarChart3 } from 'lucide-react';
 
 interface SimulationPanelProps {
   nodes: any[];
@@ -16,6 +17,7 @@ interface SimulationPanelProps {
     trafficQps: number;
     scenario: string;
     failedNodes: string[];
+    nodeChaosModes: Record<string, string>;
     metricsHistory: any[];
     currentMetrics: any | null;
     eventsLog: any[];
@@ -24,6 +26,7 @@ interface SimulationPanelProps {
     updateTraffic: (qps: number) => void;
     updateScenario: (scen: string) => void;
     toggleNodeFailure: (nodeId: string) => void;
+    setNodeChaos: (nodeId: string, mode: string) => void;
     reset: () => void;
   };
   height: number;
@@ -42,6 +45,7 @@ export function SimulationPanel({
   maxHeight = 600,
 }: SimulationPanelProps) {
   const [isOpen, setIsOpen] = useState(false);
+  const [dashboardView, setDashboardView] = useState(false);
   const resizingRef = useRef(false);
   const startYRef = useRef(0);
   const startHeightRef = useRef(0);
@@ -115,7 +119,19 @@ export function SimulationPanel({
           )}
         </div>
 
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-3">
+          <button
+            onClick={(e) => { e.stopPropagation(); setDashboardView((v) => !v); }}
+            className={`flex items-center gap-1.5 text-[10px] font-bold font-mono px-2.5 py-1 rounded-md border transition-colors ${
+              dashboardView
+                ? 'bg-orange-500 text-white border-orange-500'
+                : 'bg-white text-gray-500 border-gray-200 hover:border-orange-300 hover:text-orange-500'
+            }`}
+            title={dashboardView ? 'Switch to control room' : 'Switch to observability dashboard'}
+          >
+            {dashboardView ? <BarChart3 className="w-3.5 h-3.5" /> : <LayoutDashboard className="w-3.5 h-3.5" />}
+            <span className="hidden sm:inline">{dashboardView ? 'Control Room' : 'Dashboard'}</span>
+          </button>
           <SystemHealthBadge health={simulation.isRunning ? simulation.currentMetrics?.systemHealth : null} />
           {isOpen ? (
             <ChevronDown className="w-4 h-4 text-yc-text-muted" />
@@ -128,8 +144,15 @@ export function SimulationPanel({
       {/* Body — shown when expanded */}
       {isOpen && (
         <div className="flex-1 overflow-y-auto p-4 px-6">
-          {/* Responsive grid: 1 col mobile, 2 col tablet, 4 col desktop */}
-          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
+          {dashboardView ? (
+            <ObservabilityDashboard
+              history={simulation.metricsHistory}
+              currentMetrics={simulation.currentMetrics}
+              isRunning={simulation.isRunning}
+            />
+          ) : (
+            // Responsive grid: 1 col mobile, 2 col tablet, 4 col desktop
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
             {/* Col 1: Controls */}
             <div className="flex flex-col gap-3">
               <span className="font-mono text-[10px] text-yc-text-muted font-bold">01 // STATE SELECTOR</span>
@@ -202,11 +225,12 @@ export function SimulationPanel({
               <span className="font-mono text-[10px] text-yc-text-muted font-bold">04 // FAULT INJECTION</span>
               <ChaosPanel
                 nodes={nodes}
-                failedNodes={simulation.failedNodes}
-                onToggleFailure={simulation.toggleNodeFailure}
+                nodeChaosModes={simulation.nodeChaosModes}
+                onSetNodeChaos={simulation.setNodeChaos}
               />
             </div>
           </div>
+          )}
         </div>
       )}
     </div>

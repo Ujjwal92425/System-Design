@@ -44,6 +44,9 @@ const NODE_TYPES: NodeTypeEntry[] = [
   { type: NodeType.SEARCH_ENGINE, label: 'Search Engine', category: 'Services', icon: <Search className="h-5 w-5" /> },
   { type: NodeType.AUTH_SERVICE, label: 'Auth Service', category: 'Services', icon: <KeyRound className="h-5 w-5" /> },
   { type: NodeType.NOTIFICATION_SERVICE, label: 'Notifications', category: 'Services', icon: <Bell className="h-5 w-5" /> },
+  { type: NodeType.CIRCUIT_BREAKER, label: 'Circuit Breaker', category: 'Services', icon: <Shield className="h-5 w-5" /> },
+  { type: NodeType.DEAD_LETTER_QUEUE, label: 'DLQ', category: 'Services', icon: <ArrowLeftRight className="h-5 w-5" /> },
+  { type: NodeType.SERVICE_MESH, label: 'Service Mesh', category: 'Services', icon: <Globe className="h-5 w-5" /> },
 ];
 
 const categories = ['Entry', 'Gateway', 'Compute', 'Data', 'Services'] as const;

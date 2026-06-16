@@ -9,6 +9,7 @@
  */
 
 import jwt, { type JwtPayload } from 'jsonwebtoken';
+import { env } from '../config/env';
 
 export interface TokenPayload extends JwtPayload {
   sub: string;
@@ -21,9 +22,5 @@ export interface TokenPayload extends JwtPayload {
  * Throws on invalid signature or expired token.
  */
 export function verifyToken(token: string): TokenPayload {
-  const secret = process.env.JWT_SECRET;
-  if (!secret) {
-    throw new Error('JWT_SECRET is not configured');
-  }
-  return jwt.verify(token, secret) as TokenPayload;
+  return jwt.verify(token, env.JWT_SECRET) as TokenPayload;
 }

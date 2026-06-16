@@ -8,6 +8,7 @@ import { module07Lessons } from './module-07';
 import { module08Lessons } from './module-08';
 import { module09Lessons } from './module-09';
 import { module10Lessons } from './module-10';
+import { module11Lessons } from './module-11';
 import type { CurriculumData } from './types';
 
 const tracks = [
@@ -201,6 +202,25 @@ const tracks = [
     isPublished: true,
     completedPct: 0,
   },
+  {
+    id: 'mod-11',
+    slug: 'simulation-driven',
+    name: 'Simulation-Driven Architecture Design',
+    description: 'Learn system design through interactive simulation. Build architectures on the canvas, run real queueing-theory simulation, inject chaos, and get AI-scored reviews. Covers capacity estimation, load balancing, caching, database scaling, queues, resilience patterns, CDN optimization, rate limiting, serverless, observability, and chaos engineering.',
+    level: 2,
+    order: 11,
+    iconUrl: '/icons/simulation.svg',
+    estimatedHours: 24,
+    learningGoals: [
+      'Estimate capacity and model traffic using queueing theory',
+      'Design load balancing and caching strategies with measurable impact',
+      'Build resilient microservice architectures with circuit breakers',
+      'Run chaos engineering experiments and analyze recovery',
+      'Get AI-powered architecture reviews and interview scoring',
+    ],
+    isPublished: true,
+    completedPct: 0,
+  },
 ];
 
 function buildModules(slug: string, lessonsArray: any[]): any[] {
@@ -287,6 +307,7 @@ const allLessons = [
   ...module08Lessons,
   ...module09Lessons,
   ...module10Lessons,
+  ...module11Lessons,
 ];
 
 export const curriculumData: CurriculumData = {

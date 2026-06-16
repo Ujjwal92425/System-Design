@@ -57,6 +57,13 @@ export const SaveSimRunBody = z.object({
   })).optional(),
 });
 
+// ── Chaos injection ──────────────────────────────────────────────────────
+export const ChaosInjectBody = z.object({
+  nodeId: z.string().min(1),
+  mode: z.enum(['KILL', 'THROTTLE', 'PARTITION', 'CACHE_EVICTION']),
+  severity: z.number().min(0).max(1).optional(),
+});
+
 // ── Query params for listing runs ────────────────────────────────────────
 export const ListRunsQuery = z.object({
   page: z.coerce.number().int().min(1).default(1),

@@ -1,10 +1,17 @@
 import { CacheModel } from '../models/CacheModel';
 
 describe('CacheModel', () => {
-  it('should process cache hits/misses based on config', () => {
+  it('should emit correct hit rates', () => {
     const model = new CacheModel();
-    const res = model.process(100, { hitRate: 0.9, hitLatencyMs: 1 });
-    expect(res.passthrough).toBeCloseTo(10);
-    expect(res.latency).toBe(1);
+    const result = model.process(1000, { hitRate: 0.85, ttlSeconds: 3600, evictionPolicy: 'lru' });
+    expect(result.cacheHitRate).toBeCloseTo(0.83, 1);
+    expect(result.errorRate).toBe(0);
+    expect(result.latency).toBeLessThan(10);
+  });
+
+  it('should degrade with short TTL', () => {
+    const model = new CacheModel();
+    const result = model.process(1000, { hitRate: 0.85, ttlSeconds: 30, evictionPolicy: 'lru' });
+    expect(result.cacheHitRate).toBeLessThan(0.85);
   });
 });

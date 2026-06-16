@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { AuthRequest } from '../../middleware/authenticate';
 import { success } from '../../utils/response';
+import { Errors } from '../../utils/errors';
 import { interviewService } from './interview.service';
 
 export const interviewRouter = Router();
@@ -20,7 +21,7 @@ interviewRouter.get('/prompts', async (req: AuthRequest, res, next) => {
 interviewRouter.get('/sessions/history', async (req: AuthRequest, res, next) => {
   try {
     const userId = req.user?.id;
-    if (!userId) throw new Error('Unauthorized');
+    if (!userId) throw Errors.unauthorized();
     
     const history = await interviewService.getUserHistory(userId);
     success(res, history);
@@ -33,7 +34,7 @@ interviewRouter.get('/sessions/history', async (req: AuthRequest, res, next) => 
 interviewRouter.post('/sessions', async (req: AuthRequest, res, next) => {
   try {
     const userId = req.user?.id;
-    if (!userId) throw new Error('Unauthorized');
+    if (!userId) throw Errors.unauthorized();
     
     const { promptId } = req.body;
     const session = await interviewService.startSession(userId, promptId);
@@ -46,7 +47,9 @@ interviewRouter.post('/sessions', async (req: AuthRequest, res, next) => {
 // 4. Fetch Details of an active Session
 interviewRouter.get('/sessions/:id', async (req: AuthRequest, res, next) => {
   try {
-    const session = await interviewService.getSession(req.params.id);
+    const userId = req.user?.id;
+    if (!userId) throw Errors.unauthorized();
+    const session = await interviewService.getSession(req.params.id, userId);
     success(res, session);
   } catch (err) {
     next(err);
@@ -56,7 +59,9 @@ interviewRouter.get('/sessions/:id', async (req: AuthRequest, res, next) => {
 // 5. Use/Unlock a Hint
 interviewRouter.post('/sessions/:id/hint', async (req: AuthRequest, res, next) => {
   try {
-    const session = await interviewService.useHint(req.params.id);
+    const userId = req.user?.id;
+    if (!userId) throw Errors.unauthorized();
+    const session = await interviewService.useHint(req.params.id, userId);
     success(res, session);
   } catch (err) {
     next(err);
@@ -66,8 +71,10 @@ interviewRouter.post('/sessions/:id/hint', async (req: AuthRequest, res, next) =
 // 6. Link Design Canvas to Session
 interviewRouter.post('/sessions/:id/design', async (req: AuthRequest, res, next) => {
   try {
+    const userId = req.user?.id;
+    if (!userId) throw Errors.unauthorized();
     const { designId } = req.body;
-    const session = await interviewService.linkDesign(req.params.id, designId);
+    const session = await interviewService.linkDesign(req.params.id, designId, userId);
     success(res, session);
   } catch (err) {
     next(err);
@@ -77,8 +84,10 @@ interviewRouter.post('/sessions/:id/design', async (req: AuthRequest, res, next)
 // 7. Submit final Design for Scoring
 interviewRouter.post('/sessions/:id/submit', async (req: AuthRequest, res, next) => {
   try {
+    const userId = req.user?.id;
+    if (!userId) throw Errors.unauthorized();
     const { design } = req.body;
-    const result = await interviewService.submitSession(req.params.id, design);
+    const result = await interviewService.submitSession(req.params.id, design, userId);
     success(res, result);
   } catch (err) {
     next(err);

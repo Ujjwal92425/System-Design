@@ -16,6 +16,7 @@ interface SimulationState {
   trafficQps: number;
   scenario: string;
   failedNodes: string[];
+  nodeChaosModes: Record<string, string>;
   metricsHistory: any[];
   currentMetrics: any | null;
   eventsLog: SimulationEvent[];
@@ -26,6 +27,7 @@ interface SimulationState {
   updateTraffic: (qps: number) => void;
   updateScenario: (scen: string) => void;
   toggleNodeFailure: (nodeId: string) => void;
+  setNodeChaos: (nodeId: string, mode: string) => void;
   updateGraph: (nodes: any[], edges: any[]) => void;
   resetSimulation: () => void;
   addEvent: (type: string, message: string, severity?: 'INFO' | 'WARNING' | 'ERROR') => void;
@@ -36,6 +38,7 @@ export const useSimulationStore = create<SimulationState>((set, get) => ({
   trafficQps: 1000,
   scenario: 'steady',
   failedNodes: [],
+  nodeChaosModes: {},
   metricsHistory: [],
   currentMetrics: null,
   eventsLog: [],
@@ -69,7 +72,7 @@ export const useSimulationStore = create<SimulationState>((set, get) => ({
     const addEventFn = get().addEvent;
     addEventFn('SYSTEM', 'Simulation started. Monitoring graph nodes...', 'INFO');
 
-    currentBridge.init(nodes, edges, state.trafficQps, state.scenario, state.failedNodes);
+    currentBridge.init(nodes, edges, state.trafficQps, state.scenario, state.failedNodes, state.nodeChaosModes);
     
     currentBridge.start((metrics) => {
       set((prev) => {
@@ -115,40 +118,52 @@ export const useSimulationStore = create<SimulationState>((set, get) => ({
   },
 
   updateTraffic: (qps) => {
-    const { bridge, addEvent } = get();
+    const { bridge, addEvent, nodeChaosModes } = get();
     set({ trafficQps: qps });
     addEvent('CONFIG', `Input traffic adjusted to ${qps.toLocaleString()} QPS`, 'INFO');
     if (bridge) {
-      bridge.updateParams(qps, undefined, undefined);
+      bridge.updateParams(qps, undefined, undefined, nodeChaosModes);
     }
   },
 
   updateScenario: (scen) => {
-    const { bridge, addEvent } = get();
+    const { bridge, addEvent, nodeChaosModes } = get();
     set({ scenario: scen });
     addEvent('SCENARIO', `Profile switched to: ${scen.toUpperCase()}`, 'WARNING');
     if (bridge) {
-      bridge.updateParams(undefined, scen, undefined);
+      bridge.updateParams(undefined, scen, undefined, nodeChaosModes);
+    }
+  },
+
+  setNodeChaos: (nodeId, mode) => {
+    const { bridge, nodeChaosModes, addEvent } = get();
+    const isActive = mode !== 'none';
+    const updated = { ...nodeChaosModes };
+    if (isActive) {
+      updated[nodeId] = mode;
+    } else {
+      delete updated[nodeId];
+    }
+    const updatedFailed = Object.entries(updated)
+      .filter(([, m]) => m === 'KILL')
+      .map(([id]) => id);
+
+    if (isActive) {
+      addEvent('CHAOS', `Injected ${mode} fault into node ${nodeId}`, 'ERROR');
+    } else {
+      addEvent('CHAOS', `Node healed: ${nodeId}`, 'INFO');
+    }
+
+    set({ nodeChaosModes: updated, failedNodes: updatedFailed });
+    if (bridge) {
+      bridge.updateParams(undefined, undefined, updatedFailed, updated);
     }
   },
 
   toggleNodeFailure: (nodeId) => {
-    const { bridge, failedNodes, addEvent } = get();
-    const isFailed = failedNodes.includes(nodeId);
-    const updated = isFailed 
-      ? failedNodes.filter(id => id !== nodeId)
-      : [...failedNodes, nodeId];
-
-    if (isFailed) {
-      addEvent('CHAOS', `Node healed: ${nodeId}`, 'INFO');
-    } else {
-      addEvent('CHAOS', `CRITICAL: Injected failure into node ${nodeId}`, 'ERROR');
-    }
-
-    set({ failedNodes: updated });
-    if (bridge) {
-      bridge.updateParams(undefined, undefined, updated);
-    }
+    const { nodeChaosModes, addEvent } = get();
+    const currentMode = nodeChaosModes[nodeId];
+    get().setNodeChaos(nodeId, currentMode ? 'none' : 'KILL');
   },
 
   updateGraph: (nodes: any[], edges: any[]) => {
@@ -168,6 +183,7 @@ export const useSimulationStore = create<SimulationState>((set, get) => ({
       metricsHistory: [],
       currentMetrics: null,
       failedNodes: [],
+      nodeChaosModes: {},
       eventsLog: []
     });
   }

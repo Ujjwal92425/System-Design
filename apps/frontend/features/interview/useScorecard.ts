@@ -253,7 +253,43 @@ export function useScorecard() {
       });
     }
 
-    // 13. Notification
+    // 13. Circuit Breaker / Resilience
+    const hasCircuitBreaker = nodes.some(n =>
+      n.type === 'CIRCUIT_BREAKER' || n.type === 'SERVICE_MESH'
+    );
+    rubricResults.push({
+      id: 'resilience',
+      name: 'Resilience (Circuit Breaker / Service Mesh)',
+      weight: 5,
+      passed: hasCircuitBreaker,
+      score: hasCircuitBreaker ? 5 : 0,
+    });
+    if (!hasCircuitBreaker && nodes.some(n => n.type === 'MICROSERVICE')) {
+      missedItems.push({
+        id: 'resilience',
+        name: 'Circuit Breaker / Service Mesh',
+        hint: 'Add circuit breaker or service mesh for fault isolation in microservices.',
+      });
+    }
+
+    // 14. Dead Letter Queue
+    const hasDLQ = nodes.some(n => n.type === 'DEAD_LETTER_QUEUE');
+    rubricResults.push({
+      id: 'dlq',
+      name: 'Dead Letter Queue (DLQ)',
+      weight: 5,
+      passed: hasDLQ,
+      score: hasDLQ ? 5 : 0,
+    });
+    if (!hasDLQ && nodes.some(n => n.type === 'QUEUE')) {
+      missedItems.push({
+        id: 'dlq',
+        name: 'Dead Letter Queue',
+        hint: 'Add a dead letter queue to handle failed messages from the main queue.',
+      });
+    }
+
+    // 15. Notification
     const hasNotification = nodes.some(n => n.type === 'NOTIFICATION_SERVICE');
     rubricResults.push({
       id: 'notifications',

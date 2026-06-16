@@ -37,9 +37,11 @@ export const interviewsRepo = {
     });
   },
 
-  async getSession(id: string) {
-    return db.interviewSession.findUnique({
-      where: { id },
+  async getSession(id: string, userId?: string) {
+    const where: any = { id };
+    if (userId) where.userId = userId;
+    return db.interviewSession.findFirst({
+      where,
       include: {
         prompt: true,
         score: true,

@@ -14,7 +14,7 @@ import { Queue } from 'bullmq';
 import { env } from '../config/env';
 import { logger } from '../utils/logger';
 
-const queuesEnabled = !process.env.DISABLE_QUEUES || process.env.DISABLE_QUEUES === 'false';
+const queuesEnabled = !env.DISABLE_QUEUES;
 
 function attachErrorHandler(queue: Queue): void {
   // BullMQ 5.x: queue.client is a Promise<ioredis>
@@ -63,6 +63,7 @@ function noopQueue(name: string): Queue {
 export const aiQueue = queuesEnabled ? createQueue('ai-analysis') : noopQueue('ai-analysis');
 export const exportQueue = queuesEnabled ? createQueue('exports') : noopQueue('exports');
 export const emailQueue = queuesEnabled ? createQueue('emails') : noopQueue('emails');
+export const simulationQueue = queuesEnabled ? createQueue('simulation-run') : noopQueue('simulation-run');
 
 if (queuesEnabled) {
   logger.info('BullMQ queues initialized (Redis enabled)');

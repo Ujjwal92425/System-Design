@@ -1,9 +1,10 @@
 import { z } from 'zod';
 
 export const ChaosEventSchema = z.object({
-  type: z.enum(['KILL_NODE', 'THROTTLE_NODE', 'NETWORK_PARTITION']),
-  targetNodeId: z.string(),
-  durationSeconds: z.number().default(10),
+  type: z.enum(['KILL_NODE', 'THROTTLE_NODE', 'NETWORK_PARTITION', 'QUEUE_BACKUP', 'CACHE_EVICTION']),
+  targetNodeId: z.string().min(1),
+  durationSeconds: z.number().int().min(1).max(300).default(10),
+  severity: z.enum(['LOW', 'MEDIUM', 'HIGH']).optional(),
 });
 
 export const SimConfigSchema = z.object({

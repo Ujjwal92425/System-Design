@@ -1,21 +1,23 @@
-/**
- * apps/backend/src/jobs/pdf-export.job.ts
- *
- * BullMQ worker for PDF exports.
- * Skipped entirely when DISABLE_QUEUES is set.
- */
-
-import type { Job } from 'bullmq';
+import { Worker, type Job } from 'bullmq';
+import { env } from '../config/env';
 import { logger } from '../utils/logger';
 
-const queuesEnabled = !process.env.DISABLE_QUEUES || process.env.DISABLE_QUEUES === 'false';
+const queuesEnabled = !env.DISABLE_QUEUES;
 
 if (queuesEnabled) {
-  const { Worker } = require('bullmq');
-  const { env } = require('../config/env');
-
   const worker = new Worker('exports', async (job: Job) => {
-    logger.info({ jobId: job.id, data: job.data }, 'Processing PDF export job');
+    const { designId, userId, format } = job.data;
+    logger.info({ jobId: job.id, designId, format }, 'Processing PDF export job');
+
+    try {
+      // TODO: Integrate PDF generation library (e.g. puppeteer, pdfkit)
+      // For now, we acknowledge the job and log completion
+      logger.info({ jobId: job.id, designId }, 'PDF export job completed (stub)');
+      return { designId, status: 'exported' };
+    } catch (err: any) {
+      logger.error({ jobId: job.id, err }, 'PDF export job failed');
+      throw err;
+    }
   }, {
     connection: { url: env.REDIS_URL },
     concurrency: 1,

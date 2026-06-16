@@ -1,6 +1,8 @@
 'use client';
 
-// Inline Web Worker definition using Blob URL to ensure full Next.js/Webpack SSR compatibility
+import { api } from '@/lib/api';
+import { io as socketIO, Socket } from 'socket.io-client';
+
 const workerCode = `
   let isRunning = false;
   let intervalId = null;
@@ -9,8 +11,10 @@ const workerCode = `
   let graphNodes = [];
   let graphEdges = [];
   let trafficQps = 1000;
-  let scenario = 'steady'; // steady, spike, chaos
+  let scenario = 'steady';
   let failedNodes = [];
+  let nodeChaosModes = {};
+  let simRunId = null;
 
   self.onmessage = function(e) {
     const { type, payload } = e.data;
@@ -21,32 +25,39 @@ const workerCode = `
       trafficQps = payload.trafficQps || 1000;
       scenario = payload.scenario || 'steady';
       failedNodes = payload.failedNodes || [];
+      nodeChaosModes = payload.nodeChaosModes || {};
+      simRunId = payload.simRunId || null;
     } else if (type === 'START') {
-      if (!isRunning) {
-        isRunning = true;
-        startSimulation();
-      }
+      if (!isRunning) { isRunning = true; startSimulation(); }
     } else if (type === 'STOP') {
       isRunning = false;
-      if (intervalId) {
-        clearInterval(intervalId);
-        intervalId = null;
-      }
+      if (intervalId) { clearInterval(intervalId); intervalId = null; }
     } else if (type === 'UPDATE_PARAMS') {
       trafficQps = payload.trafficQps ?? trafficQps;
       scenario = payload.scenario ?? scenario;
       failedNodes = payload.failedNodes ?? failedNodes;
+      nodeChaosModes = payload.nodeChaosModes ?? nodeChaosModes;
     } else if (type === 'UPDATE_GRAPH') {
       graphNodes = payload.nodes || [];
       graphEdges = payload.edges || [];
+    } else if (type === 'APPLY_CHAOS') {
+      nodeChaosModes[payload.nodeId] = payload.mode;
+    } else if (type === 'HEAL_CHAOS') {
+      delete nodeChaosModes[payload.nodeId];
     }
   };
 
   function startSimulation() {
-    intervalId = setInterval(() => {
+    intervalId = setInterval(function() {
       tickCount++;
-      const metrics = runSimulationTick();
+      var metrics = runSimulationTick();
       self.postMessage({ type: 'TICK', payload: metrics });
+      if (tickCount >= 300) {
+        isRunning = false;
+        clearInterval(intervalId);
+        intervalId = null;
+        self.postMessage({ type: 'COMPLETE', payload: { ticks: tickCount } });
+      }
     }, 1000);
   }
 
@@ -65,6 +76,10 @@ const workerCode = `
     if (scenario === 'spike') {
       var phase = tickCount % 15;
       if (phase >= 3 && phase <= 7) currentInputQps = trafficQps * 3.5;
+    } else if (scenario === 'ramp') {
+      currentInputQps = trafficQps + (tickCount * 100);
+    } else if (scenario === 'chaos') {
+      if (tickCount % 10 >= 6) currentInputQps = trafficQps * 3;
     }
 
     var adj = {}, incomingCount = {};
@@ -90,6 +105,7 @@ const workerCode = `
     entrypoints.forEach(function(ep) { queue.push({ id: ep.id, load: currentInputQps / entrypoints.length }); });
     var visited = {};
     var lbRoundRobinCounter = {};
+    var events = [];
 
     while (queue.length > 0) {
       var item = queue.shift();
@@ -104,7 +120,8 @@ const workerCode = `
 
       var nodeData = node.data || {};
       var isFailed = failedNodes.indexOf(id) >= 0;
-      var isChaosActive = scenario === 'chaos' && (tickCount % 10 >= 6);
+      var chaosMode = nodeChaosModes[id] || 'none';
+      var isChaosActive = chaosMode !== 'none' || (scenario === 'chaos' && (tickCount % 10 >= 6));
       var nodeSpecType = node.type || '';
       var capacity = 3000, baseLatency = 5;
 
@@ -117,10 +134,25 @@ const workerCode = `
       var nodeErrorRate = 0;
       var queueDepth = 0;
 
-      if (isFailed) {
+      var isPartitioned = false;
+      if (isFailed || chaosMode === 'KILL') {
         nodeErrorRate = 100; nodeLatency = 5000;
-      } else {
-        // --- RATE LIMITER ---
+        events.push({ tick: tickCount, type: 'KILL', message: nodeSpecType + ' ' + id + ' killed', severity: 'ERROR' });
+      } else if (chaosMode === 'THROTTLE') {
+        var throttleFactor = 0.3;
+        capacity = Math.round(capacity * throttleFactor);
+        nodeErrorRate = Math.min(50, (1 - throttleFactor) * 100);
+        nodeLatency = baseLatency * 3;
+        events.push({ tick: tickCount, type: 'THROTTLE', message: nodeSpecType + ' ' + id + ' throttled to 30%', severity: 'WARNING' });
+      } else if (chaosMode === 'PARTITION') {
+        isPartitioned = true;
+        events.push({ tick: tickCount, type: 'PARTITION', message: nodeSpecType + ' ' + id + ' partitioned', severity: 'WARNING' });
+      } else if (chaosMode === 'CACHE_EVICTION') {
+        nodeData.ttlSeconds = 0; nodeData.evictionPolicy = 'fifo';
+        events.push({ tick: tickCount, type: 'CACHE_EVICTION', message: 'Cache ' + id + ' evicted', severity: 'WARNING' });
+      }
+
+      if (nodeErrorRate < 100) {
         if (nodeSpecType === 'RATE_LIMITER') {
           var limit = nodeData.rateLimitQps || 2000;
           var dropped = Math.max(0, nodeQps - limit);
@@ -129,7 +161,6 @@ const workerCode = `
           nodeLatency = 1;
         }
 
-        // --- M/M/c QUEUING (thread/connection pool) ---
         var poolSize = 0;
         if (nodeSpecType.indexOf('DATABASE') >= 0) poolSize = nodeData.connectionPoolSize || 50;
         else if (nodeSpecType.indexOf('WEB_SERVER') >= 0 || nodeSpecType === 'WEB_SERVER') poolSize = nodeData.threadPoolSize || 200;
@@ -149,32 +180,26 @@ const workerCode = `
           }
         }
 
-        // --- QUEUE node type ---
         if (nodeSpecType === 'QUEUE') {
           var processingRate = nodeData.processingRate || 3000;
           queueDepth = Math.max(0, nodeQps - processingRate);
           nodeQps = Math.min(nodeQps, processingRate);
         }
 
-        // --- OVERLOAD CHECK ---
         if (nodeErrorRate === 0 && nodeQps > capacity) {
           var excess = nodeQps - capacity;
           nodeErrorRate = Math.min(95, (excess / nodeQps) * 100);
           nodeLatency = baseLatency + (excess * 0.1);
         }
 
-        // --- RETRY / BACKOFF ---
         if (nodeErrorRate > 0) {
           var errRatio = nodeErrorRate / 100;
           nodeQps *= (1 + errRatio + errRatio * errRatio + errRatio * errRatio * errRatio);
           var backoffDelay = (errRatio * 50) + (errRatio * errRatio * 150) + (errRatio * errRatio * errRatio * 450);
           nodeLatency += backoffDelay;
-          if (nodeQps > capacity) {
-            nodeErrorRate = Math.min(99, ((nodeQps - capacity) / nodeQps) * 100);
-          }
+          if (nodeQps > capacity) nodeErrorRate = Math.min(99, ((nodeQps - capacity) / nodeQps) * 100);
         }
 
-        // --- CDN HIT RATIO OVERRIDE ---
         if (nodeSpecType.indexOf('CDN') >= 0 || nodeSpecType === 'CDN') {
           var hitRatio = nodeData.hitRatioOverride !== undefined ? nodeData.hitRatioOverride / 100 : 0.90;
           var misses = nodeQps * (1 - hitRatio);
@@ -186,7 +211,6 @@ const workerCode = `
           continue;
         }
 
-        // --- CACHE (with TTL / eviction decay) ---
         if (nodeSpecType.indexOf('CACHE') >= 0) {
           var hitRate = 0.85;
           if (isChaosActive) hitRate = 0.05;
@@ -204,7 +228,6 @@ const workerCode = `
           continue;
         }
 
-        // --- LOAD BALANCER (routing algorithm) ---
         if (nodeSpecType.indexOf('LOAD_BALANCER') >= 0 || nodeSpecType === 'LOAD_BALANCER') {
           var algo = nodeData.routingAlgorithm || 'round_robin';
           var lbTargets = adj[id] || [];
@@ -227,7 +250,6 @@ const workerCode = `
         }
       }
 
-      // --- DATABASE with read replicas ---
       if (nodeSpecType.indexOf('DATABASE') >= 0) {
         var replicaCount = nodeData.readReplicaCount || 0;
         var replicaLag = nodeData.replicationLagMs || 100;
@@ -240,11 +262,11 @@ const workerCode = `
       nodeMetrics[id].qps = Math.round(nodeQps);
       nodeMetrics[id].latency = Math.round(nodeLatency + baseLatency);
       nodeMetrics[id].errorRate = Math.round(nodeErrorRate);
-      nodeMetrics[id].cpu = Math.min(100, Math.round((nodeQps / capacity) * 100));
+      nodeMetrics[id].cpu = Math.min(100, Math.round((nodeQps / Math.max(1, capacity)) * 100));
       nodeMetrics[id].queueDepth = Math.round(queueDepth);
 
       var targets = adj[id] || [];
-      var outgoingLoad = isFailed ? 0 : nodeQps;
+      var outgoingLoad = (isFailed || isPartitioned) ? 0 : nodeQps;
       targets.forEach(function(tgt) { queue.push({ id: tgt, load: outgoingLoad / targets.length }); });
     }
 
@@ -258,7 +280,8 @@ const workerCode = `
 
     return {
       tick: tickCount, timestamp: Date.now(), nodes: nodesArray,
-      systemHealth, inputQps: currentInputQps, activeScenario: scenario
+      systemHealth, inputQps: currentInputQps, activeScenario: scenario,
+      events: events
     };
   }
 `;
@@ -266,44 +289,107 @@ const workerCode = `
 export class SimulationWorkerBridge {
   private worker: Worker | null = null;
   private onTickCallback: ((metrics: any) => void) | null = null;
+  private onCompleteCallback: ((result: any) => void) | null = null;
+  private allTicks: any[] = [];
+  private simRunId: string | null = null;
+  private syncToBackend: boolean = false;
+  private socket: Socket | null = null;
 
   constructor() {
     if (typeof window !== 'undefined') {
       const blob = new Blob([workerCode], { type: 'application/javascript' });
       this.worker = new Worker(URL.createObjectURL(blob));
-      
+
       this.worker.onmessage = (e) => {
         const { type, payload } = e.data;
-        if (type === 'TICK' && this.onTickCallback) {
-          this.onTickCallback(payload);
+        if (type === 'TICK') {
+          this.allTicks.push(payload);
+          if (this.onTickCallback) this.onTickCallback(payload);
+          if (this.syncToBackend) this.syncTickToBackend(payload);
+        } else if (type === 'COMPLETE') {
+          if (this.onCompleteCallback) this.onCompleteCallback({ ticks: this.allTicks, ...payload });
+          if (this.syncToBackend) this.completeBackendRun();
         }
       };
     }
   }
 
-  init(nodes: any[], edges: any[], trafficQps: number, scenario: string, failedNodes: string[]) {
+  private async syncTickToBackend(tick: any) {
+    if (!this.simRunId) return;
+    try {
+      await api.patch(`/simulation/runs/${this.simRunId}/progress`, { tick });
+    } catch { }
+  }
+
+  private async completeBackendRun() {
+    if (!this.simRunId) return;
+    try {
+      await api.post(`/simulation/runs/${this.simRunId}/stop`);
+    } catch { }
+  }
+
+  init(
+    nodes: any[], edges: any[], trafficQps: number, scenario: string,
+    failedNodes: string[], nodeChaosModes?: Record<string, string>,
+    simRunId?: string, syncBackend?: boolean,
+  ) {
+    this.simRunId = simRunId || null;
+    this.syncToBackend = syncBackend || false;
+    this.allTicks = [];
     this.worker?.postMessage({
       type: 'INIT',
-      payload: { nodes, edges, trafficQps, scenario, failedNodes }
+      payload: { nodes, edges, trafficQps, scenario, failedNodes, nodeChaosModes, simRunId }
     });
+  }
+
+  enableBackendSync(simRunId: string) {
+    this.simRunId = simRunId;
+    this.syncToBackend = true;
+  }
+
+  disableBackendSync() {
+    this.simRunId = null;
+    this.syncToBackend = false;
+  }
+
+  subscribeToBackend(runId: string, designId: string) {
+    if (!this.socket) {
+      this.socket = socketIO({ path: '/api/socket' });
+    }
+    this.socket.emit('simulation:subscribe', { runId, designId });
+    this.socket.on('simulation:tick', (data: { runId: string; tick: any }) => {
+      if (this.onTickCallback) this.onTickCallback(data.tick);
+    });
+  }
+
+  unsubscribeFromBackend(runId: string) {
+    if (this.socket) {
+      this.socket.emit('simulation:unsubscribe', { runId });
+    }
   }
 
   updateGraph(nodes: any[], edges: any[]) {
-    this.worker?.postMessage({
-      type: 'UPDATE_GRAPH',
-      payload: { nodes, edges }
-    });
+    this.worker?.postMessage({ type: 'UPDATE_GRAPH', payload: { nodes, edges } });
   }
 
-  updateParams(trafficQps?: number, scenario?: string, failedNodes?: string[]) {
+  updateParams(trafficQps?: number, scenario?: string, failedNodes?: string[], nodeChaosModes?: Record<string, string>) {
     this.worker?.postMessage({
       type: 'UPDATE_PARAMS',
-      payload: { trafficQps, scenario, failedNodes }
+      payload: { trafficQps, scenario, failedNodes, nodeChaosModes }
     });
   }
 
-  start(onTick: (metrics: any) => void) {
+  applyChaos(nodeId: string, mode: string) {
+    this.worker?.postMessage({ type: 'APPLY_CHAOS', payload: { nodeId, mode } });
+  }
+
+  healChaos(nodeId: string) {
+    this.worker?.postMessage({ type: 'HEAL_CHAOS', payload: { nodeId } });
+  }
+
+  start(onTick: (metrics: any) => void, onComplete?: (result: any) => void) {
     this.onTickCallback = onTick;
+    this.onCompleteCallback = onComplete || null;
     this.worker?.postMessage({ type: 'START' });
   }
 
@@ -311,8 +397,16 @@ export class SimulationWorkerBridge {
     this.worker?.postMessage({ type: 'STOP' });
   }
 
+  getTicks() {
+    return [...this.allTicks];
+  }
+
   terminate() {
     this.worker?.terminate();
     this.worker = null;
+    if (this.socket) {
+      this.socket.disconnect();
+      this.socket = null;
+    }
   }
 }

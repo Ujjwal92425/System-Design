@@ -50,6 +50,7 @@ export default async function AdminLayout({ children }: { children: ReactNode })
         <nav style={{ padding: '16px 12px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
           {[
             { href: '/admin', label: 'Overview' },
+            { href: '/admin/analytics', label: 'Analytics' },
             { href: '/admin/content/tracks', label: 'Tracks' },
             { href: '/admin/content/lessons', label: 'Lessons' },
             { href: '/admin/users', label: 'Users' },

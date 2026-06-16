@@ -105,9 +105,7 @@ const FIELD_CONFIGS: Record<string, FieldDef[]> = {
   ],
   RATE_LIMITER: [
     { label: 'Label', key: 'label', type: 'text' },
-    {
-      label: 'Rate Limit (QPS)', key: 'rateLimitQps', type: 'number'
-    },
+    { label: 'Rate Limit (QPS)', key: 'rateLimitQps', type: 'number' },
     {
       label: 'Algorithm', key: 'rateLimiterType', type: 'select',
       options: [
@@ -115,6 +113,171 @@ const FIELD_CONFIGS: Record<string, FieldDef[]> = {
         { label: 'Fixed Window', value: 'fixed_window' },
       ]
     },
+  ],
+  [NodeType.API_GATEWAY]: [
+    { label: 'Label', key: 'label', type: 'text' },
+    { label: 'Rate Limit (QPS)', key: 'capacity', type: 'number' },
+    { label: 'Latency (ms)', key: 'latency', type: 'number' },
+  ],
+  [NodeType.DNS]: [
+    { label: 'Label', key: 'label', type: 'text' },
+    { label: 'TTL (seconds)', key: 'ttlSeconds', type: 'number' },
+    { label: 'Latency (ms)', key: 'latency', type: 'number' },
+  ],
+  [NodeType.CLIENT]: [
+    { label: 'Label', key: 'label', type: 'text' },
+    { label: 'Users', key: 'userCount', type: 'number' },
+    { label: 'Requests/min', key: 'requestsPerMin', type: 'number' },
+  ],
+  MICROSERVICE: [
+    { label: 'Label', key: 'label', type: 'text' },
+    { label: 'Container Replicas', key: 'replicas', type: 'number' },
+    { label: 'Timeout (ms)', key: 'timeoutMs', type: 'number' },
+  ],
+  APP_SERVER: [
+    { label: 'Label', key: 'label', type: 'text' },
+    { label: 'Capacity (QPS)', key: 'capacity', type: 'number' },
+    { label: 'Thread Pool', key: 'threadPoolSize', type: 'number' },
+  ],
+  WORKER: [
+    { label: 'Label', key: 'label', type: 'text' },
+    { label: 'Concurrency', key: 'concurrency', type: 'number' },
+    { label: 'Queue Size', key: 'queueSize', type: 'number' },
+  ],
+  SERVERLESS_FN: [
+    { label: 'Label', key: 'label', type: 'text' },
+    { label: 'Memory (MB)', key: 'memoryMb', type: 'number' },
+    { label: 'Timeout (ms)', key: 'timeoutMs', type: 'number' },
+  ],
+  OBJECT_STORAGE: [
+    { label: 'Label', key: 'label', type: 'text' },
+    { label: 'Reads/s', key: 'readThroughput', type: 'number' },
+    { label: 'Writes/s', key: 'writeThroughput', type: 'number' },
+  ],
+  FILE_STORAGE: [
+    { label: 'Label', key: 'label', type: 'text' },
+    { label: 'Read Latency (ms)', key: 'latency', type: 'number' },
+    { label: 'Capacity (GB)', key: 'capacityGb', type: 'number' },
+  ],
+  DATA_LAKE: [
+    { label: 'Label', key: 'label', type: 'text' },
+    { label: 'Ingestion Rate', key: 'ingestionRate', type: 'number' },
+    { label: 'Storage (TB)', key: 'storageTb', type: 'number' },
+  ],
+  SEARCH_ENGINE: [
+    { label: 'Label', key: 'label', type: 'text' },
+    { label: 'Index QPS', key: 'indexQps', type: 'number' },
+    { label: 'Search QPS', key: 'searchQps', type: 'number' },
+    { label: 'Shards', key: 'shardCount', type: 'number' },
+  ],
+  AUTH_SERVICE: [
+    { label: 'Label', key: 'label', type: 'text' },
+    { label: 'Requests/s', key: 'capacity', type: 'number' },
+    { label: 'Latency (ms)', key: 'latency', type: 'number' },
+  ],
+  NOTIFICATION_SERVICE: [
+    { label: 'Label', key: 'label', type: 'text' },
+    { label: 'Messages/s', key: 'capacity', type: 'number' },
+    { label: 'Channels', key: 'channels', type: 'number' },
+  ],
+  REVERSE_PROXY: [
+    { label: 'Label', key: 'label', type: 'text' },
+    { label: 'Max Connections', key: 'capacity', type: 'number' },
+    { label: 'Latency (ms)', key: 'latency', type: 'number' },
+  ],
+  WAF: [
+    { label: 'Label', key: 'label', type: 'text' },
+    { label: 'Inspect QPS', key: 'capacity', type: 'number' },
+    { label: 'Block Rate (%)', key: 'blockRate', type: 'number' },
+  ],
+  MONITORING: [
+    { label: 'Label', key: 'label', type: 'text' },
+    { label: 'Scrape Interval (s)', key: 'scrapeInterval', type: 'number' },
+    { label: 'Retention (days)', key: 'retentionDays', type: 'number' },
+  ],
+  LOGS: [
+    { label: 'Label', key: 'label', type: 'text' },
+    { label: 'Ingest Rate', key: 'ingestRate', type: 'number' },
+    { label: 'Retention (days)', key: 'retentionDays', type: 'number' },
+  ],
+  METRICS: [
+    { label: 'Label', key: 'label', type: 'text' },
+    { label: 'Ingest QPS', key: 'capacity', type: 'number' },
+    { label: 'Cardinality', key: 'cardinality', type: 'number' },
+  ],
+  TRACING: [
+    { label: 'Label', key: 'label', type: 'text' },
+    { label: 'Trace Rate (%)', key: 'sampleRate', type: 'number' },
+    { label: 'Retention (days)', key: 'retentionDays', type: 'number' },
+  ],
+  ALERTING: [
+    { label: 'Label', key: 'label', type: 'text' },
+    { label: 'Rate (alerts/min)', key: 'alertRate', type: 'number' },
+    { label: 'Latency (ms)', key: 'latency', type: 'number' },
+  ],
+  OAUTH: [
+    { label: 'Label', key: 'label', type: 'text' },
+    { label: 'Tokens/s', key: 'capacity', type: 'number' },
+    { label: 'Token TTL (s)', key: 'tokenTtl', type: 'number' },
+  ],
+  JWT: [
+    { label: 'Label', key: 'label', type: 'text' },
+    { label: 'Tokens/s', key: 'capacity', type: 'number' },
+    { label: 'Key Rotation (days)', key: 'keyRotationDays', type: 'number' },
+  ],
+  SECRETS_MANAGER: [
+    { label: 'Label', key: 'label', type: 'text' },
+    { label: 'Reads/s', key: 'capacity', type: 'number' },
+    { label: 'Cache TTL (s)', key: 'cacheTtl', type: 'number' },
+  ],
+  PUBSUB: [
+    { label: 'Label', key: 'label', type: 'text' },
+    { label: 'Pub Rate (msg/s)', key: 'publishRate', type: 'number' },
+    { label: 'Sub Rate (msg/s)', key: 'subscribeRate', type: 'number' },
+    { label: 'Partitions', key: 'partitions', type: 'number' },
+  ],
+  LLM_GATEWAY: [
+    { label: 'Label', key: 'label', type: 'text' },
+    { label: 'Requests/s', key: 'capacity', type: 'number' },
+    { label: 'Context Window', key: 'contextWindow', type: 'number' },
+  ],
+  EMBEDDING_SVC: [
+    { label: 'Label', key: 'label', type: 'text' },
+    { label: 'Embed/s', key: 'capacity', type: 'number' },
+    { label: 'Dim Size', key: 'dimensionSize', type: 'number' },
+  ],
+  VECTOR_DB: [
+    { label: 'Label', key: 'label', type: 'text' },
+    { label: 'Queries/s', key: 'capacity', type: 'number' },
+    { label: 'Index Dim', key: 'dimensionSize', type: 'number' },
+    { label: 'Top-K', key: 'topK', type: 'number' },
+  ],
+  RAG_SERVICE: [
+    { label: 'Label', key: 'label', type: 'text' },
+    { label: 'Queries/s', key: 'capacity', type: 'number' },
+    { label: 'Chunk Size', key: 'chunkSize', type: 'number' },
+  ],
+  INFERENCE_SVC: [
+    { label: 'Label', key: 'label', type: 'text' },
+    { label: 'Inferences/s', key: 'capacity', type: 'number' },
+    { label: 'Model', key: 'modelName', type: 'text' },
+  ],
+  BROWSER: [
+    { label: 'Label', key: 'label', type: 'text' },
+    { label: 'Users', key: 'userCount', type: 'number' },
+  ],
+  DESKTOP_APP: [
+    { label: 'Label', key: 'label', type: 'text' },
+    { label: 'Users', key: 'userCount', type: 'number' },
+  ],
+  ADMIN_PANEL: [
+    { label: 'Label', key: 'label', type: 'text' },
+    { label: 'Admins', key: 'userCount', type: 'number' },
+  ],
+  MOBILE_APP: [
+    { label: 'Label', key: 'label', type: 'text' },
+    { label: 'Users', key: 'userCount', type: 'number' },
+    { label: 'Requests/s', key: 'capacity', type: 'number' },
   ],
 };
 

@@ -5,11 +5,17 @@ import { useRouter } from 'next/navigation';
 import { api } from '@/lib/api';
 import { useCanvasStore, CanvasNode, CanvasEdge } from '@/features/canvas/useCanvasStore';
 import { useAutoSave } from '@/features/canvas/useAutoSave';
+import { useAutoLayout } from '@/features/canvas/useAutoLayout';
 import { useSimulation } from '@/features/simulation/useSimulation';
+import { useCollaboration } from '@/features/canvas/useCollaboration';
 import { FlowCanvas } from '@/components/canvas/FlowCanvas';
+import { toPng } from 'html-to-image';
 import { CanvasSidebar } from '@/components/canvas/CanvasSidebar';
 import { SimulationPanel } from '@/components/canvas/panels/SimulationPanel';
 import { InspectorPanel } from '@/components/canvas/panels/InspectorPanel';
+import type { ScenarioTemplate } from '@/data/scenarios';
+import LatencyBudgetPanel from '@/components/canvas/panels/LatencyBudgetPanel';
+import AIReviewPanel from '@/components/canvas/panels/AIReviewPanel';
 import { useInterviewSession } from '@/features/interview/useInterviewSession';
 import { Timer } from '@/components/interview/Timer';
 import { RequirementsPanel } from '@/components/interview/RequirementsPanel';
@@ -19,15 +25,16 @@ import {
   ChevronLeft, Save, RotateCcw, Copy, Trash, Globe, Lock,
   Loader2, AlertCircle, Info, ArrowLeftRight,
   Undo2, Redo2, Settings, Sliders, Clock, Sparkles,
-  Download, StickyNote, PanelRight,
+  Download, StickyNote, PanelRight, X,
 } from 'lucide-react';
 import { NodeCategoryItem } from '@/features/canvas/nodeCategories';
 
 function createReactFlowNode(cn: CanvasNode): Node {
   const isNote = cn.type === 'NOTE';
+  const isGroup = cn.type === 'GROUP';
   return {
     id: cn.id,
-    type: isNote ? 'noteNode' : 'architectureNode',
+    type: isNote ? 'noteNode' : isGroup ? 'groupNode' : 'architectureNode',
     position: cn.position,
     data: {
       nodeType: cn.type,
@@ -37,6 +44,7 @@ function createReactFlowNode(cn: CanvasNode): Node {
       ...cn.data,
     },
     selected: cn.selected || false,
+    ...(isGroup ? { style: { width: 400, height: 300 } } : {}),
   };
 }
 
@@ -86,10 +94,11 @@ export default function CanvasWorkspace({ params }: { params: Promise<{ designId
   const [saving, setSaving] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(true);
   const [simHeight, setSimHeight] = useState(DEFAULT_SIM_HEIGHT);
-  const [inspectorOpen, setInspectorOpen] = useState(true);
+  const [rightPanel, setRightPanel] = useState<'inspector' | 'latency' | 'ai-review' | null>('inspector');
 
   const simulation = useSimulation(nodes, edges);
-
+  useCollaboration({ designId, enabled: true });
+  const { layout } = useAutoLayout();
   const [interviewSessionId, setInterviewSessionId] = useState<string | null>(null);
   const [activeLeftTab, setActiveLeftTab] = useState<'palette' | 'requirements' | 'hints'>('requirements');
   const [isSubmitConfirmOpen, setIsSubmitConfirmOpen] = useState(false);
@@ -189,6 +198,9 @@ export default function CanvasWorkspace({ params }: { params: Promise<{ designId
     DATABASE_NOSQL: { readReplicaCount: 0, connectionPoolSize: 50, replicationLagMs: 100 },
     CACHE: { evictionPolicy: 'lru', ttlSeconds: 3600 },
     QUEUE: { processingRate: 3000 },
+    CIRCUIT_BREAKER: { failureThreshold: 5, halfOpenMaxQps: 100, recoveryTimeoutMs: 30000 },
+    DEAD_LETTER_QUEUE: { maxRetryCount: 3, dlqBaseRate: 0.02, processingRate: 500 },
+    SERVICE_MESH: { sidecarCpuOverhead: 0.05, sidecarLatencyMs: 3, enableMtls: true, enableTraces: true, enableRetries: true },
   };
 
   const handleAddNode = useCallback((item: NodeCategoryItem) => {
@@ -285,6 +297,7 @@ export default function CanvasWorkspace({ params }: { params: Promise<{ designId
     addNode(newNode);
   }, [addNode]);
 
+
   const handleExportImage = useCallback((dataUrl: string) => {
     const link = document.createElement('a');
     link.download = `architecture-${Date.now()}.png`;
@@ -330,7 +343,7 @@ export default function CanvasWorkspace({ params }: { params: Promise<{ designId
   }
 
   return (
-    <div className="flex flex-col h-dvh overflow-hidden bg-yc-bg">
+    <div className="flex flex-col h-[calc(100vh-56px)] overflow-hidden bg-yc-bg">
       {/* Toolbar — fixed height, scrollable on tiny screens */}
       <div className="h-12 border-b border-yc-border bg-yc-bg backdrop-blur-sm flex items-center justify-between px-2 sm:px-4 flex-shrink-0 overflow-x-auto gap-1">
         <div className="flex items-center gap-1 sm:gap-3 flex-shrink-0">
@@ -354,7 +367,17 @@ export default function CanvasWorkspace({ params }: { params: Promise<{ designId
 
         <div className="flex items-center gap-1 sm:gap-2 flex-shrink-0">
           <button
-            onClick={() => { const f = (window as any).__canvasAutoLayoutH; if (f) f(); }}
+            onClick={() => {
+              const layouted = layout(rfNodes, rfEdges, 'LR');
+              setNodes(layouted.map((n) => ({
+                id: n.id,
+                type: String(n.data?.nodeType || 'WEB_SERVER') as any,
+                position: n.position,
+                data: n.data,
+                selected: n.selected,
+              })));
+              setTimeout(() => {}, 100);
+            }}
             className="p-1.5 rounded-md text-yc-text-muted hover:text-yc-text hover:bg-yc-bg-card transition flex items-center gap-1.5 text-xs"
             title="Auto Layout Horizontal"
           >
@@ -383,7 +406,12 @@ export default function CanvasWorkspace({ params }: { params: Promise<{ designId
           <div className="w-px h-5 bg-yc-border hidden sm:block" />
 
           <button
-            onClick={() => { const f = (window as any).__canvasExport; if (f) f(); }}
+            onClick={async () => {
+              const container = document.querySelector('.react-flow') as HTMLElement;
+              if (!container) return;
+              const dataUrl = await toPng(container, { backgroundColor: '#FCF9F2', pixelRatio: 2 });
+              handleExportImage(dataUrl);
+            }}
             className="p-1.5 rounded-md text-yc-text-muted hover:text-yc-text hover:bg-yc-bg-card transition"
             title="Export as PNG"
             aria-label="Export as PNG"
@@ -496,7 +524,7 @@ export default function CanvasWorkspace({ params }: { params: Promise<{ designId
           </>
         )}
 
-        {/* Canvas + Simulation — stack vertically */}
+          {/* Canvas + Simulation — stack vertically */}
         <div className="flex flex-col flex-1 min-h-0 relative">
           {/* Canvas area: takes all remaining space via flex-1 */}
           <div className="flex-1 min-h-0 relative">
@@ -533,28 +561,56 @@ export default function CanvasWorkspace({ params }: { params: Promise<{ designId
           />
         </div>
 
-        {/* Right Inspector Panel — overlay on mobile, sidebar on desktop */}
-        {inspectorOpen && (
+        {/* Right Panels — overlay on mobile, sidebar on desktop */}
+        {rightPanel && (
           <aside className="fixed lg:static right-0 top-12 bottom-0 z-30 w-72 border-l border-yc-border bg-white flex-col overflow-y-auto shadow-xl lg:shadow-none lg:flex">
-            <div className="flex border-b border-yc-border flex-shrink-0">
+            <div className="flex items-center border-b border-yc-border flex-shrink-0">
               <div className="flex-1" />
+              <div className="flex items-center gap-0.5">
+                <button
+                  onClick={() => setRightPanel(rightPanel === 'inspector' ? null : 'inspector')}
+                  className={`p-2 transition ${rightPanel === 'inspector' ? 'text-yc-accent' : 'text-yc-text-muted hover:text-yc-text'}`}
+                  title="Inspector"
+                  aria-label="Inspector panel"
+                >
+                  <Settings className="w-3.5 h-3.5" />
+                </button>
+                <button
+                  onClick={() => setRightPanel(rightPanel === 'latency' ? null : 'latency')}
+                  className={`p-2 transition ${rightPanel === 'latency' ? 'text-yc-accent' : 'text-yc-text-muted hover:text-yc-text'}`}
+                  title="Latency Budget"
+                  aria-label="Latency budget panel"
+                >
+                  <Clock className="w-3.5 h-3.5" />
+                </button>
+                <button
+                  onClick={() => setRightPanel(rightPanel === 'ai-review' ? null : 'ai-review')}
+                  className={`p-2 transition ${rightPanel === 'ai-review' ? 'text-yc-accent' : 'text-yc-text-muted hover:text-yc-text'}`}
+                  title="AI Review"
+                  aria-label="AI review panel"
+                >
+                  <Sparkles className="w-3.5 h-3.5" />
+                </button>
+              </div>
               <button
-                onClick={() => setInspectorOpen(false)}
+                onClick={() => setRightPanel(null)}
                 className="p-2 text-yc-text-muted hover:text-yc-text transition"
-                aria-label="Close inspector"
+                aria-label="Close panel"
               >
-                <PanelRight className="w-4 h-4" />
+                <X className="w-3.5 h-3.5" />
               </button>
             </div>
-            <InspectorPanel />
+            {rightPanel === 'inspector' && <InspectorPanel />}
+            {rightPanel === 'latency' && <LatencyBudgetPanel nodes={nodes} edges={edges} />}
+            {rightPanel === 'ai-review' && <AIReviewPanel nodes={nodes} edges={edges} />}
           </aside>
         )}
 
-        {/* Mobile inspector toggle button */}
+        {/* Mobile panel toggle button */}
         <button
-          onClick={() => setInspectorOpen(!inspectorOpen)}
+          onClick={() => setRightPanel(rightPanel ? null : 'inspector')}
           className="fixed bottom-4 right-4 z-30 w-10 h-10 bg-white border border-yc-border rounded-full shadow-md flex items-center justify-center text-yc-text-muted hover:text-yc-accent transition"
-          aria-label="Toggle inspector"
+          aria-label="Toggle panels"
         >
           <Settings className="w-4 h-4" />
         </button>

@@ -9,6 +9,7 @@ export function useSimulation(nodes: any[] = [], edges: any[] = []) {
     trafficQps,
     scenario,
     failedNodes,
+    nodeChaosModes,
     metricsHistory,
     currentMetrics,
     eventsLog,
@@ -17,6 +18,7 @@ export function useSimulation(nodes: any[] = [], edges: any[] = []) {
     updateTraffic,
     updateScenario,
     toggleNodeFailure,
+    setNodeChaos,
     resetSimulation
   } = useSimulationStore();
 
@@ -41,6 +43,7 @@ export function useSimulation(nodes: any[] = [], edges: any[] = []) {
     trafficQps,
     scenario,
     failedNodes,
+    nodeChaosModes,
     metricsHistory,
     currentMetrics,
     eventsLog,
@@ -49,6 +52,7 @@ export function useSimulation(nodes: any[] = [], edges: any[] = []) {
     updateTraffic,
     updateScenario,
     toggleNodeFailure,
+    setNodeChaos,
     reset: resetSimulation
   };
 }
