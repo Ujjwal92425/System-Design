@@ -132,7 +132,12 @@ export function SimulationPanel({
             {dashboardView ? <BarChart3 className="w-3.5 h-3.5" /> : <LayoutDashboard className="w-3.5 h-3.5" />}
             <span className="hidden sm:inline">{dashboardView ? 'Control Room' : 'Dashboard'}</span>
           </button>
-          <SystemHealthBadge health={simulation.isRunning ? simulation.currentMetrics?.systemHealth : null} />
+          <SystemHealthBadge
+            health={simulation.isRunning ? simulation.currentMetrics?.systemHealth : null}
+            avgLatency={simulation.currentMetrics?.nodes?.reduce((sum: number, n: any) => sum + (n.latency || 0), 0) / (simulation.currentMetrics?.nodes?.length || 1)}
+            avgMemory={simulation.currentMetrics?.nodes?.reduce((sum: number, n: any) => sum + (n.memoryUsage || 0), 0) / (simulation.currentMetrics?.nodes?.length || 1)}
+            avgErrorRate={simulation.currentMetrics?.nodes?.reduce((sum: number, n: any) => sum + (n.errorRate || 0), 0) / (simulation.currentMetrics?.nodes?.length || 1)}
+          />
           {isOpen ? (
             <ChevronDown className="w-4 h-4 text-yc-text-muted" />
           ) : (

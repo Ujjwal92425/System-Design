@@ -78,12 +78,12 @@ export const designsRepo = {
   },
 
   /** Create a new blank design (optionally pre-populated from a template) */
-  async create(userId: string, title: string, templateId?: string) {
-    // Fetch template nodes/edges if provided
-    let initNodes: any[] = [];
-    let initEdges: any[] = [];
+  async create(userId: string, title: string, templateId?: string, nodes?: any[], edges?: any[]) {
+    // Directly-provided nodes/edges take priority (e.g. from SCENARIO_TEMPLATES on the frontend)
+    let initNodes = nodes ?? [];
+    let initEdges = edges ?? [];
 
-    if (templateId) {
+    if (!initNodes.length && templateId) {
       const template = await db.template.findUnique({
         where: { id: templateId },
         select: { nodes: true, edges: true },
@@ -98,8 +98,7 @@ export const designsRepo = {
       data: {
         userId,
         title,
-        templateId,
-        // Create the first version immediately so the canvas always has something to load
+        templateId: templateId || null,
         versions: {
           create: { version: 1, nodes: initNodes, edges: initEdges, message: 'Initial save' },
         },

@@ -72,6 +72,8 @@ export interface TickSnapshot {
     queueDepth: number;
     cacheHitRate: number;
     readReplicasUsed: number;
+    memory: number;
+    replicas: number;
   }>;
   systemHealth: 'GREEN' | 'YELLOW' | 'RED';
   events: Array<{
@@ -94,6 +96,10 @@ export class SimulationEngine {
   private onTick?: (metrics: TickSnapshot) => void;
   private onComplete?: (history: TickSnapshot[]) => void;
   private history: TickSnapshot[] = [];
+  private nodeMemory: Map<string, { usedMb: number; lastGcTick: number }> = new Map();
+  private nodeReplicas: Map<string, number> = new Map();
+  private hpaCooldown: Map<string, number> = new Map();
+  private prevCpu: Map<string, number[]> = new Map();
 
   constructor(nodes: any[], edges: any[], config: SimulationConfig) {
     this.graph = GraphEngine.buildGraph(nodes, edges);
@@ -249,33 +255,122 @@ export class SimulationEngine {
       incomingCount.set(edge.target, curr + 1);
     }
 
+    // Initialize persistent state for current graph
+    for (const id of allNodeIds) {
+      const n = this.graph.nodes.get(id);
+      if (!this.nodeMemory.has(id)) this.nodeMemory.set(id, { usedMb: 0, lastGcTick: 0 });
+      if (!this.nodeReplicas.has(id)) this.nodeReplicas.set(id, (n?.data as Record<string, any>)?.replicas || 1);
+      if (!this.hpaCooldown.has(id)) this.hpaCooldown.set(id, 0);
+      if (!this.prevCpu.has(id)) this.prevCpu.set(id, []);
+    }
+    // Clean up stale state
+    const knownIds = new Set(allNodeIds);
+    for (const id of this.nodeMemory.keys()) { if (!knownIds.has(id)) this.nodeMemory.delete(id); }
+    for (const id of this.nodeReplicas.keys()) { if (!knownIds.has(id)) this.nodeReplicas.delete(id); }
+    for (const id of this.hpaCooldown.keys()) { if (!knownIds.has(id)) this.hpaCooldown.delete(id); }
+    for (const id of this.prevCpu.keys()) { if (!knownIds.has(id)) this.prevCpu.delete(id); }
+
     const entrypoints = allNodeIds.filter((id) => (incomingCount.get(id) ?? 0) === 0);
+
     const loadMap = new Map<string, number>();
     const resultMap = new Map<string, NodeResult>();
     const visited = new Set<string>();
 
+    interface QueueItem { id: string; load: number; hopLatency: number; }
+    const queue: QueueItem[] = [];
+
     for (const ep of entrypoints) {
       loadMap.set(ep, currentInputQps / Math.max(1, entrypoints.length));
+      queue.push({ id: ep, load: loadMap.get(ep)!, hopLatency: 0 });
     }
 
-    const queue: string[] = [...entrypoints];
     while (queue.length > 0) {
-      const id = queue.shift()!;
-      if (visited.has(id)) continue;
-      visited.add(id);
+      const item = queue.shift()!;
+      const id = item.id;
+      const cumulativeHopLatency = item.hopLatency;
 
       const node = this.graph.nodes.get(id);
       if (!node) continue;
 
       const incomingLoad = loadMap.get(id) ?? 0;
+      if (visited.has(id)) {
+        // Still propagate load even if already visited (fan-in)
+        const neighbors = adjacency.get(id) || [];
+        for (const neighbor of neighbors) {
+          const existing = loadMap.get(neighbor) ?? 0;
+          loadMap.set(neighbor, existing + incomingLoad / Math.max(1, neighbors.length));
+          if (!visited.has(neighbor)) queue.push({ id: neighbor, load: loadMap.get(neighbor)!, hopLatency: cumulativeHopLatency + 2 });
+        }
+        continue;
+      }
+      visited.add(id);
+
       const nodeData = { ...(node.data || {}), ...(this.config.nodeOverrides?.[id] || {}) };
       const chaosFailure = this.chaos.getActiveFailure(id, this.tickCount);
       const model = this.getModel(node.type);
       const defaultLatency = nodeData.latency || 5;
 
-      let result: any;
+      // --- Compute effective capacity from config fields ---
+      const getCapacity = (nd: any, type: string): number => {
+        if (nd.capacity !== undefined && nd.capacity > 0) return nd.capacity;
+        const cpuCores = nd.cpuCores || 2;
+        const base: Record<string, number> = { DATABASE: 800, CACHE: 10000, WEB_SERVER: 2500, CDN: 50000, LOAD_BALANCER: 20000, QUEUE: 3000, RATE_LIMITER: 5000 };
+        const matched = Object.entries(base).find(([k]) => type.indexOf(k) >= 0);
+        return Math.round((matched?.[1] || 3000) * (cpuCores / 2));
+      };
+      const baseCapacity = getCapacity(nodeData, node.type);
+      const replicas = Math.max(1, this.nodeReplicas.get(id) || 1);
+      const effectiveCapacity = baseCapacity * replicas;
+      const cpuCores = nodeData.cpuCores || 2;
+      const ramGb = nodeData.ramGb || 4;
+      const maxMemMb = ramGb * 1024;
+      const payloadKb = nodeData.avgPayloadSizeKb || 4;
+      const memPerReqMb = payloadKb / 1024;
+      const netLatencyPerHop = nodeData.networkLatencyMs || 2;
 
-      if (chaosFailure) {
+      // --- Memory state ---
+      const memState = this.nodeMemory.get(id) || { usedMb: 0, lastGcTick: 0 };
+      const baseMemMb = maxMemMb * 0.3;
+      const concurrentFactor = Math.min(incomingLoad, replicas * cpuCores * 50) / Math.max(1, replicas * cpuCores * 50);
+      memState.usedMb = baseMemMb + (incomingLoad * memPerReqMb * concurrentFactor);
+      let oomCrashed = false;
+      let gcPauseMs = 0;
+      if (memState.usedMb > maxMemMb * 0.9) {
+        memState.usedMb = maxMemMb * 0.9;
+        oomCrashed = true;
+      }
+      const memPct = memState.usedMb / maxMemMb;
+      if (memPct > 0.7 && this.tickCount - memState.lastGcTick > 3) {
+        gcPauseMs = Math.min(200, 50 + (memPct - 0.7) * 500);
+        memState.usedMb = maxMemMb * 0.3;
+        memState.lastGcTick = this.tickCount;
+        this.events.push({ tick: this.tickCount, type: 'GC', message: `${node.type} ${id} GC pause ${Math.round(gcPauseMs)}ms`, severity: 'WARNING' });
+      }
+      if (oomCrashed) {
+        this.events.push({ tick: this.tickCount, type: 'OOM', message: `${node.type} ${id} ran out of memory (${Math.round(maxMemMb)} MB)`, severity: 'ERROR' });
+      }
+      this.nodeMemory.set(id, memState);
+
+      // --- Connection pool semaphore ---
+      const poolSize = nodeData.connectionPoolSize || nodeData.threadPoolSize || 200;
+      const maxConns = nodeData.maxConnections || poolSize;
+
+      // --- Write ratio for disk I/O ---
+      const writeRatio = nodeData.writeRatio !== undefined ? nodeData.writeRatio
+        : node.type.indexOf('DATABASE') >= 0 ? 0.3 : node.type.indexOf('CACHE') >= 0 ? 0.2 : 0.1;
+
+      let result: any;
+      let oomOrConnBlocked = false;
+
+      if (oomCrashed) {
+        result = { outgoingQps: 0, passthrough: 0, latency: 5000, errorRate: 100, queueDepth: 0, cacheHitRate: 0, readReplicasUsed: 0 };
+        oomOrConnBlocked = true;
+      } else if (incomingLoad > maxConns) {
+        const blocked = incomingLoad - maxConns;
+        result = { outgoingQps: maxConns, passthrough: maxConns, latency: defaultLatency + (blocked / maxConns) * 200, errorRate: 30, queueDepth: Math.round(blocked), cacheHitRate: 0, readReplicasUsed: 0 };
+        oomOrConnBlocked = true;
+        this.events.push({ tick: this.tickCount, type: 'CONN_POOL', message: `${node.type} ${id} connection pool saturated (${maxConns})`, severity: 'WARNING' });
+      } else if (chaosFailure) {
         switch (chaosFailure.mode) {
           case 'KILL':
             result = FailureScenario.kill(incomingLoad);
@@ -293,17 +388,16 @@ export class SimulationEngine {
           }
           default:
             result = model
-              ? model.process(incomingLoad, nodeData)
+              ? model.process(incomingLoad, { ...nodeData, capacity: effectiveCapacity })
               : { outgoingQps: incomingLoad, passthrough: incomingLoad, latency: defaultLatency, errorRate: 0, queueDepth: 0, cacheHitRate: 0, readReplicasUsed: 0 };
         }
         this.events.push({
-          tick: this.tickCount,
-          type: 'CHAOS_ACTIVE',
+          tick: this.tickCount, type: 'CHAOS_ACTIVE',
           message: `[${chaosFailure.mode}] ${node.type} ${id}: ${result.reason}`,
           severity: result.errorRate >= 50 ? 'ERROR' : result.errorRate > 0 ? 'WARNING' : 'INFO',
         });
       } else if (model) {
-        result = model.process(incomingLoad, nodeData);
+        result = model.process(incomingLoad, { ...nodeData, capacity: effectiveCapacity });
       } else {
         result = {
           outgoingQps: incomingLoad,
@@ -316,18 +410,35 @@ export class SimulationEngine {
         };
       }
 
+      // --- Disk I/O penalty ---
+      if (!oomOrConnBlocked && node.type.indexOf('DATABASE') >= 0 && writeRatio > 0 && result.outgoingQps > 0) {
+        const writeOps = result.outgoingQps * writeRatio;
+        const storageType = nodeData.storageType || 'ssd';
+        const seekTimeMs = storageType === 'hdd' ? 5 : storageType === 'nvme' ? 0.05 : 0.1;
+        const walFsyncMs = nodeData.walFsyncMs !== undefined ? nodeData.walFsyncMs : 20;
+        result.latency += (writeOps * seekTimeMs * 2) + (Math.min(writeOps, 1) * walFsyncMs * 0.1);
+        if (writeOps > effectiveCapacity * 0.5) {
+          result.errorRate = Math.min(result.errorRate + 10, 90);
+        }
+      }
+
+      // Add GC pause, network per-hop latency
+      result.latency += gcPauseMs + cumulativeHopLatency;
+
       resultMap.set(id, result);
 
+      // --- Propagate downstream ---
       const neighbors = adjacency.get(id) || [];
+      const outgoing = (oomCrashed || chaosFailure?.mode === 'KILL' || chaosFailure?.mode === 'PARTITION') ? 0 : result.outgoingQps;
       for (const neighbor of neighbors) {
         const existing = loadMap.get(neighbor) ?? 0;
-        if (node.type === NodeType.LOAD_BALANCER || node.type === NodeType.API_GATEWAY) {
-          const downstreamCount = adjacency.get(id)?.length || 1;
-          loadMap.set(neighbor, existing + result.outgoingQps / Math.max(1, downstreamCount));
-        } else {
-          loadMap.set(neighbor, existing + result.outgoingQps);
+        const isLB = node.type === NodeType.LOAD_BALANCER || node.type === NodeType.API_GATEWAY;
+        const downstreamCount = Math.max(1, neighbors.length);
+        const splitLoad = isLB ? outgoing / downstreamCount : outgoing;
+        loadMap.set(neighbor, existing + splitLoad);
+        if (!visited.has(neighbor)) {
+          queue.push({ id: neighbor, load: loadMap.get(neighbor)!, hopLatency: cumulativeHopLatency + netLatencyPerHop });
         }
-        if (!visited.has(neighbor)) queue.push(neighbor);
       }
     }
 
@@ -342,10 +453,34 @@ export class SimulationEngine {
 
     let isDegraded = false;
     let isFailing = false;
+    let oomCount = 0;
 
     const nodeSnapshots: TickSnapshot['nodes'] = [];
     for (const [id, result] of resultMap) {
       const node = this.graph.nodes.get(id);
+      const nodeData: Record<string, any> = node?.data || {};
+
+      const cpuCores = nodeData.cpuCores || 2;
+      const ramGb = nodeData.ramGb || 4;
+      const maxMemMb = ramGb * 1024;
+
+      // --- CPU: use effective capacity instead of hardcoded 10000 ---
+      const getCapacity = (nd: any, type: string): number => {
+        if (nd.capacity !== undefined && nd.capacity > 0) return nd.capacity;
+        const base: Record<string, number> = { DATABASE: 800, CACHE: 10000, WEB_SERVER: 2500, CDN: 50000, LOAD_BALANCER: 20000 };
+        const matched = Object.entries(base).find(([k]) => type.indexOf(k) >= 0);
+        return Math.round((matched?.[1] || 3000) * (cpuCores / 2));
+      };
+      const baseCapacity = getCapacity(nodeData, node?.type || '');
+      const replicas = Math.max(1, this.nodeReplicas.get(id) || 1);
+      const effectiveCapacity = baseCapacity * replicas;
+      const cpuUtil = Math.min(100, Math.round((result.outgoingQps / Math.max(1, effectiveCapacity)) * 100 * (cpuCores / 2) * 0.8));
+
+      // Memory % from persistent state
+      const memState = this.nodeMemory.get(id);
+      const memPct = memState ? Math.round((memState.usedMb / maxMemMb) * 100) : 0;
+      if (memPct >= 90) oomCount++;
+
       if (result.errorRate > 50) isFailing = true;
       else if (result.errorRate > 10 || result.latency > 200) isDegraded = true;
 
@@ -356,14 +491,44 @@ export class SimulationEngine {
         qps: Math.round(result.outgoingQps),
         errorRate: Math.round(result.errorRate * 10) / 10,
         p99Latency: Math.round(result.latency * 10) / 10,
-        cpu: Math.min(100, Math.round((result.outgoingQps / Math.max(1, 10000)) * 100)),
+        cpu: Math.min(100, cpuUtil),
         queueDepth: Math.round(result.queueDepth),
         cacheHitRate: Math.round(result.cacheHitRate * 100),
         readReplicasUsed: Math.round(result.readReplicasUsed),
+        memory: memPct,
+        replicas,
       });
     }
 
-    const systemHealth: TickSnapshot['systemHealth'] = isFailing ? 'RED' : isDegraded ? 'YELLOW' : 'GREEN';
+    const systemHealth: TickSnapshot['systemHealth'] = (oomCount > 0 || isFailing) ? 'RED' : isDegraded ? 'YELLOW' : 'GREEN';
+
+    // --- HPA: auto-scale replicas ---
+    for (const [id, result] of resultMap) {
+      const node = this.graph.nodes.get(id);
+      const nd: Record<string, any> = node?.data || {};
+      if (!nd.replicas || nd.replicas < 1) continue;
+      const cpuHistory = this.prevCpu.get(id) || [];
+      cpuHistory.push(nodeSnapshots.find((n) => n.id === id)?.cpu || 0);
+      if (cpuHistory.length > 5) cpuHistory.shift();
+      this.prevCpu.set(id, cpuHistory);
+      if (cpuHistory.length < 2) continue;
+      const avgCpu = cpuHistory.reduce((s, v) => s + v, 0) / cpuHistory.length;
+      const maxReplicas = nd.maxReplicas || 10;
+      const curReplicas = Math.max(1, this.nodeReplicas.get(id) || 1);
+      const lastScale = this.hpaCooldown.get(id) || 0;
+
+      if (avgCpu > 70 && curReplicas < maxReplicas && this.tickCount - lastScale >= 2) {
+        const add = Math.min(Math.ceil((avgCpu - 70) / 20), 3);
+        this.nodeReplicas.set(id, Math.min(curReplicas + add, maxReplicas));
+        this.hpaCooldown.set(id, this.tickCount);
+        this.events.push({ tick: this.tickCount, type: 'HPA', message: `${nd.label} scaled up ${curReplicas} -> ${this.nodeReplicas.get(id)} replicas (CPU ${Math.round(avgCpu)}%)`, severity: 'INFO' });
+      } else if (avgCpu < 30 && curReplicas > 1 && this.tickCount - lastScale >= 3) {
+        const remove = Math.min(Math.ceil((30 - avgCpu) / 20), 2);
+        this.nodeReplicas.set(id, Math.max(1, curReplicas - remove));
+        this.hpaCooldown.set(id, this.tickCount);
+        this.events.push({ tick: this.tickCount, type: 'HPA', message: `${nd.label} scaled down ${curReplicas} -> ${this.nodeReplicas.get(id)} replicas (CPU ${Math.round(avgCpu)}%)`, severity: 'INFO' });
+      }
+    }
 
     const snapshot: TickSnapshot = {
       tick: this.tickCount,

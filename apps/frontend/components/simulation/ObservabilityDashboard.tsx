@@ -6,8 +6,8 @@ import {
   CartesianGrid, Tooltip, ResponsiveContainer, Legend, PieChart, Pie, Cell,
 } from 'recharts';
 import {
-  Activity, Cpu, Clock, AlertTriangle, CheckCircle, ArrowUpDown,
-  BarChart3, Gauge, Server, Zap,
+   Activity, Cpu, Clock, AlertTriangle, CheckCircle, ArrowUpDown,
+   BarChart3, Gauge, Server, Zap, MemoryStick, Wifi,
 } from 'lucide-react';
 
 interface MetricsSnapshot {
@@ -23,6 +23,11 @@ interface MetricsSnapshot {
     errorRate: number;
     queueDepth?: number;
     cpu?: number;
+    memory?: number;
+    cacheHitRate?: number;
+    activeConnections?: number;
+    replicas?: number;
+    readReplicasUsed?: number;
   }[];
 }
 
@@ -84,6 +89,14 @@ export function ObservabilityDashboard({ history, currentMetrics, isRunning }: O
         : 0;
       const maxQueue = Math.max(...snap.nodes.map((n) => n.queueDepth || 0), 0);
       const totalQps = snap.nodes.reduce((s, n) => s + (n.qps || 0), 0);
+      const avgMemory = snap.nodes.length
+        ? snap.nodes.reduce((s, n) => s + (n.memory || 0), 0) / snap.nodes.length
+        : 0;
+      const avgCacheHit = snap.nodes.length
+        ? snap.nodes.reduce((s, n) => s + (n.cacheHitRate || 0), 0) / snap.nodes.length
+        : 0;
+      const maxConnections = Math.max(...snap.nodes.map((n) => n.activeConnections || 0), 0);
+      const totalReplicas = snap.nodes.reduce((s, n) => s + (n.replicas || 1), 0);
       return {
         tick: snap.tick,
         qps: totalQps,
@@ -91,7 +104,11 @@ export function ObservabilityDashboard({ history, currentMetrics, isRunning }: O
         latency: Math.round(avgLatency * 10) / 10,
         errorRate: Math.round(avgError * 10) / 10,
         cpu: Math.round(avgCpu * 10) / 10,
+        memory: Math.round(avgMemory * 10) / 10,
+        cacheHitRate: Math.round(avgCacheHit * 10) / 10,
         queueDepth: maxQueue,
+        activeConnections: maxConnections,
+        totalReplicas,
         health: snap.systemHealth,
         throughput: snap.nodes.length,
       };
@@ -244,17 +261,39 @@ export function ObservabilityDashboard({ history, currentMetrics, isRunning }: O
                 <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
                 <XAxis dataKey="tick" tick={{ fontSize: 8, fontFamily: 'monospace' }} stroke="#999" />
                 <YAxis tick={{ fontSize: 8, fontFamily: 'monospace' }} stroke="#999" domain={[0, 100]} tickFormatter={(v) => `${v}%`} />
-                <Tooltip
-                  contentStyle={{ fontSize: 11, fontFamily: 'monospace', borderRadius: 8, border: '1px solid #e5e7eb' }}
-                  formatter={(value: any) => [`${value}%`, 'CPU']}
-                />
+                <Tooltip contentStyle={{ fontSize: 11, fontFamily: 'monospace', borderRadius: 8, border: '1px solid #e5e7eb' }} formatter={(value: any) => [`${value}%`, 'CPU']} />
                 <Area type="monotone" dataKey="cpu" stroke={CHART_COLORS.purple} strokeWidth={2} fill="url(#cpuGradient)" />
               </AreaChart>
             </ResponsiveContainer>
           </div>
         </div>
 
-        {/* Error / Success Rate */}
+        {/* Memory Usage */}
+        <div className="bg-white border border-gray-200 rounded-xl p-4">
+          <div className="flex items-center gap-2 mb-3">
+            <MemoryStick className="w-3.5 h-3.5 text-orange-500" />
+            <span className="text-[11px] font-bold text-gray-700">Memory Usage</span>
+          </div>
+          <div className="h-36">
+            <ResponsiveContainer width="100%" height="100%">
+              <AreaChart data={chartData}>
+                <defs>
+                  <linearGradient id="memGradient" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor={CHART_COLORS.orange} stopOpacity={0.3} />
+                    <stop offset="95%" stopColor={CHART_COLORS.orange} stopOpacity={0} />
+                  </linearGradient>
+                </defs>
+                <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                <XAxis dataKey="tick" tick={{ fontSize: 8, fontFamily: 'monospace' }} stroke="#999" />
+                <YAxis tick={{ fontSize: 8, fontFamily: 'monospace' }} stroke="#999" domain={[0, 100]} tickFormatter={(v) => `${v}%`} />
+                <Tooltip contentStyle={{ fontSize: 11, fontFamily: 'monospace', borderRadius: 8, border: '1px solid #e5e7eb' }} formatter={(value: any) => [`${value}%`, 'Memory']} />
+                <Area type="monotone" dataKey="memory" stroke={CHART_COLORS.orange} strokeWidth={2} fill="url(#memGradient)" />
+              </AreaChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+
+        {/* Error Rate */}
         <div className="bg-white border border-gray-200 rounded-xl p-4">
           <div className="flex items-center gap-2 mb-3">
             <AlertTriangle className="w-3.5 h-3.5 text-red-500" />
@@ -266,12 +305,37 @@ export function ObservabilityDashboard({ history, currentMetrics, isRunning }: O
                 <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
                 <XAxis dataKey="tick" tick={{ fontSize: 8, fontFamily: 'monospace' }} stroke="#999" />
                 <YAxis tick={{ fontSize: 8, fontFamily: 'monospace' }} stroke="#999" domain={[0, 100]} tickFormatter={(v) => `${v}%`} />
-                <Tooltip
-                  contentStyle={{ fontSize: 11, fontFamily: 'monospace', borderRadius: 8, border: '1px solid #e5e7eb' }}
-                  formatter={(value: any) => [`${value}%`, 'Error Rate']}
-                />
+                <Tooltip contentStyle={{ fontSize: 11, fontFamily: 'monospace', borderRadius: 8, border: '1px solid #e5e7eb' }} formatter={(value: any) => [`${value}%`, 'Error Rate']} />
                 <Bar dataKey="errorRate" fill={CHART_COLORS.red} radius={[2, 2, 0, 0]} />
               </BarChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+      </div>
+
+      {/* Charts Row 3 */}
+      <div className="grid grid-cols-3 gap-4">
+        {/* Cache Hit Rate */}
+        <div className="bg-white border border-gray-200 rounded-xl p-4">
+          <div className="flex items-center gap-2 mb-3">
+            <Zap className="w-3.5 h-3.5 text-yellow-500" />
+            <span className="text-[11px] font-bold text-gray-700">Cache Hit Rate</span>
+          </div>
+          <div className="h-36">
+            <ResponsiveContainer width="100%" height="100%">
+              <AreaChart data={chartData}>
+                <defs>
+                  <linearGradient id="cacheGradient" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor={CHART_COLORS.yellow} stopOpacity={0.3} />
+                    <stop offset="95%" stopColor={CHART_COLORS.yellow} stopOpacity={0} />
+                  </linearGradient>
+                </defs>
+                <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                <XAxis dataKey="tick" tick={{ fontSize: 8, fontFamily: 'monospace' }} stroke="#999" />
+                <YAxis tick={{ fontSize: 8, fontFamily: 'monospace' }} stroke="#999" domain={[0, 100]} tickFormatter={(v) => `${v}%`} />
+                <Tooltip contentStyle={{ fontSize: 11, fontFamily: 'monospace', borderRadius: 8, border: '1px solid #e5e7eb' }} formatter={(value: any) => [`${value}%`, 'Cache Hit']} />
+                <Area type="monotone" dataKey="cacheHitRate" stroke={CHART_COLORS.yellow} strokeWidth={2} fill="url(#cacheGradient)" />
+              </AreaChart>
             </ResponsiveContainer>
           </div>
         </div>
@@ -294,10 +358,33 @@ export function ObservabilityDashboard({ history, currentMetrics, isRunning }: O
                 <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
                 <XAxis dataKey="tick" tick={{ fontSize: 8, fontFamily: 'monospace' }} stroke="#999" />
                 <YAxis tick={{ fontSize: 8, fontFamily: 'monospace' }} stroke="#999" />
-                <Tooltip
-                  contentStyle={{ fontSize: 11, fontFamily: 'monospace', borderRadius: 8, border: '1px solid #e5e7eb' }}
-                />
+                <Tooltip contentStyle={{ fontSize: 11, fontFamily: 'monospace', borderRadius: 8, border: '1px solid #e5e7eb' }} />
                 <Area type="monotone" dataKey="queueDepth" stroke={CHART_COLORS.teal} strokeWidth={2} fill="url(#queueGradient)" />
+              </AreaChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+
+        {/* Active Connections */}
+        <div className="bg-white border border-gray-200 rounded-xl p-4">
+          <div className="flex items-center gap-2 mb-3">
+            <Wifi className="w-3.5 h-3.5 text-blue-500" />
+            <span className="text-[11px] font-bold text-gray-700">Active Connections (max)</span>
+          </div>
+          <div className="h-36">
+            <ResponsiveContainer width="100%" height="100%">
+              <AreaChart data={chartData}>
+                <defs>
+                  <linearGradient id="connGradient" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor={CHART_COLORS.blue} stopOpacity={0.3} />
+                    <stop offset="95%" stopColor={CHART_COLORS.blue} stopOpacity={0} />
+                  </linearGradient>
+                </defs>
+                <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                <XAxis dataKey="tick" tick={{ fontSize: 8, fontFamily: 'monospace' }} stroke="#999" />
+                <YAxis tick={{ fontSize: 8, fontFamily: 'monospace' }} stroke="#999" />
+                <Tooltip contentStyle={{ fontSize: 11, fontFamily: 'monospace', borderRadius: 8, border: '1px solid #e5e7eb' }} />
+                <Area type="monotone" dataKey="activeConnections" stroke={CHART_COLORS.blue} strokeWidth={2} fill="url(#connGradient)" />
               </AreaChart>
             </ResponsiveContainer>
           </div>

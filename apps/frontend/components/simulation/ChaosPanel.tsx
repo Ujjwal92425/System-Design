@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Zap, ZapOff, CheckCircle, Gauge, Network, Database, Skull } from 'lucide-react';
+import { Zap, CheckCircle, Gauge, Network, Database, Skull } from 'lucide-react';
 
 interface NodeItem {
   id: string;

@@ -34,6 +34,8 @@ import { CanvasControls } from './panels/CanvasControls';
 import { ContextMenu } from './panels/ContextMenu';
 import { useAutoLayout } from '@/features/canvas/useAutoLayout';
 import { PacketFlowOverlay } from '../simulation/PacketFlowOverlay';
+import { MetricsOverlay } from './overlays/MetricsOverlay';
+import { ChaosOverlay } from './overlays/ChaosOverlay';
 
 const nodeTypes: NodeTypes = { architectureNode: NodeWithHandles, noteNode: NoteNode, groupNode: GroupNode };
 const edgeTypes: EdgeTypes = { architectureEdge: FlowEdge };
@@ -398,6 +400,22 @@ function FlowCanvasInner({
           onRename={onRenameNode}
         />
       )}
+
+      {/* Simulation overlays */}
+      {simulation?.isRunning && nodes.map((n) => {
+        const m = simulation.currentMetrics?.nodes?.find((nm: any) => nm.id === n.id);
+        if (!m) return null;
+        const nx = n.position.x * viewport.zoom + viewport.x;
+        const ny = n.position.y * viewport.zoom + viewport.y;
+        const nw = (n.width || 160) * viewport.zoom;
+        const nh = (n.height || 60) * viewport.zoom;
+        return (
+          <div key={`overlay-${n.id}`} style={{ position: 'absolute', top: 0, left: 0, width: 0, height: 0, zIndex: 50 }}>
+            <MetricsOverlay x={nx} y={ny} width={nw} height={nh} metrics={m} isSimulating />
+            <ChaosOverlay x={nx} y={ny} width={nw} height={nh} isFailed={simulation.failedNodes?.includes(n.id)} errorRate={m.errorRate} />
+          </div>
+        );
+      })}
     </div>
   );
 }

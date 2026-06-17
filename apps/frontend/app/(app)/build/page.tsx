@@ -85,10 +85,19 @@ export default function BuildListPage() {
     setCreating(true);
     setCreateError(null);
     try {
-      const payload = {
+      const payload: Record<string, any> = {
         title: newTitle.trim() || 'Untitled Design',
-        templateId: selectedTemplateId || undefined
+        templateId: selectedTemplateId || undefined,
       };
+      // If the template is a SCENARIO_TEMPLATE (not a DB template), send nodes/edges directly
+      if (selectedTemplateId) {
+        const scenarioTemplate = SCENARIO_TEMPLATES.find((t) => t.id === selectedTemplateId);
+        if (scenarioTemplate) {
+          payload.nodes = scenarioTemplate.nodes;
+          payload.edges = scenarioTemplate.edges;
+          // templateId is still sent but won't match a DB record; the backend prefers nodes/edges
+        }
+      }
       const res = await api.post('/designs', payload);
       const newDesign = res.data.data;
       router.push(`/build/${newDesign.id}`);

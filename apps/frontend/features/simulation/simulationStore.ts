@@ -36,7 +36,7 @@ interface SimulationState {
 export const useSimulationStore = create<SimulationState>((set, get) => ({
   isRunning: false,
   trafficQps: 1000,
-  scenario: 'steady',
+  scenario: 'constant',
   failedNodes: [],
   nodeChaosModes: {},
   metricsHistory: [],

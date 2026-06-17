@@ -45,12 +45,14 @@ designsRouter.get('/templates', async (req: AuthRequest, res, next) => {
 // ── Create a new design ───────────────────────────────────────────────────────
 designsRouter.post('/', validate(CreateDesignBody), async (req: AuthRequest, res, next) => {
   try {
-    const { title, templateId } = req.body;
+    const { title, templateId, nodes, edges } = req.body;
     const design = await designsService.createDesign(
       req.user!.id,
       req.user!.role,
       title,
       templateId,
+      nodes,
+      edges,
     );
     res.status(201).json({ success: true, data: design });
   } catch (err) { next(err); }

@@ -27,7 +27,9 @@ export const SaveDesignBody = z.object({
 // ── Create a new design (optionally from a template) ─────────────────────────
 export const CreateDesignBody = z.object({
   title:      z.string().min(1).max(200).default('Untitled Design'),
-  templateId: z.string().cuid().optional(),
+  templateId: z.string().optional(),
+  nodes:      z.array(z.any()).optional(),
+  edges:      z.array(z.any()).optional(),
 });
 
 // ── Restore a specific version ────────────────────────────────────────────────

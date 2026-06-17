@@ -54,7 +54,7 @@ export const designsService = {
    *
    * @throws 402 if the user is on FREE and already at their limit
    */
-  async createDesign(userId: string, role: string, title: string, templateId?: string) {
+  async createDesign(userId: string, role: string, title: string, templateId?: string, nodes?: any[], edges?: any[]) {
     const limit = PLAN_LIMITS[role as keyof typeof PLAN_LIMITS] ?? PLAN_LIMITS.USER;
 
     if (limit !== Infinity) {
@@ -68,7 +68,7 @@ export const designsService = {
       }
     }
 
-    return designsRepo.create(userId, title, templateId);
+    return designsRepo.create(userId, title, templateId, nodes, edges);
   },
 
   /** Save a new version snapshot — ownership verified in repo */

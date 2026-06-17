@@ -56,9 +56,9 @@ export function SimulationControls({
           onChange={(e) => onScenarioChange(e.target.value)}
           className="font-mono bg-yc-bg-card border border-yc-border rounded-md px-2.5 py-1.5 text-[11px] text-yc-text outline-none cursor-pointer"
         >
-          <option value="steady">Steady State</option>
+          <option value="constant">Steady State</option>
           <option value="spike">Traffic Spike Surges</option>
-          <option value="chaos">Chaos Test (CacheStampede)</option>
+          <option value="ramp">Ramping Load</option>
         </select>
       </div>
     </div>
