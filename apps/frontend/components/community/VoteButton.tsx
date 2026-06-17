@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { ArrowBigUp, ArrowBigDown } from 'lucide-react';
+import { communityService } from '@/services/community';
 
 interface VoteButtonProps {
   blueprintId: string;
@@ -22,7 +23,6 @@ export function VoteButton({ blueprintId, initialVotes, initialUserVote, onVoteC
     const oldVote = userVote;
     const oldNet = netVotes;
 
-    // Optimistic update
     if (userVote === value) {
       setUserVote(0);
       setNetVotes((v) => v - value);
@@ -32,16 +32,9 @@ export function VoteButton({ blueprintId, initialVotes, initialUserVote, onVoteC
     }
 
     try {
-      const token = localStorage.getItem('accessToken');
-      const res = await fetch(`/api/community/blueprints/${blueprintId}/vote`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ value }),
-      });
-      if (!res.ok) throw new Error('Vote failed');
-      const data = await res.json();
-      setNetVotes(data.data.netVotes);
-      onVoteChange?.(data.data.netVotes);
+      const result = await communityService.vote(blueprintId, value);
+      setNetVotes(result.netVotes);
+      onVoteChange?.(result.netVotes);
     } catch {
       setUserVote(oldVote);
       setNetVotes(oldNet);

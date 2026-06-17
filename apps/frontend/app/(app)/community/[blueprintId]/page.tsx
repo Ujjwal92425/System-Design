@@ -6,6 +6,7 @@ import { BlueprintCard } from '@/components/community/BlueprintCard';
 import { CommentThread } from '@/components/community/CommentThread';
 import { ForkButton } from '@/components/community/ForkButton';
 import { VoteButton } from '@/components/community/VoteButton';
+import { communityService } from '@/services/community';
 import { Loader2, ArrowLeft, User, Calendar, Tag } from 'lucide-react';
 
 interface BlueprintDetail {
@@ -23,41 +24,29 @@ interface Comment {
   user: { id: string; name: string | null; avatarUrl: string | null };
 }
 
+interface UserProfile {
+  id: string; name: string | null; email: string;
+}
+
 export default function BlueprintDetail({ params }: { params: Promise<{ blueprintId: string }> }) {
   const { blueprintId } = use(params);
   const router = useRouter();
   const [blueprint, setBlueprint] = useState<BlueprintDetail | null>(null);
   const [comments, setComments] = useState<Comment[]>([]);
-  const [currentUser, setCurrentUser] = useState<any>(null);
+  const [currentUser, setCurrentUser] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const [commentLoading, setCommentLoading] = useState(false);
 
   useEffect(() => {
     async function load() {
       try {
-        const token = localStorage.getItem('accessToken');
-        const [bpRes, commentRes, userRes] = await Promise.all([
-          fetch(`/api/community/blueprints/${blueprintId}`, {
-            headers: { Authorization: `Bearer ${token}` },
-          }),
-          fetch(`/api/community/blueprints/${blueprintId}/comments`, {
-            headers: { Authorization: `Bearer ${token}` },
-          }),
-          fetch('/api/users/me', {
-            headers: { Authorization: `Bearer ${token}` },
-          }),
+        const [bp, commentList, userRes] = await Promise.all([
+          communityService.getBlueprint(blueprintId),
+          communityService.listComments(blueprintId),
+          communityService.getCollection('me').catch(() => null),
         ]);
-        if (!bpRes.ok) throw new Error('Blueprint not found');
-        const bpData = await bpRes.json();
-        setBlueprint(bpData.data);
-        if (commentRes.ok) {
-          const cData = await commentRes.json();
-          setComments(cData.data);
-        }
-        if (userRes.ok) {
-          const uData = await userRes.json();
-          setCurrentUser(uData.data);
-        }
+        setBlueprint(bp);
+        setComments(commentList);
       } catch (err) {
         console.error('Load failed:', err);
       }
@@ -69,22 +58,9 @@ export default function BlueprintDetail({ params }: { params: Promise<{ blueprin
   async function handleAddComment(content: string, parentId?: string) {
     setCommentLoading(true);
     try {
-      const token = localStorage.getItem('accessToken');
-      const res = await fetch(`/api/community/blueprints/${blueprintId}/comments`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ content, parentId }),
-      });
-      if (!res.ok) throw new Error('Failed to add comment');
-      const data = await res.json();
-      // Refresh comments
-      const cRes = await fetch(`/api/community/blueprints/${blueprintId}/comments`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      if (cRes.ok) {
-        const cData = await cRes.json();
-        setComments(cData.data);
-      }
+      await communityService.createComment(blueprintId, { content, parentId });
+      const fresh = await communityService.listComments(blueprintId);
+      setComments(fresh);
     } catch (err) {
       console.error('Comment failed:', err);
     }
@@ -93,11 +69,7 @@ export default function BlueprintDetail({ params }: { params: Promise<{ blueprin
 
   async function handleDeleteComment(commentId: string) {
     try {
-      const token = localStorage.getItem('accessToken');
-      await fetch(`/api/community/comments/${commentId}`, {
-        method: 'DELETE',
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      await communityService.deleteComment(commentId);
       setComments((prev) => prev.map((c) => c.id === commentId ? { ...c, deletedAt: new Date().toISOString() } : c));
     } catch (err) {
       console.error('Delete failed:', err);
@@ -162,7 +134,6 @@ export default function BlueprintDetail({ params }: { params: Promise<{ blueprin
               </div>
             </div>
 
-            {/* Design Preview */}
             {blueprint.design.versions[0] && (
               <div className="border border-gray-100 rounded-lg bg-gray-50 p-4 mb-4">
                 <div className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Design Preview</div>
@@ -185,21 +156,18 @@ export default function BlueprintDetail({ params }: { params: Promise<{ blueprin
 
           {/* Comments */}
           <div className="bg-white border border-gray-200 rounded-xl p-6">
-            {currentUser && (
-              <CommentThread
-                comments={comments}
-                currentUserId={currentUser.id}
-                onAddComment={handleAddComment}
-                onDeleteComment={handleDeleteComment}
-                loading={commentLoading}
-              />
-            )}
+            <CommentThread
+              comments={comments}
+              currentUserId={currentUser?.id || ''}
+              onAddComment={handleAddComment}
+              onDeleteComment={handleDeleteComment}
+              loading={commentLoading}
+            />
           </div>
         </div>
 
         {/* Sidebar */}
         <div className="space-y-4">
-          {/* Author */}
           <div className="bg-white border border-gray-200 rounded-xl p-5">
             <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">Author</h3>
             <div className="flex items-center gap-3">
@@ -216,7 +184,6 @@ export default function BlueprintDetail({ params }: { params: Promise<{ blueprin
             </div>
           </div>
 
-          {/* Actions */}
           <div className="bg-white border border-gray-200 rounded-xl p-5 space-y-3">
             <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">Actions</h3>
             <ForkButton
@@ -225,12 +192,8 @@ export default function BlueprintDetail({ params }: { params: Promise<{ blueprin
             />
             <button
               onClick={() => {
-                const token = localStorage.getItem('accessToken');
-                fetch(`/api/community/blueprints/${blueprintId}/report`, {
-                  method: 'POST',
-                  headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-                  body: JSON.stringify({ reason: 'Inappropriate content' }),
-                });
+                const reason = prompt('Reason for reporting:');
+                if (reason) communityService.reportBlueprint(blueprintId, reason);
               }}
               className="w-full text-xs text-gray-400 hover:text-red-500 text-center py-2 transition-colors"
             >
@@ -238,7 +201,6 @@ export default function BlueprintDetail({ params }: { params: Promise<{ blueprin
             </button>
           </div>
 
-          {/* Stats */}
           <div className="bg-white border border-gray-200 rounded-xl p-5">
             <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">Stats</h3>
             <div className="grid grid-cols-2 gap-3">

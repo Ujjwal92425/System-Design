@@ -17,6 +17,7 @@ import type { ScenarioTemplate } from '@/data/scenarios';
 import LatencyBudgetPanel from '@/components/canvas/panels/LatencyBudgetPanel';
 import AIReviewPanel from '@/components/canvas/panels/AIReviewPanel';
 import { useInterviewSession } from '@/features/interview/useInterviewSession';
+import { communityService } from '@/services/community';
 import { Timer } from '@/components/interview/Timer';
 import { RequirementsPanel } from '@/components/interview/RequirementsPanel';
 import { HintPanel } from '@/components/interview/HintPanel';
@@ -103,6 +104,10 @@ export default function CanvasWorkspace({ params }: { params: Promise<{ designId
   const [activeLeftTab, setActiveLeftTab] = useState<'palette' | 'requirements' | 'hints'>('requirements');
   const [isSubmitConfirmOpen, setIsSubmitConfirmOpen] = useState(false);
   const [isLocked, setIsLocked] = useState(true);
+  const [showPublishModal, setShowPublishModal] = useState(false);
+  const [publishTitle, setPublishTitle] = useState('');
+  const [publishDesc, setPublishDesc] = useState('');
+  const [publishTags, setPublishTags] = useState('');
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -177,6 +182,23 @@ export default function CanvasWorkspace({ params }: { params: Promise<{ designId
     } finally {
       setSaving(false);
       setIsSubmitConfirmOpen(false);
+    }
+  };
+
+  const handlePublish = async () => {
+    try {
+      await api.post(`/designs/${designId}/save`, { nodes, edges, message: 'Published to community' });
+      markSaved();
+      const bp = await communityService.createBlueprint({
+        designId,
+        title: publishTitle || designMeta?.title || 'Untitled Design',
+        description: publishDesc,
+        tags: publishTags.split(',').map((t) => t.trim()).filter(Boolean),
+      });
+      setShowPublishModal(false);
+      window.open(`/community/${bp.id}`, '_blank');
+    } catch (err: any) {
+      alert(err.message || 'Publish failed');
     }
   };
 
@@ -435,6 +457,15 @@ export default function CanvasWorkspace({ params }: { params: Promise<{ designId
           </button>
 
           <button
+            onClick={() => { handleSave(); setShowPublishModal(true); }}
+            className="px-2.5 py-1.5 border border-yc-border rounded-lg text-xs font-semibold text-yc-text-muted hover:text-yc-accent hover:border-yc-accent transition flex items-center gap-1"
+            title="Publish to community"
+          >
+            <Globe className="w-3.5 h-3.5" />
+            <span className="hidden sm:inline">Publish</span>
+          </button>
+
+          <button
             onClick={handleSave}
             disabled={saving}
             className="px-3 py-1.5 bg-yc-accent text-white rounded-lg text-xs font-semibold flex items-center gap-1.5 transition hover:bg-yc-accent-hover disabled:opacity-60"
@@ -615,6 +646,53 @@ export default function CanvasWorkspace({ params }: { params: Promise<{ designId
           <Settings className="w-4 h-4" />
         </button>
       </div>
+
+      {/* Publish to community modal */}
+      {showPublishModal && (
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-white border rounded-xl p-6 max-w-md w-full shadow-xl">
+            <h3 className="text-base font-bold text-yc-text mb-4">Publish to Community</h3>
+            <div className="space-y-3">
+              <div>
+                <label className="text-[11px] font-semibold text-yc-text-muted block mb-1">Title</label>
+                <input
+                  value={publishTitle}
+                  onChange={(e) => setPublishTitle(e.target.value)}
+                  placeholder={designMeta?.title || 'My Architecture'}
+                  className="w-full text-sm border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-orange-200"
+                />
+              </div>
+              <div>
+                <label className="text-[11px] font-semibold text-yc-text-muted block mb-1">Description</label>
+                <textarea
+                  value={publishDesc}
+                  onChange={(e) => setPublishDesc(e.target.value)}
+                  placeholder="Describe your architecture design..."
+                  rows={3}
+                  className="w-full text-sm border border-gray-200 rounded-lg px-3 py-2 resize-none focus:outline-none focus:ring-2 focus:ring-orange-200"
+                />
+              </div>
+              <div>
+                <label className="text-[11px] font-semibold text-yc-text-muted block mb-1">Tags (comma-separated)</label>
+                <input
+                  value={publishTags}
+                  onChange={(e) => setPublishTags(e.target.value)}
+                  placeholder="e.g. microservices, aws, high-availability"
+                  className="w-full text-sm border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-orange-200"
+                />
+              </div>
+            </div>
+            <div className="flex gap-3 justify-end mt-6">
+              <button onClick={() => setShowPublishModal(false)} className="px-4 py-2 border border-gray-200 rounded-lg text-xs font-semibold text-gray-500 hover:text-gray-700 transition">
+                Cancel
+              </button>
+              <button onClick={handlePublish} className="px-4 py-2 bg-orange-500 text-white rounded-lg text-xs font-bold transition hover:bg-orange-600">
+                Publish
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Interview submit confirmation */}
       {isSubmitConfirmOpen && (

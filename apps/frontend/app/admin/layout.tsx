@@ -54,6 +54,7 @@ export default async function AdminLayout({ children }: { children: ReactNode })
             { href: '/admin/content/tracks', label: 'Tracks' },
             { href: '/admin/content/lessons', label: 'Lessons' },
             { href: '/admin/users', label: 'Users' },
+            { href: '/admin/blueprints', label: 'Blueprints' },
           ].map(({ href, label }) => (
             <a
               key={href}

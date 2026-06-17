@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState, useCallback } from 'react';
+import { adminService } from '@/services/admin';
 
 interface User {
   id: string; email: string; name: string | null; role: string;
@@ -34,22 +35,9 @@ export default function AdminUsers() {
     setLoading(true);
     setError('');
     try {
-      const token = localStorage.getItem('accessToken');
-      const headers: Record<string, string> = {};
-      if (token) headers['Authorization'] = `Bearer ${token}`;
-
-      const params = new URLSearchParams();
-      params.set('page', page.toString());
-      params.set('limit', '20');
-      if (search) params.set('search', search);
-      if (roleFilter) params.set('role', roleFilter);
-      if (statusFilter) params.set('status', statusFilter);
-
-      const res = await fetch(`/api/admin/users?${params}`, { headers });
-      if (!res.ok) throw new Error('Failed to fetch users');
-      const d = await res.json();
-      setUsers(d.data.users || []);
-      setPagination(d.data.pagination || { page: 1, limit: 20, total: 0, pages: 0 });
+      const data = await adminService.listUsers({ page, limit: 20, search, role: roleFilter, status: statusFilter });
+      setUsers(data.users || []);
+      setPagination(data.pagination || { page: 1, limit: 20, total: 0, pages: 0 });
     } catch (err: any) {
       setError(err.message);
     }
@@ -59,31 +47,18 @@ export default function AdminUsers() {
   useEffect(() => { fetchUsers(); }, [fetchUsers]);
 
   const handleSuspend = async (userId: string) => {
-    const token = localStorage.getItem('accessToken');
-    await fetch(`/api/admin/users/${userId}/suspend`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-      body: JSON.stringify({ durationMin: 1440 }),
-    });
+    await adminService.suspendUser(userId);
     fetchUsers();
   };
 
   const handleUnsuspend = async (userId: string) => {
-    const token = localStorage.getItem('accessToken');
-    await fetch(`/api/admin/users/${userId}/unsuspend`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-    });
+    await adminService.unsuspendUser(userId);
     fetchUsers();
   };
 
   const handleDelete = async (userId: string) => {
     if (!confirm('Permanently delete this user? This action cannot be undone.')) return;
-    const token = localStorage.getItem('accessToken');
-    await fetch(`/api/admin/users/${userId}`, {
-      method: 'DELETE',
-      headers: { Authorization: `Bearer ${token}` },
-    });
+    await adminService.deleteUser(userId);
     fetchUsers();
   };
 
@@ -91,13 +66,7 @@ export default function AdminUsers() {
     e.preventDefault();
     setCreating(true);
     try {
-      const token = localStorage.getItem('accessToken');
-      const res = await fetch('/api/admin/users', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ email: createEmail, name: createName || undefined, role: createRole }),
-      });
-      if (!res.ok) throw new Error('Failed to create user');
+      await adminService.createUser({ email: createEmail, name: createName || undefined, role: createRole });
       setShowCreateModal(false);
       setCreateEmail('');
       setCreateName('');
@@ -110,9 +79,8 @@ export default function AdminUsers() {
   };
 
   const handleExportCSV = async () => {
-    const token = localStorage.getItem('accessToken');
-    const res = await fetch('/api/admin/users/export', { headers: { Authorization: `Bearer ${token}` } });
-    const blob = await res.blob();
+    const csv = await adminService.exportUsersCSV();
+    const blob = new Blob([csv], { type: 'text/csv' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
@@ -131,14 +99,8 @@ export default function AdminUsers() {
       return { email: parts[1] || parts[0], name: parts[2] || undefined };
     }).filter((u) => u.email);
 
-    const token = localStorage.getItem('accessToken');
-    const res = await fetch('/api/admin/users/import', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-      body: JSON.stringify({ users }),
-    });
-    const d = await res.json();
-    setImportResult(d.data);
+    const result = await adminService.importUsers(users);
+    setImportResult(result);
     fetchUsers();
     e.target.value = '';
   };

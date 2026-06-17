@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
+import { adminService } from '@/services/admin';
 
 interface UserDetail {
   id: string; email: string; name: string | null; role: string;
@@ -30,13 +31,7 @@ export default function AdminUserDetail() {
   useEffect(() => {
     async function load() {
       try {
-        const token = localStorage.getItem('accessToken');
-        const res = await fetch(`/api/admin/users/${userId}`, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        if (!res.ok) throw new Error('User not found');
-        const d = await res.json();
-        const u = d.data;
+        const u = await adminService.getUserById(userId);
         setUser(u);
         setEditName(u.name || '');
         setEditRole(u.role);
@@ -53,17 +48,11 @@ export default function AdminUserDetail() {
     setSaving(true);
     setSaveMsg('');
     try {
-      const token = localStorage.getItem('accessToken');
-      const res = await fetch(`/api/admin/users/${userId}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body: JSON.stringify({
-          name: editName || undefined,
-          role: editRole,
-          emailVerified: editEmailVerified,
-        }),
+      await adminService.updateUser(userId, {
+        name: editName || undefined,
+        role: editRole,
+        emailVerified: editEmailVerified,
       });
-      if (!res.ok) throw new Error('Failed to update');
       setSaveMsg('Saved successfully');
       setTimeout(() => setSaveMsg(''), 3000);
     } catch (err: any) {
@@ -73,31 +62,18 @@ export default function AdminUserDetail() {
   };
 
   const handleSuspend = async () => {
-    const token = localStorage.getItem('accessToken');
-    await fetch(`/api/admin/users/${userId}/suspend`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-      body: JSON.stringify({ durationMin: 1440 }),
-    });
+    await adminService.suspendUser(userId);
     window.location.reload();
   };
 
   const handleUnsuspend = async () => {
-    const token = localStorage.getItem('accessToken');
-    await fetch(`/api/admin/users/${userId}/unsuspend`, {
-      method: 'POST',
-      headers: { Authorization: `Bearer ${token}` },
-    });
+    await adminService.unsuspendUser(userId);
     window.location.reload();
   };
 
   const handleDelete = async () => {
     if (!confirm('Permanently delete this user? This cannot be undone.')) return;
-    const token = localStorage.getItem('accessToken');
-    await fetch(`/api/admin/users/${userId}`, {
-      method: 'DELETE',
-      headers: { Authorization: `Bearer ${token}` },
-    });
+    await adminService.deleteUser(userId);
     router.push('/admin/users');
   };
 

@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { usePostHog } from '../../../components/providers/PostHogProvider';
+import { adminService } from '@/services/admin';
 
 interface PlatformStats {
   users: number;
@@ -62,23 +62,12 @@ export default function AdminAnalytics() {
   useEffect(() => {
     async function load() {
       try {
-        const token = localStorage.getItem('accessToken');
-        const headers: Record<string, string> = { 'Content-Type': 'application/json' };
-        if (token) headers['Authorization'] = `Bearer ${token}`;
-
-        const [statsRes, eventsRes] = await Promise.all([
-          fetch('/api/admin/analytics/overview', { headers }),
-          fetch('/api/admin/analytics/events?limit=20', { headers }),
+        const [statsData, eventsData] = await Promise.all([
+          adminService.getAnalyticsOverview(),
+          adminService.getRecentEvents(20),
         ]);
-
-        if (statsRes.ok) {
-          const statsData = await statsRes.json();
-          setStats(statsData.data || defaultStats);
-        }
-        if (eventsRes.ok) {
-          const eventsData = await eventsRes.json();
-          setRecentEvents(eventsData.data || []);
-        }
+        setStats(statsData || defaultStats);
+        setRecentEvents(eventsData || []);
       } catch {
         // Silently fail — analytics is optional
       } finally {
@@ -102,86 +91,79 @@ export default function AdminAnalytics() {
       <div style={{ marginBottom: '32px' }}>
         <h1 style={{ fontSize: '24px', fontWeight: 600, margin: 0 }}>Analytics</h1>
         <p style={{ color: 'var(--text-secondary)', fontSize: '14px', margin: '4px 0 0' }}>
-          Platform metrics and recent events tracked via PostHog
+          Platform metrics and event tracking
         </p>
       </div>
 
-      {/* Lifetime totals */}
       <div style={{ marginBottom: '32px' }}>
         <h2 style={{ fontSize: '14px', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--text-secondary)', marginBottom: '12px' }}>
           Lifetime Totals
         </h2>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: '16px' }}>
           <StatCard label="Total Users" value={stats.users} />
-          <StatCard label="Pro Users" value={stats.proUsers} sub={`${stats.users ? Math.round(stats.proUsers / stats.users * 100) : 0}% conversion`} />
-          <StatCard label="Designs Created" value={stats.designs} />
-          <StatCard label="Interviews Completed" value={stats.interviews} />
+          <StatCard label="Pro Users" value={stats.proUsers} />
           <StatCard label="Tracks" value={stats.tracks} />
           <StatCard label="Lessons" value={stats.lessons} sub={`${stats.publishedLessons} published`} />
+          <StatCard label="Designs" value={stats.designs} />
+          <StatCard label="Interviews" value={stats.interviews} />
         </div>
       </div>
 
-      {/* Last 7 days */}
       <div style={{ marginBottom: '32px' }}>
         <h2 style={{ fontSize: '14px', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--text-secondary)', marginBottom: '12px' }}>
           Last 7 Days
         </h2>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: '16px' }}>
           <StatCard label="New Registrations" value={stats.registrationsLast7d} />
-          <StatCard label="Logins" value={stats.loginsLast7d} />
+          <StatCard label="Active Logins" value={stats.loginsLast7d} />
           <StatCard label="Designs Created" value={stats.designsCreatedLast7d} />
-          <StatCard label="Interviews Completed" value={stats.interviewsCompletedLast7d} />
+          <StatCard label="Interviews Done" value={stats.interviewsCompletedLast7d} />
         </div>
       </div>
 
-      {/* Recent events */}
       <div>
         <h2 style={{ fontSize: '14px', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--text-secondary)', marginBottom: '12px' }}>
           Recent Events
         </h2>
-        {recentEvents.length === 0 ? (
-          <div style={{ color: 'var(--text-secondary)', fontSize: '14px', padding: '24px', textAlign: 'center', background: 'var(--bg-surface)', border: '1px solid var(--border)', borderRadius: '12px' }}>
-            No events recorded yet. Events appear as users interact with the platform.
-          </div>
-        ) : (
-          <div style={{ background: 'var(--bg-surface)', border: '1px solid var(--border)', borderRadius: '12px', overflow: 'hidden' }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px' }}>
-              <thead>
-                <tr style={{ borderBottom: '1px solid var(--border)', textAlign: 'left' }}>
-                  <th style={{ padding: '12px 16px', color: 'var(--text-secondary)', fontWeight: 600, textTransform: 'uppercase', fontSize: '11px', letterSpacing: '0.05em' }}>Event</th>
-                  <th style={{ padding: '12px 16px', color: 'var(--text-secondary)', fontWeight: 600, textTransform: 'uppercase', fontSize: '11px', letterSpacing: '0.05em' }}>User</th>
-                  <th style={{ padding: '12px 16px', color: 'var(--text-secondary)', fontWeight: 600, textTransform: 'uppercase', fontSize: '11px', letterSpacing: '0.05em' }}>Timestamp</th>
-                  <th style={{ padding: '12px 16px', color: 'var(--text-secondary)', fontWeight: 600, textTransform: 'uppercase', fontSize: '11px', letterSpacing: '0.05em' }}>Details</th>
+        <div style={{ background: 'var(--bg-surface)', border: '1px solid var(--border)', borderRadius: '12px', overflow: 'hidden' }}>
+          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px' }}>
+            <thead>
+              <tr style={{ borderBottom: '1px solid var(--border)' }}>
+                <th style={{ textAlign: 'left', padding: '12px 16px', color: 'var(--text-secondary)', fontWeight: 500 }}>Event</th>
+                <th style={{ textAlign: 'left', padding: '12px 16px', color: 'var(--text-secondary)', fontWeight: 500 }}>User</th>
+                <th style={{ textAlign: 'left', padding: '12px 16px', color: 'var(--text-secondary)', fontWeight: 500 }}>Details</th>
+                <th style={{ textAlign: 'left', padding: '12px 16px', color: 'var(--text-secondary)', fontWeight: 500 }}>Time</th>
+              </tr>
+            </thead>
+            <tbody>
+              {recentEvents.map((evt) => (
+                <tr key={evt.id} style={{ borderBottom: '1px solid var(--border)' }}>
+                  <td style={{ padding: '10px 16px' }}>
+                    <span style={{
+                      fontSize: '11px', fontWeight: 600, padding: '2px 8px', borderRadius: '4px',
+                      background: evt.event.includes('error') ? 'rgba(239,68,68,0.1)' : 'rgba(255,102,0,0.1)',
+                      color: evt.event.includes('error') ? 'var(--color-error)' : 'var(--accent-amber)',
+                    }}>
+                      {evt.event}
+                    </span>
+                  </td>
+                  <td style={{ padding: '10px 16px', color: 'var(--text-primary)' }}>{evt.userEmail}</td>
+                  <td style={{ padding: '10px 16px', color: 'var(--text-secondary)' }}>{evt.metadata}</td>
+                  <td style={{ padding: '10px 16px', color: 'var(--text-muted)', fontSize: '12px' }}>
+                    {new Date(evt.timestamp).toLocaleString()}
+                  </td>
                 </tr>
-              </thead>
-              <tbody>
-                {recentEvents.map((evt) => (
-                  <tr key={evt.id} style={{ borderBottom: '1px solid var(--border)' }}>
-                    <td style={{ padding: '10px 16px' }}>
-                      <span style={{
-                        display: 'inline-block',
-                        padding: '2px 8px',
-                        borderRadius: '4px',
-                        fontSize: '12px',
-                        fontWeight: 500,
-                        background: 'var(--bg-elevated)',
-                      }}>
-                        {evt.event}
-                      </span>
-                    </td>
-                    <td style={{ padding: '10px 16px', color: 'var(--text-primary)' }}>{evt.userEmail}</td>
-                    <td style={{ padding: '10px 16px', color: 'var(--text-secondary)' }}>
-                      {new Date(evt.timestamp).toLocaleString()}
-                    </td>
-                    <td style={{ padding: '10px 16px', color: 'var(--text-secondary)', maxWidth: '200px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                      {evt.metadata}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
+              ))}
+              {recentEvents.length === 0 && (
+                <tr>
+                  <td colSpan={4} style={{ padding: '24px', textAlign: 'center', color: 'var(--text-muted)', fontSize: '13px' }}>
+                    No events yet
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
   );

@@ -1,17 +1,7 @@
-/**
- * apps/frontend/features/canvas/useVersionHistory.ts
- *
- * Hook for managing design version history.
- * Fetches the version list for a design, allows restoring
- * a previous version, and creating snapshots.
- *
- * CHANGE: Implemented from stub — full version list/restore/save
- *          with loading and error states.
- */
-
 'use client';
 
 import { useCallback, useState } from 'react';
+import { designsService } from '@/services/designs';
 import { useCanvasStore, type CanvasNode, type CanvasEdge } from './useCanvasStore';
 
 interface VersionEntry {
@@ -28,10 +18,6 @@ interface VersionHistoryState {
   currentVersion: number | null;
 }
 
-/**
- * Hook for version history operations.
- * Relies on the backend REST API at /api/designs/:id/*.
- */
 export function useVersionHistory(designId?: string) {
   const [state, setState] = useState<VersionHistoryState>({
     versions: [],
@@ -42,23 +28,17 @@ export function useVersionHistory(designId?: string) {
 
   const { nodes, edges, init } = useCanvasStore();
 
-  /**
-   * Fetch the version list from the backend.
-   */
   const fetchVersions = useCallback(async () => {
     if (!designId) return;
     setState((s) => ({ ...s, isLoading: true, error: null }));
 
     try {
-      const res = await fetch(`/api/designs/${designId}`);
-      if (!res.ok) throw new Error('Failed to load versions');
-      const body = await res.json();
+      const data = await designsService.get(designId);
       setState((s) => ({
         ...s,
         isLoading: false,
-        // Versions are embedded in the design response or fetched separately
-        versions: body.data?.versions || [],
-        currentVersion: body.data?.canvas?.version || null,
+        versions: data.versions || [],
+        currentVersion: data.canvas?.version || null,
       }));
     } catch (err) {
       setState((s) => ({
@@ -69,25 +49,17 @@ export function useVersionHistory(designId?: string) {
     }
   }, [designId]);
 
-  /**
-   * Save the current canvas state as a new version.
-   */
   const saveVersion = useCallback(
     async (message?: string) => {
       if (!designId) return;
       setState((s) => ({ ...s, isLoading: true, error: null }));
 
       try {
-        const res = await fetch(`/api/designs/${designId}/save`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            nodes,
-            edges,
-            message: message || undefined,
-          }),
+        await designsService.save(designId, {
+          nodes,
+          edges,
+          message: message || undefined,
         });
-        if (!res.ok) throw new Error('Failed to save version');
         await fetchVersions();
       } catch (err) {
         setState((s) => ({
@@ -100,26 +72,16 @@ export function useVersionHistory(designId?: string) {
     [designId, nodes, edges, fetchVersions],
   );
 
-  /**
-   * Restore a specific version by fetching it and updating the canvas store.
-   */
   const restoreVersion = useCallback(
     async (version: number) => {
       if (!designId) return;
       setState((s) => ({ ...s, isLoading: true, error: null }));
 
       try {
-        const res = await fetch(`/api/designs/${designId}/restore`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ version }),
-        });
-        if (!res.ok) throw new Error('Failed to restore version');
+        await designsService.restore(designId, version);
 
-        // Re-fetch the full design to get the restored canvas data
-        const designRes = await fetch(`/api/designs/${designId}`);
-        const body = await designRes.json();
-        const canvas = body.data?.canvas;
+        const data = await designsService.get(designId);
+        const canvas = data.canvas;
 
         if (canvas?.nodes && canvas?.edges) {
           init(canvas.nodes, canvas.edges);

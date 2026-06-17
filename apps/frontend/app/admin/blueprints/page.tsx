@@ -1,13 +1,13 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Loader2, Star, Flag, Trash2, CheckCircle, XCircle, Eye } from 'lucide-react';
+import { adminService } from '@/services/admin';
+import { Loader2, Star, Flag, Trash2, CheckCircle, XCircle } from 'lucide-react';
 
 interface AdminBlueprint {
   id: string; title: string; description: string; tags: string[];
   voteCount: number; forkCount: number; viewCount: number;
-  isPublished: boolean; isFeatured: boolean; publishedAt: string;
-  createdAt: string;
+  isPublished: boolean; isFeatured: boolean; publishedAt: string; createdAt: string;
   author: { id: string; name: string | null; email: string };
   design: { id: string; title: string };
   _count: { comments: number; votes: number; reports: number };
@@ -28,19 +28,12 @@ export default function AdminBlueprints() {
   useEffect(() => {
     async function load() {
       try {
-        const token = localStorage.getItem('accessToken');
-        const [bpRes, repRes] = await Promise.all([
-          fetch('/api/admin/blueprints', { headers: { Authorization: `Bearer ${token}` } }),
-          fetch('/api/admin/reports', { headers: { Authorization: `Bearer ${token}` } }),
+        const [bps, reps] = await Promise.all([
+          adminService.listBlueprints(),
+          adminService.listPendingReports(),
         ]);
-        if (bpRes.ok) {
-          const d = await bpRes.json();
-          setBlueprints(d.data);
-        }
-        if (repRes.ok) {
-          const d = await repRes.json();
-          setReports(d.data);
-        }
+        setBlueprints(bps);
+        setReports(reps);
       } catch (err) { console.error(err); }
       setLoading(false);
     }
@@ -48,32 +41,18 @@ export default function AdminBlueprints() {
   }, []);
 
   async function handleFeature(id: string, featured: boolean) {
-    const token = localStorage.getItem('accessToken');
-    await fetch(`/api/admin/blueprints/${id}/feature`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-      body: JSON.stringify({ featured }),
-    });
+    await adminService.featureBlueprint(id, featured);
     setBlueprints((prev) => prev.map((b) => b.id === id ? { ...b, isFeatured: featured } : b));
   }
 
   async function handleRemove(id: string) {
     if (!confirm('Remove this blueprint from the community?')) return;
-    const token = localStorage.getItem('accessToken');
-    await fetch(`/api/admin/blueprints/${id}`, {
-      method: 'DELETE',
-      headers: { Authorization: `Bearer ${token}` },
-    });
+    await adminService.removeBlueprint(id);
     setBlueprints((prev) => prev.map((b) => b.id === id ? { ...b, isPublished: false } : b));
   }
 
   async function handleReview(reportId: string, status: string) {
-    const token = localStorage.getItem('accessToken');
-    await fetch(`/api/admin/reports/${reportId}/review`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-      body: JSON.stringify({ status }),
-    });
+    await adminService.reviewReport(reportId, status);
     setReports((prev) => prev.map((r) => r.id === reportId ? { ...r, status } : r));
   }
 

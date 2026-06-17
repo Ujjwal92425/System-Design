@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import { BlueprintCard } from '@/components/community/BlueprintCard';
 import { BlueprintFilter } from '@/components/community/BlueprintFilter';
+import { communityService } from '@/services/community';
 import { Loader2, Compass } from 'lucide-react';
 
 interface Blueprint {
@@ -28,19 +29,9 @@ export default function CommunityBlueprints() {
   const fetchBlueprints = useCallback(async (pageNum: number = 1) => {
     setLoading(true);
     try {
-      const token = localStorage.getItem('accessToken');
-      const params = new URLSearchParams({
-        page: String(pageNum), limit: '20', sort,
-        ...(search ? { search } : {}),
-        ...(topic ? { topic } : {}),
-      });
-      const res = await fetch(`/api/community/blueprints?${params}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      if (!res.ok) throw new Error('Failed to fetch');
-      const data = await res.json();
-      setBlueprints(data.data.blueprints);
-      setPagination(data.data.pagination);
+      const result = await communityService.listBlueprints({ page: pageNum, limit: 20, sort, search: search || undefined, topic: topic || undefined });
+      setBlueprints(result.blueprints);
+      setPagination(result.pagination);
     } catch (err) {
       console.error('Fetch failed:', err);
     }

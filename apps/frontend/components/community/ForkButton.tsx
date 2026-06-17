@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { GitFork } from 'lucide-react';
+import { communityService } from '@/services/community';
 
 interface ForkButtonProps {
   blueprintId: string;
@@ -17,16 +18,10 @@ export function ForkButton({ blueprintId, forkCount, onFork }: ForkButtonProps) 
     if (loading || done) return;
     setLoading(true);
     try {
-      const token = localStorage.getItem('accessToken');
-      const res = await fetch(`/api/community/blueprints/${blueprintId}/fork`, {
-        method: 'POST',
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      if (!res.ok) throw new Error('Fork failed');
-      const data = await res.json();
+      const design = await communityService.forkBlueprint(blueprintId);
       setDone(true);
-      onFork?.(data.data.id);
-      window.open(`/build/${data.data.id}`, '_blank');
+      onFork?.(design.id);
+      window.open(`/build/${design.id}`, '_blank');
     } catch (err) {
       console.error('Fork failed:', err);
     }
