@@ -65,7 +65,7 @@ function createReactFlowEdge(ce: CanvasEdge): Edge {
 
 const MIN_SIM_HEIGHT = 250;
 const MAX_SIM_HEIGHT = 600;
-const DEFAULT_SIM_HEIGHT = 320;
+const DEFAULT_SIM_HEIGHT = 360;
 
 export default function CanvasWorkspace({ params }: { params: Promise<{ designId: string }> }) {
   const { designId } = use(params);
@@ -558,7 +558,7 @@ export default function CanvasWorkspace({ params }: { params: Promise<{ designId
           {/* Canvas + Simulation — stack vertically */}
         <div className="flex flex-col flex-1 min-h-0 relative">
           {/* Canvas area: takes all remaining space via flex-1 */}
-          <div className="flex-1 min-h-0 relative">
+          <div className="flex-1 min-h-0 relative overflow-hidden">
             <FlowCanvas
               initialNodes={rfNodes}
               initialEdges={rfEdges}
@@ -576,6 +576,7 @@ export default function CanvasWorkspace({ params }: { params: Promise<{ designId
                 isRunning: simulation.isRunning,
                 currentMetrics: simulation.currentMetrics,
                 failedNodes: simulation.failedNodes,
+                nodeChaosModes: simulation.nodeChaosModes,
               }}
             />
           </div>

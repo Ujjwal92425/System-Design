@@ -60,7 +60,7 @@ export function ChaosPanel({ nodes, nodeChaosModes, onSetNodeChaos }: ChaosPanel
         })}
       </div>
 
-      <div className="flex flex-col gap-2">
+      <div className="flex flex-col gap-2 max-h-64 overflow-y-auto">
         {nodes.length === 0 ? (
           <p className="text-xs text-yc-text-muted text-center py-4">No nodes on the canvas.</p>
         ) : (

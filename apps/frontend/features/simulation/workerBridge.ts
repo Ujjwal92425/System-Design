@@ -153,7 +153,7 @@ const workerCode = `
       var phase = tickCount % 15;
       if (phase >= 3 && phase <= 7) currentInputQps = trafficQps * 3.5;
     } else if (scenario === 'ramp') {
-      currentInputQps = trafficQps + (tickCount * 100);
+      currentInputQps = Math.min(10000, trafficQps + (tickCount * 100));
     }
 
     var adj = {}, incomingCount = {};

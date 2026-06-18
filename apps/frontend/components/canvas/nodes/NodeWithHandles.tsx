@@ -162,6 +162,10 @@ function NodeWithHandles({ id, data, selected }: NodeProps) {
   const typeColor = TYPE_COLORS[type] || 'border-slate-300 bg-slate-50';
   const iconColor = TYPE_ICON_COLORS[type] || 'text-slate-600';
   const metrics = data.metrics as Record<string, any> | undefined;
+  const chaosMode = data.chaosMode as string | null | undefined;
+  const errorRate = metrics?.errorRate ?? 0;
+  const isChaosKill = chaosMode === 'KILL';
+  const isChaosDegraded = !isChaosKill && (chaosMode || errorRate > 10);
 
   return (
     <div
@@ -169,6 +173,8 @@ function NodeWithHandles({ id, data, selected }: NodeProps) {
         'relative rounded-xl border-2 px-3 py-2.5 shadow-sm transition-shadow min-w-[140px] group',
         typeColor,
         selected && 'ring-2 ring-yc-accent shadow-lg',
+        isChaosKill && 'ring-2 ring-red-400 border-red-300',
+        isChaosDegraded && !isChaosKill && 'ring-2 ring-amber-300 border-amber-200',
       )}
     >
       {/* Resize handles (shown when selected) */}
@@ -201,15 +207,29 @@ function NodeWithHandles({ id, data, selected }: NodeProps) {
         {label}
       </p>
 
-      {/* Metrics */}
+      {/* Metrics — inline on node, no floating overlays */}
       {metrics && (
-        <div className="mt-1.5 pt-1.5 border-t border-gray-200 flex items-center gap-2 text-[9px] text-gray-500">
-          {metrics.qps !== undefined && <span>{metrics.qps.toLocaleString()} qps</span>}
-          {metrics.errorRate !== undefined && (
-            <span className={cn(metrics.errorRate > 30 ? 'text-red-500 font-semibold' : '')}>
-              {metrics.errorRate}% err
-            </span>
-          )}
+        <div className="mt-1.5 pt-1.5 border-t border-gray-200 grid grid-cols-3 gap-1 text-[8px] font-mono text-gray-500">
+          <span title="Queries per second">{metrics.qps?.toLocaleString() ?? 0} qps</span>
+          <span title="Latency">{metrics.latency ?? 0}ms</span>
+          <span
+            className={cn(
+              (metrics.errorRate ?? 0) > 10 ? 'text-red-500 font-bold' : '',
+              'text-right',
+            )}
+            title="Error rate"
+          >
+            {metrics.errorRate ?? 0}%
+          </span>
+        </div>
+      )}
+
+      {chaosMode && (
+        <div className={cn(
+          'absolute -top-2 -right-2 px-1.5 py-0.5 rounded text-[7px] font-extrabold font-mono uppercase tracking-wide',
+          isChaosKill ? 'bg-red-500 text-white' : 'bg-amber-500 text-white',
+        )}>
+          {chaosMode}
         </div>
       )}
     </div>

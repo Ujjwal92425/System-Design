@@ -99,7 +99,12 @@ export function MetricsChart({ history }: MetricsChartProps) {
   const padding = { top: 15, right: 15, bottom: 25, left: 52 };
 
   let pathD = '';
-  if (dataPoints.length > 1) {
+  if (dataPoints.length === 1) {
+    const val = dataPoints[0];
+    const x = padding.left + (width - padding.left - padding.right) / 2;
+    const y = height - padding.bottom - ((val - minVal) / valRange) * (height - padding.top - padding.bottom);
+    pathD = `M ${padding.left},${y.toFixed(1)} L ${x.toFixed(1)},${y.toFixed(1)}`;
+  } else if (dataPoints.length > 1) {
     const segments = dataPoints.map((val, idx) => {
       const x = padding.left + (idx / (dataPoints.length - 1)) * (width - padding.left - padding.right);
       const y = height - padding.bottom - ((val - minVal) / valRange) * (height - padding.top - padding.bottom);
@@ -162,7 +167,7 @@ export function MetricsChart({ history }: MetricsChartProps) {
       </div>
 
       <div className="flex-1 relative min-h-[120px]">
-        {history.length < 2 ? (
+        {history.length === 0 ? (
           <div className="absolute inset-0 flex items-center justify-center text-yc-text-muted font-mono text-[11px]">
             Awaiting simulation tick metrics...
           </div>
@@ -212,7 +217,11 @@ export function MetricsChart({ history }: MetricsChartProps) {
                 />
                 {dataPoints.length > 0 && (
                   <circle
-                    cx={padding.left + (dataPoints.length - 1) / (dataPoints.length - 1) * (width - padding.left - padding.right)}
+                    cx={
+                      dataPoints.length === 1
+                        ? padding.left + (width - padding.left - padding.right) / 2
+                        : padding.left + ((dataPoints.length - 1) / (dataPoints.length - 1)) * (width - padding.left - padding.right)
+                    }
                     cy={height - padding.bottom - ((dataPoints[dataPoints.length - 1] - minVal) / valRange) * (height - padding.top - padding.bottom)}
                     r="3"
                     fill="#FF6600"

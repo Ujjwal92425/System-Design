@@ -8,6 +8,7 @@ import {
   SaveSimRunBody,
   ListRunsQuery,
   ChaosInjectBody,
+  UpdateRunProgressBody,
 } from './simulation.schema';
 
 export const simulationRouter = Router();
@@ -47,6 +48,14 @@ simulationRouter.post('/runs/:runId/stop', async (req: AuthRequest, res, next) =
     success(res, { ticks: history });
   } catch (err) { next(err); }
 });
+
+simulationRouter.patch('/runs/:runId/progress', validate(UpdateRunProgressBody), async (req: AuthRequest, res, next) => {
+  try {
+    const run = await simulationService.updateRunProgress(req.params.runId, req.user!.id, req.body.tick);
+    success(res, run);
+  } catch (err) { next(err); }
+});
+
 simulationRouter.post('/runs/:runId/chaos', validate(ChaosInjectBody), async (req: AuthRequest, res, next) => {
   try {
     const { nodeId, mode, severity } = req.body;

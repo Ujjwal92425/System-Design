@@ -11,6 +11,22 @@ interface SimulationEvent {
   severity: 'INFO' | 'WARNING' | 'ERROR';
 }
 
+const METRICS_HISTORY_CAP = 120;
+
+function filterSimNodes(nodes: any[]) {
+  return nodes.filter((n) => {
+    const nodeType = n.data?.nodeType || n.type;
+    return nodeType !== 'NOTE' && nodeType !== 'GROUP';
+  });
+}
+
+function hasEntryPoint(nodes: any[]) {
+  return filterSimNodes(nodes).some((n) => {
+    const t = n.data?.nodeType || n.type;
+    return ['WEB_SERVER', 'CLIENT', 'BROWSER', 'MOBILE_APP', 'DESKTOP_APP'].includes(t);
+  });
+}
+
 interface SimulationState {
   isRunning: boolean;
   trafficQps: number;
@@ -60,6 +76,17 @@ export const useSimulationStore = create<SimulationState>((set, get) => ({
 
   startSimulation: (nodes, edges) => {
     const state = get();
+    const simNodes = filterSimNodes(nodes);
+
+    if (simNodes.length === 0) {
+      get().addEvent('SYSTEM', 'No architecture nodes found. Add components to the canvas first.', 'ERROR');
+      return;
+    }
+    if (!hasEntryPoint(nodes)) {
+      get().addEvent('SYSTEM', 'No entry point found. Add a Web Server or Client node.', 'ERROR');
+      return;
+    }
+
     let currentBridge = state.bridge;
 
     if (!currentBridge) {
@@ -72,12 +99,20 @@ export const useSimulationStore = create<SimulationState>((set, get) => ({
     const addEventFn = get().addEvent;
     addEventFn('SYSTEM', 'Simulation started. Monitoring graph nodes...', 'INFO');
 
-    currentBridge.init(nodes, edges, state.trafficQps, state.scenario, state.failedNodes, state.nodeChaosModes);
+    currentBridge.init(simNodes, edges, state.trafficQps, state.scenario, state.failedNodes, state.nodeChaosModes);
     
     currentBridge.start((metrics) => {
       set((prev) => {
+        // Forward worker-generated events (OOM, GC, HPA, etc.) to the event log
+        if (metrics.events?.length) {
+          metrics.events.forEach((evt: any) => {
+            const sev = evt.severity === 'ERROR' ? 'ERROR' : evt.severity === 'WARNING' ? 'WARNING' : 'INFO';
+            addEventFn(evt.type || 'ALERT', evt.message, sev);
+          });
+        }
+
         const history = [...prev.metricsHistory, metrics];
-        if (history.length > 30) history.shift();
+        if (history.length > METRICS_HISTORY_CAP) history.shift();
         
         // Auto-check metrics for alerts
         const prevMetrics = prev.currentMetrics;
@@ -103,6 +138,9 @@ export const useSimulationStore = create<SimulationState>((set, get) => ({
           metricsHistory: history
         };
       });
+    }, () => {
+      addEventFn('SYSTEM', 'Simulation completed after 300 ticks.', 'INFO');
+      set({ isRunning: false });
     });
 
     set({ isRunning: true });
@@ -118,20 +156,20 @@ export const useSimulationStore = create<SimulationState>((set, get) => ({
   },
 
   updateTraffic: (qps) => {
-    const { bridge, addEvent, nodeChaosModes } = get();
+    const { bridge, addEvent, nodeChaosModes, isRunning } = get();
     set({ trafficQps: qps });
-    addEvent('CONFIG', `Input traffic adjusted to ${qps.toLocaleString()} QPS`, 'INFO');
-    if (bridge) {
-      bridge.updateParams(qps, undefined, undefined, nodeChaosModes);
+    if (isRunning) {
+      addEvent('CONFIG', `Input traffic adjusted to ${qps.toLocaleString()} QPS`, 'INFO');
+      bridge?.updateParams(qps, undefined, undefined, nodeChaosModes);
     }
   },
 
   updateScenario: (scen) => {
-    const { bridge, addEvent, nodeChaosModes } = get();
+    const { bridge, addEvent, nodeChaosModes, isRunning, trafficQps } = get();
     set({ scenario: scen });
-    addEvent('SCENARIO', `Profile switched to: ${scen.toUpperCase()}`, 'WARNING');
-    if (bridge) {
-      bridge.updateParams(undefined, scen, undefined, nodeChaosModes);
+    if (isRunning) {
+      addEvent('SCENARIO', `Load profile: ${scen.toUpperCase()} (base ${trafficQps.toLocaleString()} QPS)`, 'INFO');
+      bridge?.updateParams(undefined, scen, undefined, nodeChaosModes);
     }
   },
 
@@ -169,7 +207,7 @@ export const useSimulationStore = create<SimulationState>((set, get) => ({
   updateGraph: (nodes: any[], edges: any[]) => {
     const { bridge } = get();
     if (bridge) {
-      bridge.updateGraph(nodes, edges);
+      bridge.updateGraph(filterSimNodes(nodes), edges);
     }
   },
 

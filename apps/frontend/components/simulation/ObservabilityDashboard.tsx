@@ -168,7 +168,7 @@ export function ObservabilityDashboard({ history, currentMetrics, isRunning }: O
       </div>
 
       {/* KPI Row */}
-      <div className="grid grid-cols-5 gap-3">
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
         {[
           { label: 'Total Throughput', value: formatMetric(totalQps, 'qps'), unit: 'QPS', icon: Activity, color: CHART_COLORS.orange, trend: latestSnap?.qps ?? 0 },
           { label: 'Avg Latency', value: formatMetric(avgLatency, 'ms'), unit: 'ms', icon: Clock, color: avgLatency > 200 ? CHART_COLORS.red : avgLatency > 100 ? CHART_COLORS.yellow : CHART_COLORS.green, trend: avgLatency },

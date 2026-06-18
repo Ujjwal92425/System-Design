@@ -165,6 +165,30 @@ export const simulationService = {
     });
   },
 
+  async updateRunProgress(runId: string, userId: string, tick: any) {
+    const run = await db.simulationRun.findUnique({
+      where: { id: runId },
+      include: {
+        simulation: {
+          include: { design: { select: { userId: true } } },
+        },
+      },
+    });
+    if (!run) throw new AppError('NOT_FOUND', 'Simulation run not found', 404);
+    if (run.simulation.design.userId !== userId) {
+      throw new AppError('FORBIDDEN', 'Access denied', 403);
+    }
+
+    const existing = (run.metrics as any[]) || [];
+    return db.simulationRun.update({
+      where: { id: runId },
+      data: {
+        metrics: [...existing, tick],
+        durationSec: tick?.tick ?? existing.length,
+      },
+    });
+  },
+
   async listRuns(params: {
     page: number;
     limit: number;

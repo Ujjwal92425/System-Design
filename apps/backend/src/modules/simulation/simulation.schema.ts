@@ -70,3 +70,8 @@ export const ListRunsQuery = z.object({
   limit: z.coerce.number().int().min(1).max(100).default(20),
   designId: z.string().cuid().optional(),
 });
+
+// ── Progress update during client-side simulation sync ────────────────────
+export const UpdateRunProgressBody = z.object({
+  tick: z.record(z.unknown()).optional(),
+});
