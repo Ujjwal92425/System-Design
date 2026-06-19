@@ -88,6 +88,8 @@ export function AppSidebar({ collapsed, onToggleCollapse }: AppSidebarProps) {
                 }`}
                 aria-current={isActive ? 'page' : undefined}
                 title={collapsed ? item.name : undefined}
+                data-track="sidebar:nav"
+                data-track-page={item.href}
               >
                 <Icon className={`w-4 h-4 flex-shrink-0 ${isActive ? 'text-yc-accent' : 'text-yc-text-muted'}`} />
                 <span className={`transition-all duration-200 whitespace-nowrap ${collapsed ? 'opacity-0 w-0 overflow-hidden' : 'opacity-100'}`}>
@@ -129,6 +131,7 @@ export function AppSidebar({ collapsed, onToggleCollapse }: AppSidebarProps) {
                   onClick={() => logout()}
                   title="Sign Out"
                   className="p-1.5 rounded-lg text-yc-text-muted hover:text-red-500 hover:bg-red-50 transition-colors flex-shrink-0"
+                  data-track="sidebar:logout"
                 >
                   <LogOut className="w-4 h-4" />
                 </button>
@@ -143,6 +146,7 @@ export function AppSidebar({ collapsed, onToggleCollapse }: AppSidebarProps) {
           className="hidden lg:flex items-center justify-center w-full py-2 rounded-xl text-yc-text-muted hover:text-yc-text hover:bg-yc-bg-card transition-colors"
           title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
           aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+          data-track="sidebar:toggle_collapse"
         >
           {collapsed ? <ChevronRight className="w-4 h-4" /> : <ChevronLeft className="w-4 h-4" />}
         </button>
@@ -259,6 +263,7 @@ export function AppSidebar({ collapsed, onToggleCollapse }: AppSidebarProps) {
         aria-expanded={mobileOpen}
         aria-controls="mobile-app-sidebar"
         className="app-sidebar-mobile-toggle fixed bottom-4 left-4 z-30 w-12 h-12 rounded-full bg-yc-accent text-white shadow-md flex items-center justify-center hover:bg-yc-accent-hover transition lg:hidden"
+        data-track="sidebar:mobile_open"
       >
         <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
           <line x1="3" y1="5" x2="17" y2="5" />

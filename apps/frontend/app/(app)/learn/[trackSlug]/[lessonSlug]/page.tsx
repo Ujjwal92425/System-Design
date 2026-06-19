@@ -7,13 +7,13 @@ import {
   ArrowLeft, ArrowRight, Bookmark, BookmarkCheck,
   CheckCircle2, Clock, Building2, Tag, Loader2, AlertCircle, LogIn,
 } from 'lucide-react';
-import { LessonRenderer } from '../../../../components/learn/LessonRenderer';
-import { ProgressBar } from '../../../../components/learn/ProgressBar';
-import { QuizBlock } from '../../../../components/learn/QuizBlock';
-import { useLesson } from '../../../../features/learn/useLearn';
-import { useAuthStore } from '../../../../features/auth/authStore';
-import { Breadcrumbs } from '../../../../components/seo/Breadcrumb';
-import { FaqSchema } from '../../../../components/seo/FaqSchema';
+import { LessonRenderer } from '../../../../../components/learn/LessonRenderer';
+import { ProgressBar } from '../../../../../components/learn/ProgressBar';
+import { QuizBlock } from '../../../../../components/learn/QuizBlock';
+import { useLesson } from '../../../../../features/learn/useLearn';
+import { useAuthStore } from '../../../../../features/auth/authStore';
+import { Breadcrumbs } from '../../../../../components/seo/Breadcrumb';
+import { FaqSchema } from '../../../../../components/seo/FaqSchema';
 
 // ── Public lesson page: no auth required to read. Auth required for progress. ──
 

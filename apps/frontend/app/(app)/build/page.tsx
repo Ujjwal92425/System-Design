@@ -12,6 +12,7 @@ import {
 } from 'lucide-react';
 import { SCENARIO_TEMPLATES } from '@/data/scenarios';
 import { useUsage, incrementCanvas } from '@/features/usage/useUsage';
+import { analytics } from '@/lib/analytics';
 
 const ICON_MAP: Record<string, any> = {
   Link: LinkIcon,
@@ -105,8 +106,10 @@ export default function BuildListPage() {
       const res = await api.post('/designs', payload);
       const newDesign = res.data.data;
       incrementCanvas();
+      analytics.track('design:created', { designId: newDesign.id, title: newDesign.title, templateId: selectedTemplateId });
       router.push(`/build/${newDesign.id}`);
     } catch (err: any) {
+      analytics.track('design:create_failed', { error: err.message });
       setCreateError(err.response?.data?.message || err.message || 'Failed to create workspace');
     } finally {
       setCreating(false);
@@ -120,8 +123,10 @@ export default function BuildListPage() {
 
     try {
       await api.delete(`/designs/${id}`);
+      analytics.track('design:deleted', { designId: id });
       setDesigns(prev => prev.filter(d => d.id !== id));
     } catch (err: any) {
+      analytics.track('design:delete_failed', { designId: id, error: err.message });
       alert(err.response?.data?.message || err.message || 'Failed to delete workspace');
     }
   };
@@ -165,6 +170,7 @@ export default function BuildListPage() {
           <button
             onClick={() => {
               if (usage.canvasExceeded) return;
+              analytics.track('build:new_design_click');
               setNewTitle('');
               setSelectedTemplateId(null);
               setShowCreateModal(true);
@@ -187,6 +193,7 @@ export default function BuildListPage() {
             }}
             onMouseOver={(e) => { if (!usage.canvasExceeded) e.currentTarget.style.opacity = '0.85'; }}
             onMouseOut={(e) => e.currentTarget.style.opacity = '1'}
+            data-track="build:new_design_btn"
           >
             <FolderPlus style={{ width: '16px', height: '16px' }} />
             <span>{usage.canvasExceeded ? 'Limit Reached' : 'New Design'}</span>

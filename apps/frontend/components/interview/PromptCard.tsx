@@ -118,6 +118,9 @@ export function PromptCard({ prompt, onStart, disabled }: PromptCardProps) {
             transition: 'background-color 150ms ease'
           }}
           className="hover:opacity-90"
+          data-track="interview:start_attempt"
+          data-track-prompt={prompt.id}
+          data-track-difficulty={prompt.difficulty}
         >
           <span>{disabled ? 'Limit Reached' : 'Start Attempt'}</span>
           <ArrowRight style={{ width: '12px', height: '12px' }} />

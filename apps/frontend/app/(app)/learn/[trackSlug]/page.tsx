@@ -3,16 +3,16 @@
 import { useParams } from 'next/navigation';
 import {
   curriculumData, getTrackBySlug,
-} from '../../../data/curriculum/index';
+} from '../../../../data/curriculum/index';
 import {
   ArrowLeft, ChevronRight, Clock, BookOpen, CheckCircle, Circle, Zap, BarChart3,
 } from 'lucide-react';
 import Link from 'next/link';
 import { useMemo } from 'react';
-import { useProgressStore } from '../../../features/learn/progressStore';
-import { JsonLd } from '../../../components/seo/JsonLd';
-import { breadcrumbSchemaJsonLd, collectionPageSchemaJsonLd } from '../../../lib/seo';
-import { BRAND, BRAND_L, BRAND_B, DiffBadge, PROGRESS_COLORS } from '../../../components/ui/curriculum-shared';
+import { useProgressStore } from '../../../../features/learn/progressStore';
+import { JsonLd } from '../../../../components/seo/JsonLd';
+import { breadcrumbSchemaJsonLd, collectionPageSchemaJsonLd } from '../../../../lib/seo';
+import { BRAND, BRAND_L, BRAND_B, DiffBadge, PROGRESS_COLORS } from '../../../../components/ui/curriculum-shared';
 
 // ── Public track page: full lesson listing with progress overlay ──────────
 // Anyone can view. Progress is shown from localStorage if available.
@@ -24,7 +24,7 @@ export default function TrackPage() {
   const detail = curriculumData.trackDetails[trackSlug] as any;
   const modules = detail?.modules ?? [];
 
-  const lessonStates = useProgressStore(s => s.lessonStates);
+  const lessonStatuses = useProgressStore(s => s.lessonStatuses);
 
   const lessonIds = useMemo(() => {
     const ids = new Set<string>();
@@ -37,9 +37,9 @@ export default function TrackPage() {
   const trackProgress = useMemo(() => {
     const total = lessonIds.size;
     if (total === 0) return { completed: 0, total, percent: 0 };
-    const completed = [...lessonIds].filter(id => lessonStates[id]?.status === 'COMPLETED').length;
+    const completed = [...lessonIds].filter(id => lessonStatuses[id]?.status === 'COMPLETE').length;
     return { completed, total, percent: total > 0 ? Math.round((completed / total) * 100) : 0 };
-  }, [lessonIds, lessonStates]);
+  }, [lessonIds, lessonStatuses]);
 
   if (!track) {
     return (
@@ -135,7 +135,7 @@ export default function TrackPage() {
 
       {modules.map((mod: any, mi: number) => {
         const modLessons = mod.lessons ?? [];
-        const modCompleted = modLessons.filter((l: any) => lessonStates[l.id]?.status === 'COMPLETED').length;
+        const modCompleted = modLessons.filter((l: any) => lessonStatuses[l.id]?.status === 'COMPLETE').length;
         return (
           <div key={mod.id} style={{
             background: 'var(--bg-surface)',
@@ -161,9 +161,9 @@ export default function TrackPage() {
             </div>
 
             {modLessons.map((lesson: any, li: number) => {
-              const state = lessonStates[lesson.id];
+              const state = lessonStatuses[lesson.id];
               const status = state?.status ?? 'NOT_STARTED';
-              const isCompleted = status === 'COMPLETED';
+              const isCompleted = status === 'COMPLETE';
               return (
                 <Link
                   key={lesson.id}

@@ -1,4 +1,4 @@
-﻿export const module10Lessons = [
+export const module10Lessons = [
     {
     id: "lesson-10-01",
     slug: "devops-production-01-ci-cd-pipeline",
@@ -2316,7 +2316,7 @@ A: Immediate auto-rollback: shift all traffic to baseline. Investigate: compare 
 **Deliverables:**
 - Screenshot of successful canary progression (10% → 50% → 100%).
 - Logs showing rollback on failure.
-- Summary of how Argo compares metrics to decide promotion vs rollback.,
+- Summary of how Argo compares metrics to decide promotion vs rollback.`,
     estimatedMin: 13,
     difficulty: 'INTERMEDIATE',
     companies: ['Netflix', 'Amazon', 'Kubernetes', 'Spinnaker'],
@@ -2642,7 +2642,7 @@ spec:
 - Screenshots of pod being killed and auto-recovered by ReplicaSet.
 - \`kubectl describe podchaos web-pod-kill\` output showing experiment status.
 - \`kubectl describe networkchaos web-latency\` output.
-- Summary of findings: did the nginx deployment handle these failures gracefully? What would you improve?,
+- Summary of findings: did the nginx deployment handle these failures gracefully? What would you improve.`,
     estimatedMin: 14,
     difficulty: 'ADVANCED',
     companies: ['Netflix', 'Amazon', 'Gremlin', 'Uber'],
@@ -2966,7 +2966,7 @@ A: Authorization code flow with PKCE is more secure. The authorization code is e
 - List of top 5 vulnerabilities found with CVSS score and OWASP Top 10 mapping.
 - For each vulnerability: mitigation approach and code example (pseudo-code).
 - Screenshot showing the SQL injection exploitation.
-- Recommendations for production deployment security (top 3 priorities).,
+- Recommendations for production deployment security (top 3 priorities).`,
     estimatedMin: 15,
     difficulty: 'INTERMEDIATE',
     companies: ['Amazon', 'Google', 'Cloudflare', 'OWASP'],
@@ -3307,7 +3307,7 @@ For each savings opportunity, document:
 - Savings opportunity table with calculations.
 - Top 5 recommendations ranked by savings/risk ratio.
 - Implementation timeline (what to do this week, this month, this quarter).
-- Monitoring plan to verify savings after changes.,
+- Monitoring plan to verify savings after changes.`,
     estimatedMin: 13,
     difficulty: 'INTERMEDIATE',
     companies: ['Amazon AWS', 'Google Cloud', 'Azure', 'Spot by NetApp'],
@@ -3511,7 +3511,7 @@ HPA formula: \`desired = ceil[current × (current_metric / target_metric)]\`
 
 Requirements: 10,000 videos/day, each 1-30 minutes. Transcoding is CPU-intensive and takes 0.5-2x video duration. Traffic spikes when users upload after events (concerts, sports).
 
-**Solution**: Use KEDA with RabbitMQ queue depth as the metric. Workers are CPU-optimized instances (C5/C7g). Scale from 5 to 200 workers. Each worker picks one video segment at a time. Use spot instances for 80% of the fleet with a fallback to on-demand. Predictive scaling based on historical upload patterns (more on weekends, evenings). Cooldown of 120s prevents thrashing during burst uploads. Estimated cost savings: 60% vs always-on.,
+**Solution**: Use KEDA with RabbitMQ queue depth as the metric. Workers are CPU-optimized instances (C5/C7g). Scale from 5 to 200 workers. Each worker picks one video segment at a time. Use spot instances for 80% of the fleet with a fallback to on-demand. Predictive scaling based on historical upload patterns (more on weekends, evenings). Cooldown of 120s prevents thrashing during burst uploads. Estimated cost savings: 60% vs always-on.`,
     estimatedMin: 14,
     difficulty: 'INTERMEDIATE',
     companies: ['Amazon AWS', 'Google', 'Kubernetes', 'Netflix'],
@@ -3733,7 +3733,7 @@ Services: rider app, driver app, matching engine, pricing engine, payments, maps
 - Matching engine: 4.3 min/month budget. If exhausted → stop all matching deploys.
 - Payments: 2.2 min/month budget. If exhausted → full deploy freeze + immediate incident review.
 
-**Monitoring**: Each service has a Grafana dashboard with burn rate chart, remaining budget, and SLO violation history. On-call teams are paged when burn rate exceeds 10x for any Tier 1 service.,
+**Monitoring**: Each service has a Grafana dashboard with burn rate chart, remaining budget, and SLO violation history. On-call teams are paged when burn rate exceeds 10x for any Tier 1 service.`,
     estimatedMin: 12,
     difficulty: 'INTERMEDIATE',
     companies: ['Google', 'Amazon', 'Microsoft', 'CRE'],
@@ -3942,7 +3942,7 @@ Scale: 1 billion users, 100 billion messages/day. Peak: 3x average.
 - CPU cores needed (peak): 3.5M × 0.007s = 24,500 CPU-seconds/sec → ~25,000 cores at 100% → ~42,000 cores at 60% utilization.
 - Instances: c6g.2xlarge (8 cores) → 5,250 instances.
 
-**Procurement:** Multi-region active-active. 50% RI (3yr), 30% Savings Plan (1yr), 20% On-Demand. Storage: S3 Standard (30 days) → Glacier (90 days) → Deep Archive (1 year). Cost: ~$50M+/month for compute + storage.,
+**Procurement:** Multi-region active-active. 50% RI (3yr), 30% Savings Plan (1yr), 20% On-Demand. Storage: S3 Standard (30 days) → Glacier (90 days) → Deep Archive (1 year). Cost: ~$50M+/month for compute + storage.`,
     estimatedMin: 13,
     difficulty: 'INTERMEDIATE',
     companies: ['Amazon', 'Google', 'Netflix', 'Uber'],
@@ -4177,7 +4177,7 @@ Action item types: **Prevent** (fix the root cause), **Detect** (add monitoring/
 - Incident recurrence rate (target: < 10% for same root cause).
 - Time to complete postmortem (target: < 48 hours).
 
-**Cultural success indicators:** Engineers volunteer to present postmortems. Incident causes are discussed openly. Teams proactively fix vulnerabilities found in other teams' postmortems.,
+**Cultural success indicators:** Engineers volunteer to present postmortems. Incident causes are discussed openly. Teams proactively fix vulnerabilities found in other teams' postmortems.`,
     estimatedMin: 11,
     difficulty: 'INTERMEDIATE',
     companies: ['Google', 'Amazon', 'Netflix', 'Etsy'],

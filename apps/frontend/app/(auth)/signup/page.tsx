@@ -12,6 +12,7 @@ import { useState, FormEvent } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '../../../features/auth/useAuth';
+import { analytics } from '../../../lib/analytics';
 
 // Very simple password strength scorer (0-4)
 function scorePassword(pw: string): number {
@@ -52,9 +53,10 @@ export default function SignupPage() {
     if (!validate()) return;
     try {
       await signup(email, password, name);
+      analytics.track('signup:completed', { email, name });
       setDone(true);
     } catch {
-      // error already in useAuth state
+      analytics.track('signup:failed', { email });
     }
   }
 
@@ -148,13 +150,13 @@ export default function SignupPage() {
           {fieldErrors.password && <p className="form-error">{fieldErrors.password}</p>}
         </div>
 
-        <button type="submit" disabled={loading} className="auth-submit-btn">
+        <button type="submit" disabled={loading} className="auth-submit-btn" data-track="signup:submit">
           {loading ? <span className="spinner" /> : 'Create Account'}
         </button>
       </form>
 
       <div className="auth-divider"><span>or</span></div>
-      <button className="oauth-btn" type="button" disabled>
+      <button className="oauth-btn" type="button" disabled data-track="signup:google_oauth">
         <span className="oauth-icon">G</span>
         Continue with Google
       </button>

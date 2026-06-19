@@ -1,10 +1,10 @@
 import type { Metadata } from 'next';
-import { getTrackBySlug } from '../../../data/curriculum/index';
+import { getTrackBySlug } from '../../../../data/curriculum/index';
 import {
   generatePageMetadata,
   courseSchemaJsonLd,
   breadcrumbSchemaJsonLd,
-} from '../../../lib/seo';
+} from '../../../../lib/seo';
 
 // ── Track layout: public metadata + JSON-LD for SEO ────────────────────────
 export async function generateMetadata({ params }: { params: Promise<{ trackSlug: string }> }): Promise<Metadata> {

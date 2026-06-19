@@ -38,6 +38,35 @@ function PageViewTracker() {
   return null;
 }
 
+function AnalyticsTracker() {
+  useEffect(() => {
+    if (!POSTHOG_KEY) return;
+
+    const handleClick = (e: MouseEvent) => {
+      let target = e.target as HTMLElement | null;
+      while (target && target !== document.body) {
+        const eventName = target.getAttribute('data-track');
+        if (eventName) {
+          const props: Record<string, string> = {};
+          for (const attr of target.attributes) {
+            if (attr.name.startsWith('data-track-')) {
+              props[attr.name.slice(12)] = attr.value;
+            }
+          }
+          PostHog.capture(eventName, props);
+          return;
+        }
+        target = target.parentElement;
+      }
+    };
+
+    document.addEventListener('click', handleClick, { capture: true });
+    return () => document.removeEventListener('click', handleClick, { capture: true });
+  }, []);
+
+  return null;
+}
+
 export function PostHogProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     initPostHog();
@@ -48,6 +77,7 @@ export function PostHogProvider({ children }: { children: React.ReactNode }) {
       <Suspense fallback={null}>
         <PageViewTracker />
       </Suspense>
+      <AnalyticsTracker />
       {children}
     </>
   );

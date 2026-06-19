@@ -8,6 +8,7 @@ import { PromptFilter } from '@/components/interview/PromptFilter';
 import { HelpCircle, History, Sparkles, Loader2, AlertTriangle } from 'lucide-react';
 import Link from 'next/link';
 import { useUsage, incrementInterview } from '@/features/usage/useUsage';
+import { analytics } from '@/lib/analytics';
 
 export default function InterviewSelector() {
   const router = useRouter();
@@ -39,12 +40,15 @@ export default function InterviewSelector() {
 
   const handleStartPrompt = async (promptId: string) => {
     if (usage.interviewExceeded) return;
+    analytics.track('interview:started', { promptId });
     try {
       const res = await api.post('/interview/sessions', { promptId });
       const session = res.data?.data || res.data;
       incrementInterview();
+      analytics.track('interview:session_created', { sessionId: session.id, promptId });
       router.push(`/interview/${session.id}`);
     } catch (err: any) {
+      analytics.track('interview:start_failed', { promptId, error: err.message });
       alert(err?.response?.data?.message || err.message || 'Failed to start interview session');
     }
   };
@@ -101,6 +105,7 @@ export default function InterviewSelector() {
             transition: 'background-color 150ms ease'
           }}
           className="hover:bg-gray-100"
+          data-track="interview:view_history"
         >
           <History style={{ width: '15px', height: '15px' }} />
           <span>My Attempt History</span>

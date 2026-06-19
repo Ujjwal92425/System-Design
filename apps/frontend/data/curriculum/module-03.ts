@@ -2214,7 +2214,7 @@ async function write(key: string, value: unknown, tier: ConsistencyTier) {
 - **CAP Theorem** (lesson-03-11) — the foundation PACELC extends
 - **Database Replication** (lesson-03-06) — the mechanism behind EL vs EC
 - **Saga Pattern** — achieving consistency without distributed transactions
-- **Module 04: Caching** — another layer where consistency vs latency appears
+- **Module 04: Caching** — another layer where consistency vs latency appears`,
     estimatedMin: 10,
     difficulty: "Advanced" as const,
     companies: ["Amazon", "Google", "Netflix", "MongoDB", "CockroachDB"],
@@ -2562,7 +2562,7 @@ groups:
 - **Vector Databases** (lesson-03-15) — another specialized store for embeddings
 - **Module 04: Caching** — reduce load before it hits the database
 - **Prometheus alerting** — turn metrics into actionable pages
-- **OpenTelemetry** — unified metrics, logs, and traces pipeline
+- **OpenTelemetry** — unified metrics, logs, and traces pipeline`,
     estimatedMin: 12,
     difficulty: "Intermediate" as const,
     companies: ["Prometheus", "InfluxDB", "TimescaleDB", "Amazon", "QuestDB"],

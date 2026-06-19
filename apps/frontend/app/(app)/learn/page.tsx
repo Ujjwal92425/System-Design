@@ -7,9 +7,9 @@ import {
   Radio, Layout, Monitor, Shield, ChevronDown,
 } from 'lucide-react';
 import Link from 'next/link';
-import { curriculumData } from '../../data/curriculum/index';
-import { JsonLd } from '../../components/seo/JsonLd';
-import { collectionSchemaJsonLd } from '../../lib/seo';
+import { curriculumData } from '../../../data/curriculum/index';
+import { JsonLd } from '../../../components/seo/JsonLd';
+import { collectionSchemaJsonLd } from '../../../lib/seo';
 
 // ── Public curriculum page: no auth required, full SEO ─────────────────────
 // Anyone can browse all tracks and lessons. Login is only needed for
@@ -140,6 +140,8 @@ function TrackCard({ track }: { track: any }) {
         }}
         onMouseOver={e => { if (!open) (e.currentTarget.parentElement as HTMLElement).style.borderColor = BRAND_B; }}
         onMouseOut={e =>  { if (!open) (e.currentTarget.parentElement as HTMLElement).style.borderColor = 'var(--border)'; }}
+        data-track="curriculum:track_expand"
+        data-track-track={track.slug}
       >
         <div style={{
           width: '44px', height: '44px', borderRadius: '12px', flexShrink: 0,
@@ -199,6 +201,8 @@ function TrackCard({ track }: { track: any }) {
               }}
               onMouseOver={e => (e.currentTarget.style.opacity = '0.85')}
               onMouseOut={e => (e.currentTarget.style.opacity = '1')}
+              data-track="curriculum:open_track"
+              data-track-track={track.slug}
             >
               Open Track <ChevronRight style={{ width: '12px', height: '12px' }} />
             </Link>

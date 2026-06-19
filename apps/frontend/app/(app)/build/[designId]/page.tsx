@@ -3,6 +3,7 @@
 import React, { useEffect, useState, useRef, use, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { api } from '@/lib/api';
+import { analytics } from '@/lib/analytics';
 import { useCanvasStore, CanvasNode, CanvasEdge } from '@/features/canvas/useCanvasStore';
 import { useAutoSave } from '@/features/canvas/useAutoSave';
 import { useAutoLayout } from '@/features/canvas/useAutoLayout';
@@ -409,19 +410,19 @@ export default function CanvasWorkspace({ params }: { params: Promise<{ designId
 
           <div className="w-px h-5 bg-yc-border hidden sm:block" />
 
-          <button onClick={undo} className="p-1.5 rounded-md text-yc-text-muted hover:text-yc-text hover:bg-yc-bg-card transition" title="Undo (Ctrl+Z)" aria-label="Undo">
+          <button onClick={undo} className="p-1.5 rounded-md text-yc-text-muted hover:text-yc-text hover:bg-yc-bg-card transition" title="Undo (Ctrl+Z)" aria-label="Undo" data-track="canvas:undo">
             <Undo2 className="w-4 h-4" />
           </button>
-          <button onClick={redo} className="p-1.5 rounded-md text-yc-text-muted hover:text-yc-text hover:bg-yc-bg-card transition" title="Redo (Ctrl+Shift+Z)" aria-label="Redo">
+          <button onClick={redo} className="p-1.5 rounded-md text-yc-text-muted hover:text-yc-text hover:bg-yc-bg-card transition" title="Redo (Ctrl+Shift+Z)" aria-label="Redo" data-track="canvas:redo">
             <Redo2 className="w-4 h-4" />
           </button>
 
           <div className="w-px h-5 bg-yc-border hidden sm:block" />
 
-          <button onClick={duplicateSelected} className="p-1.5 rounded-md text-yc-text-muted hover:text-yc-text hover:bg-yc-bg-card transition" title="Duplicate Selected" aria-label="Duplicate selected">
+          <button onClick={duplicateSelected} className="p-1.5 rounded-md text-yc-text-muted hover:text-yc-text hover:bg-yc-bg-card transition" title="Duplicate Selected" aria-label="Duplicate selected" data-track="canvas:duplicate">
             <Copy className="w-4 h-4" />
           </button>
-          <button onClick={deleteSelected} className="p-1.5 rounded-md text-yc-text-muted hover:text-red-500 hover:bg-red-50 transition" title="Delete Selected" aria-label="Delete selected">
+          <button onClick={deleteSelected} className="p-1.5 rounded-md text-yc-text-muted hover:text-red-500 hover:bg-red-50 transition" title="Delete Selected" aria-label="Delete selected" data-track="canvas:delete_node">
             <Trash className="w-4 h-4" />
           </button>
 
@@ -429,6 +430,7 @@ export default function CanvasWorkspace({ params }: { params: Promise<{ designId
 
           <button
             onClick={async () => {
+              analytics.track('canvas:export_png');
               const container = document.querySelector('.react-flow') as HTMLElement;
               if (!container) return;
               const dataUrl = await toPng(container, { backgroundColor: '#FCF9F2', pixelRatio: 2 });
@@ -437,6 +439,7 @@ export default function CanvasWorkspace({ params }: { params: Promise<{ designId
             className="p-1.5 rounded-md text-yc-text-muted hover:text-yc-text hover:bg-yc-bg-card transition"
             title="Export as PNG"
             aria-label="Export as PNG"
+            data-track="canvas:export_png"
           >
             <Download className="w-4 h-4" />
           </button>
@@ -460,6 +463,7 @@ export default function CanvasWorkspace({ params }: { params: Promise<{ designId
             onClick={() => { handleSave(); setShowPublishModal(true); }}
             className="px-2.5 py-1.5 border border-yc-border rounded-lg text-xs font-semibold text-yc-text-muted hover:text-yc-accent hover:border-yc-accent transition flex items-center gap-1"
             title="Publish to community"
+            data-track="canvas:publish"
           >
             <Globe className="w-3.5 h-3.5" />
             <span className="hidden sm:inline">Publish</span>
@@ -469,6 +473,7 @@ export default function CanvasWorkspace({ params }: { params: Promise<{ designId
             onClick={handleSave}
             disabled={saving}
             className="px-3 py-1.5 bg-yc-accent text-white rounded-lg text-xs font-semibold flex items-center gap-1.5 transition hover:bg-yc-accent-hover disabled:opacity-60"
+            data-track="canvas:save"
           >
             {saving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}
             {saving ? 'Saving...' : 'Save'}
@@ -515,9 +520,13 @@ export default function CanvasWorkspace({ params }: { params: Promise<{ designId
             </div>
             <div className="p-4 border-t border-yc-border bg-yc-bg">
               <button
-                onClick={() => setIsSubmitConfirmOpen(true)}
+                onClick={() => {
+                  analytics.track('canvas:submit_interview_click');
+                  setIsSubmitConfirmOpen(true);
+                }}
                 disabled={!interview.isTimerStarted || interview.session.status !== 'IN_PROGRESS'}
                 className="w-full py-2.5 bg-yc-accent text-white rounded-lg text-xs font-bold flex items-center justify-center gap-2 disabled:opacity-50"
+                data-track="canvas:submit_interview"
               >
                 <span>Submit Architecture</span>
               </button>

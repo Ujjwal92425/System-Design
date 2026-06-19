@@ -1,5 +1,5 @@
 import type { Metadata } from 'next';
-import { getLessonBySlug, getTrackBySlug } from '../../../../data/curriculum/index';
+import { getLessonBySlug, getTrackBySlug } from '../../../../../data/curriculum/index';
 import {
   generatePageMetadata,
   lessonSchemaJsonLd,
@@ -8,7 +8,7 @@ import {
   breadcrumbSchemaJsonLd,
   extractPlainText,
   extractHeadings,
-} from '../../../../lib/seo';
+} from '../../../../../lib/seo';
 
 // ── Lesson layout: public metadata + full JSON-LD stack for SEO/AEO ────────
 export async function generateMetadata({

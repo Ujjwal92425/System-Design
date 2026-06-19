@@ -129,7 +129,7 @@ export default function LandingPage() {
         }`}
       >
         <div className="max-w-screen-2xl mx-auto px-6 lg:px-12 py-4 md:py-5 flex items-center justify-between">
-          <Link href="/" className="flex items-center space-x-2 no-underline">
+          <Link href="/" className="flex items-center space-x-2 no-underline" data-track="landing:logo_click">
             <LogoIcon />
             <span className="font-display font-semibold text-lg text-yc-text">SD-OS</span>
           </Link>
@@ -144,10 +144,11 @@ export default function LandingPage() {
 
           {/* Desktop right actions */}
           <div className="hidden lg:flex items-center space-x-4">
-            <Link href="/login" className="text-sm text-yc-text-muted hover:text-yc-text transition">Login</Link>
+            <Link href="/login" className="text-sm text-yc-text-muted hover:text-yc-text transition" data-track="nav:login_click">Login</Link>
             <Link
               href="/signup"
               className="text-sm font-medium px-5 py-2.5 bg-yc-accent text-white rounded-lg hover:bg-yc-accent-hover transition"
+              data-track="nav:signup_click"
             >
               Apply
             </Link>
@@ -160,6 +161,7 @@ export default function LandingPage() {
             aria-expanded={drawerOpen}
             aria-controls="mobile-drawer"
             className="lg:hidden p-2 -mr-2"
+            data-track="nav:mobile_menu_open"
           >
             <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="#1C1C1C" strokeWidth="1.5" strokeLinecap="round">
               <line x1="3" y1="5" x2="17" y2="5" />
@@ -202,11 +204,12 @@ export default function LandingPage() {
             <a href="#pricing" onClick={() => setDrawerOpen(false)} className="text-base text-yc-text-muted hover:text-yc-text transition">Pricing</a>
           </nav>
           <div className="mt-auto flex flex-col space-y-4">
-            <Link href="/login" onClick={() => setDrawerOpen(false)} className="text-center text-sm text-yc-text-muted">Login</Link>
+                <Link href="/login" onClick={() => setDrawerOpen(false)} className="text-center text-sm text-yc-text-muted" data-track="mobile_nav:login_click">Login</Link>
             <Link
               href="/signup"
               onClick={() => setDrawerOpen(false)}
               className="text-center text-sm font-medium px-5 py-3 bg-yc-accent text-white rounded-lg"
+              data-track="mobile_nav:signup_click"
             >
               Apply
             </Link>
@@ -243,12 +246,14 @@ export default function LandingPage() {
                 <Link
                   href="/signup"
                   className="inline-flex items-center px-7 py-3.5 bg-yc-accent text-white text-sm font-medium rounded-lg hover:bg-yc-accent-hover transition"
+                  data-track="hero:start_learning_free"
                 >
                   Start learning free
                 </Link>
                 <Link
                   href="/learn"
                   className="inline-flex items-center px-7 py-3.5 border border-yc-border text-yc-text-muted text-sm font-medium rounded-lg hover:border-yc-text/30 hover:text-yc-text transition"
+                  data-track="hero:browse_curriculum"
                 >
                   Browse curriculum
                 </Link>
@@ -737,6 +742,7 @@ export default function LandingPage() {
             <Link
               href="/signup"
               className="inline-flex items-center mt-8 px-7 py-3.5 bg-yc-accent text-white text-sm font-medium rounded-lg hover:bg-yc-accent-hover transition"
+              data-track="cta:start_building_free"
             >
               Start building free
             </Link>
@@ -759,6 +765,7 @@ export default function LandingPage() {
             <Link
               href="/signup"
               className="inline-flex items-center px-8 py-4 bg-yc-accent text-white text-sm font-medium rounded-lg hover:bg-yc-accent-hover transition"
+              data-track="cta:final_start_learning"
             >
               Start learning free &rarr;
             </Link>
@@ -791,9 +798,9 @@ export default function LandingPage() {
             <div>
               <span className="text-[10px] font-mono font-semibold text-yc-text-muted uppercase tracking-wider mb-4 block">Product</span>
               <div className="space-y-3">
-                <a href="#learn" className="block text-sm text-yc-text-muted hover:text-yc-text transition">Learn</a>
-                <a href="#build" className="block text-sm text-yc-text-muted hover:text-yc-text transition">Build</a>
-                <a href="#evaluate" className="block text-sm text-yc-text-muted hover:text-yc-text transition">Evaluate</a>
+                <a href="#learn" className="block text-sm text-yc-text-muted hover:text-yc-text transition" data-track="footer:learn_section">Learn</a>
+                <a href="#build" className="block text-sm text-yc-text-muted hover:text-yc-text transition" data-track="footer:build_section">Build</a>
+                <a href="#evaluate" className="block text-sm text-yc-text-muted hover:text-yc-text transition" data-track="footer:evaluate_section">Evaluate</a>
               </div>
             </div>
 

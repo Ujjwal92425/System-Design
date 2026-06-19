@@ -1,5 +1,7 @@
 import type { NextConfig } from 'next';
 
+const isDev = process.env.NODE_ENV === 'development';
+
 const nextConfig: NextConfig = {
   reactStrictMode: true,
   transpilePackages: ['@sd-os/ui', '@sd-os/shared'],
@@ -9,6 +11,10 @@ const nextConfig: NextConfig = {
     ];
   },
   async headers() {
+    const cspValue = isDev
+      ? "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://posthog.sdos.academy; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' data:; connect-src 'self' ws: http://localhost:4000 http://localhost:3000 https://posthog.sdos.academy; frame-src 'none'; object-src 'none'"
+      : "default-src 'self'; script-src 'self' https://posthog.sdos.academy; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' data:; connect-src 'self' https://posthog.sdos.academy; frame-src 'none'; object-src 'none'";
+
     return [
       {
         source: '/(.*)',
@@ -19,7 +25,7 @@ const nextConfig: NextConfig = {
           { key: 'X-XSS-Protection', value: '1; mode=block' },
           {
             key: 'Content-Security-Policy',
-            value: "default-src 'self'; script-src 'self' https://posthog.sdos.academy; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' data:; connect-src 'self' https://posthog.sdos.academy; frame-src 'none'; object-src 'none'",
+            value: cspValue,
           },
         ],
       },

@@ -16,6 +16,7 @@ import { useState, FormEvent } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '../../../features/auth/useAuth';
+import { analytics } from '../../../lib/analytics';
 
 export default function LoginPage() {
   const router = useRouter();
@@ -39,9 +40,10 @@ export default function LoginPage() {
     if (!validate()) return;
     try {
       await login(email, password);
+      analytics.track('login:completed', { email });
       router.push('/dashboard');
     } catch {
-      // `error` from useAuth hook already holds the message
+      analytics.track('login:failed', { email });
     }
   }
 
@@ -83,7 +85,7 @@ export default function LoginPage() {
         <div className="form-group">
           <div className="form-label-row">
             <label htmlFor="password" className="form-label">Password</label>
-            <Link href="/forgot-password" className="form-label-link">Forgot password?</Link>
+            <Link href="/forgot-password" className="form-label-link" data-track="login:forgot_password">Forgot password?</Link>
           </div>
           <input
             id="password"
@@ -102,6 +104,7 @@ export default function LoginPage() {
           type="submit"
           disabled={loading}
           className="auth-submit-btn"
+          data-track="login:submit"
         >
           {loading ? <span className="spinner" /> : 'Sign In'}
         </button>
@@ -111,7 +114,7 @@ export default function LoginPage() {
       <div className="auth-divider"><span>or</span></div>
 
       {/* OAuth (wired in Part 5) */}
-      <button className="oauth-btn" type="button" disabled>
+      <button className="oauth-btn" type="button" disabled data-track="login:google_oauth">
         <span className="oauth-icon">G</span>
         Continue with Google
       </button>
