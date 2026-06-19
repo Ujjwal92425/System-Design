@@ -1,3 +1,12 @@
+import type { Metadata } from 'next';
+import { generatePageMetadata } from '../../../lib/seo';
+
+export const metadata: Metadata = generatePageMetadata({
+  title: 'About',
+  description: 'Learn about System Design OS — the interactive platform for mastering system design through hands-on simulation and AI-powered feedback.',
+  path: '/about',
+});
+
 export default function AboutPage() {
   return (
     <div className="max-w-4xl mx-auto px-6 py-24 space-y-8">

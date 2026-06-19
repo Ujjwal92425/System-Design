@@ -34,10 +34,11 @@ interviewRouter.get('/sessions/history', async (req: AuthRequest, res, next) => 
 interviewRouter.post('/sessions', async (req: AuthRequest, res, next) => {
   try {
     const userId = req.user?.id;
+    const role = req.user?.role;
     if (!userId) throw Errors.unauthorized();
     
     const { promptId } = req.body;
-    const session = await interviewService.startSession(userId, promptId);
+    const session = await interviewService.startSession(userId, promptId, role);
     success(res, session);
   } catch (err) {
     next(err);

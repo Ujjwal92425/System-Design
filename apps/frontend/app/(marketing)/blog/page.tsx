@@ -1,4 +1,13 @@
+import type { Metadata } from 'next';
 import Link from 'next/link';
+import { generatePageMetadata } from '../../../lib/seo';
+
+export const metadata: Metadata = generatePageMetadata({
+  title: 'Blog',
+  description: 'System design insights, architecture patterns, and engineering best practices. Learn from real-world case studies and deep dives.',
+  path: '/blog',
+  keywords: ['system design blog', 'architecture blog', 'engineering blog'],
+});
 
 export default function BlogIndex() {
   return (

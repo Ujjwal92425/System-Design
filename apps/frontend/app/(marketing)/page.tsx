@@ -48,7 +48,6 @@ function useCountUp(target: number, duration = 1800, inView = false) {
 export default function LandingPage() {
   const [scrolled, setScrolled] = useState(false);
   const [drawerOpen, setDrawerOpen] = useState(false);
-  const [annual, setAnnual] = useState(false);
   const scrollProgress = useScrollProgress();
   const statsRef = useRef<HTMLDivElement>(null);
   const [statsInView, setStatsInView] = useState(false);
@@ -247,12 +246,12 @@ export default function LandingPage() {
                 >
                   Start learning free
                 </Link>
-                <a
-                  href="#how-it-works"
+                <Link
+                  href="/learn"
                   className="inline-flex items-center px-7 py-3.5 border border-yc-border text-yc-text-muted text-sm font-medium rounded-lg hover:border-yc-text/30 hover:text-yc-text transition"
                 >
-                  See how it works
-                </a>
+                  Browse curriculum
+                </Link>
               </div>
 
               <div className="mt-10 flex items-center space-x-2 text-xs text-yc-text-muted">
@@ -722,111 +721,25 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* ──── PRICING ──── */}
+      {/* ──── FREE FOREVER MESSAGE ──── */}
       <section id="pricing" className="py-24 md:py-32 border-b border-yc-border">
-        <div className="max-w-5xl mx-auto px-6 lg:px-12">
-          <div className="animate-on-scroll text-center mb-16">
-            <span className="text-xs font-medium text-yc-accent uppercase tracking-[0.12em]">PRICING</span>
+        <div className="max-w-3xl mx-auto px-6 lg:px-12 text-center">
+          <div className="animate-on-scroll">
+            <span className="text-xs font-medium text-yc-accent uppercase tracking-[0.12em]">FREE FOREVER</span>
             <h2 className="font-display text-3xl md:text-4xl font-[500] text-yc-text mt-4 mb-4">
-              Start free. Upgrade when it matters.
+              No pricing. No trials. Just build.
             </h2>
-            {/* Annual toggle */}
-            <div className="inline-flex items-center gap-3 mt-2">
-              <span className={`text-sm ${annual ? 'text-yc-text-muted' : 'text-yc-text'}`}>Monthly</span>
-              <button
-                onClick={() => setAnnual(!annual)}
-                className={`relative w-11 h-6 rounded-full border transition-colors ${
-                  annual ? 'bg-yc-accent border-yc-accent' : 'bg-yc-bg-card border-yc-border'
-                }`}
-                aria-label="Toggle annual pricing"
-              >
-                <span
-                  className={`block w-4 h-4 rounded-full bg-white shadow-sm transition-transform ${
-                    annual ? 'translate-x-[22px]' : 'translate-x-[3px]'
-                  }`}
-                />
-              </button>
-              <div className="flex items-center gap-1.5">
-                <span className={`text-sm ${annual ? 'text-yc-text' : 'text-yc-text-muted'}`}>Annually</span>
-                <span className="text-[10px] font-mono font-semibold text-green-700 bg-green-50 border border-green-200 px-1.5 py-0.5 rounded">SAVE 20%</span>
-              </div>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-3xl mx-auto">
-            {/* Free Plan */}
-            <div className="animate-on-scroll bg-white border border-yc-border rounded-xl p-8 md:p-10 flex flex-col">
-              <span className="text-[10px] font-mono font-semibold text-yc-text-muted uppercase tracking-wider mb-2">FREE</span>
-              <div className="flex items-baseline gap-1 mb-2">
-                <span className="font-display text-4xl md:text-5xl font-[500] text-yc-text">$0</span>
-                <span className="text-sm text-yc-text-muted">/month</span>
-              </div>
-              <p className="text-sm text-yc-text-muted mb-8">
-                Everything you need to learn the fundamentals and build your first designs.
-              </p>
-              <ul className="space-y-3 mb-10 flex-1">
-                {[
-                  'Level 1 + 2 curriculum (18 lessons)',
-                  '3 saved designs',
-                  '10 interview prompt templates',
-                  'Basic traffic simulation',
-                  '5 AI reviews per month',
-                ].map((f, i) => (
-                  <li key={i} className="flex items-center gap-3 text-sm text-yc-text-muted">
-                    <span className="w-1 h-1 rounded-full bg-yc-border" />
-                    {f}
-                  </li>
-                ))}
-              </ul>
-              <Link
-                href="/signup"
-                className="block text-center text-sm font-medium py-3 border border-yc-border text-yc-text rounded-lg hover:bg-yc-bg-alt transition"
-              >
-                Get started free
-              </Link>
-            </div>
-
-            {/* Pro Plan */}
-            <div className="animate-on-scroll bg-white border-2 border-yc-accent rounded-xl p-8 md:p-10 flex flex-col relative">
-              <span className="absolute top-0 right-0 text-[9px] font-mono font-bold bg-yc-accent text-white px-3 py-1.5 rounded-tr-xl rounded-bl-lg">
-                MOST POPULAR
-              </span>
-              <span className="text-[10px] font-mono font-semibold text-yc-accent uppercase tracking-wider mb-2">PRO</span>
-              <div className="flex items-baseline gap-1 mb-1">
-                <span className="font-display text-4xl md:text-5xl font-[500] text-yc-text">
-                  {annual ? '$15' : '$19'}
-                </span>
-                <span className="text-sm text-yc-text-muted">/month</span>
-              </div>
-              {annual && (
-                <span className="text-[11px] font-mono text-green-700 mb-2">Billed annually ($180/yr)</span>
-              )}
-              <p className="text-sm text-yc-text-muted mb-8 mt-1">
-                Unlocks the complete sandbox, chaos suite, full curriculum, and unlimited AI reviews.
-              </p>
-              <ul className="space-y-3 mb-10 flex-1">
-                {[
-                  'All 5 levels — 44 lessons',
-                  'Unlimited saved designs + version history',
-                  'All 10 interview prompts with rubric scoring',
-                  'Full chaos simulation suite',
-                  '100 AI reviews per month + cost estimation',
-                  'PDF export + shareable blueprint publishing',
-                  'Model answer comparison after each session',
-                ].map((f, i) => (
-                  <li key={i} className="flex items-center gap-3 text-sm text-yc-text-muted">
-                    <span className="w-1 h-1 rounded-full bg-yc-accent" />
-                    {f}
-                  </li>
-                ))}
-              </ul>
-              <Link
-                href="/signup"
-                className="block text-center text-sm font-medium py-3 bg-yc-accent text-white rounded-lg hover:bg-yc-accent-hover transition"
-              >
-                Start Pro &mdash; 7 days free
-              </Link>
-            </div>
+            <p className="text-sm md:text-base text-yc-text-muted max-w-xl mx-auto leading-relaxed">
+              The curriculum, canvas, and interview sandbox are free for everyone.
+              You get <strong>2 architecture canvases</strong> and <strong>2 interview sessions</strong>
+              — enough to master system design.
+            </p>
+            <Link
+              href="/signup"
+              className="inline-flex items-center mt-8 px-7 py-3.5 bg-yc-accent text-white text-sm font-medium rounded-lg hover:bg-yc-accent-hover transition"
+            >
+              Start building free
+            </Link>
           </div>
         </div>
       </section>
@@ -850,7 +763,7 @@ export default function LandingPage() {
               Start learning free &rarr;
             </Link>
             <p className="text-xs text-yc-text-muted mt-4">
-              No credit card required. Pro trial included.
+              Free forever. No credit card needed.
             </p>
           </div>
         </div>
@@ -881,7 +794,6 @@ export default function LandingPage() {
                 <a href="#learn" className="block text-sm text-yc-text-muted hover:text-yc-text transition">Learn</a>
                 <a href="#build" className="block text-sm text-yc-text-muted hover:text-yc-text transition">Build</a>
                 <a href="#evaluate" className="block text-sm text-yc-text-muted hover:text-yc-text transition">Evaluate</a>
-                <a href="#pricing" className="block text-sm text-yc-text-muted hover:text-yc-text transition">Pricing</a>
               </div>
             </div>
 

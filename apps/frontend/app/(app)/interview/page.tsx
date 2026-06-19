@@ -5,11 +5,13 @@ import { useRouter } from 'next/navigation';
 import { api } from '@/lib/api';
 import { PromptCard } from '@/components/interview/PromptCard';
 import { PromptFilter } from '@/components/interview/PromptFilter';
-import { HelpCircle, History, Sparkles, Loader2 } from 'lucide-react';
+import { HelpCircle, History, Sparkles, Loader2, AlertTriangle } from 'lucide-react';
 import Link from 'next/link';
+import { useUsage, incrementInterview } from '@/features/usage/useUsage';
 
 export default function InterviewSelector() {
   const router = useRouter();
+  const usage = useUsage();
   const [prompts, setPrompts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -36,9 +38,11 @@ export default function InterviewSelector() {
   }, []);
 
   const handleStartPrompt = async (promptId: string) => {
+    if (usage.interviewExceeded) return;
     try {
       const res = await api.post('/interview/sessions', { promptId });
       const session = res.data?.data || res.data;
+      incrementInterview();
       router.push(`/interview/${session.id}`);
     } catch (err: any) {
       alert(err?.response?.data?.message || err.message || 'Failed to start interview session');
@@ -103,6 +107,39 @@ export default function InterviewSelector() {
         </Link>
       </div>
 
+      {/* Free tier usage banner */}
+      <div style={{
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        padding: '12px 16px',
+        background: usage.interviewExceeded ? 'rgba(239,68,68,0.06)' : 'rgba(255,102,0,0.06)',
+        border: `1px solid ${usage.interviewExceeded ? 'rgba(239,68,68,0.2)' : 'rgba(255,102,0,0.15)'}`,
+        borderRadius: '10px',
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          {usage.interviewExceeded ? (
+            <AlertTriangle style={{ width: '15px', height: '15px', color: '#EF4444', flexShrink: 0 }} />
+          ) : (
+            <Sparkles style={{ width: '15px', height: '15px', color: 'var(--accent-amber)', flexShrink: 0 }} />
+          )}
+          <span style={{ fontSize: '12px', color: usage.interviewExceeded ? '#EF4444' : 'var(--text-secondary)' }}>
+            {usage.interviewExceeded
+              ? `Free limit reached (${usage.interviewCount}/${usage.interviewLimit}). Delete past sessions to start a new one.`
+              : `${usage.interviewRemaining} / ${usage.interviewLimit} interview sessions remaining in free tier`
+            }
+          </span>
+        </div>
+        <span className="mono" style={{
+          fontSize: '10px', fontWeight: 700, padding: '2px 8px', borderRadius: '4px',
+          color: usage.interviewExceeded ? '#EF4444' : 'var(--accent-amber)',
+          background: usage.interviewExceeded ? 'rgba(239,68,68,0.1)' : 'rgba(255,102,0,0.08)',
+          border: `1px solid ${usage.interviewExceeded ? 'rgba(239,68,68,0.2)' : 'rgba(255,102,0,0.15)'}`,
+        }}>
+          {usage.interviewCount}/{usage.interviewLimit}
+        </span>
+      </div>
+
       {/* Filter panel */}
       <PromptFilter
         search={search}
@@ -152,6 +189,7 @@ export default function InterviewSelector() {
               key={prompt.id}
               prompt={prompt}
               onStart={handleStartPrompt}
+              disabled={usage.interviewExceeded}
             />
           ))}
         </div>

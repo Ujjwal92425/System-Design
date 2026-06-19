@@ -1,0 +1,14 @@
+{
+  "name": "System Design OS",
+  "short_name": "SD OS",
+  "description": "Master system design through interactive learning, architecture simulation, and AI-powered interview practice.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#FF6600",
+  "icons": [
+    { "src": "/icon", "sizes": "32x32", "type": "image/png" },
+    { "src": "/icon?size=192", "sizes": "192x192", "type": "image/png" },
+    { "src": "/icon?size=512", "sizes": "512x512", "type": "image/png" }
+  ]
+}

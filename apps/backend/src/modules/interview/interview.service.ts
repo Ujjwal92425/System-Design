@@ -1,8 +1,15 @@
-import { interviewsRepo } from '@sd-os/db';
+import { db, interviewsRepo } from '@sd-os/db';
 import { aiService } from '../ai/ai.service';
 import { scoreDesign, mergeAiIntoScores } from './scoring.service';
-import { Errors } from '../../utils/errors';
+import { AppError, Errors } from '../../utils/errors';
 import type { InterviewPrompt, RubricCriteria } from '@sd-os/shared';
+
+const INTERVIEW_LIMITS = {
+  USER: 2,
+  PRO:  Infinity,
+  ADMIN: Infinity,
+  INSTRUCTOR: Infinity,
+} as const;
 
 export const interviewService = {
   async getPrompts(filters?: { difficulty?: string; tag?: string }) {
@@ -13,11 +20,24 @@ export const interviewService = {
     return interviewsRepo.findPromptById(id);
   },
 
-  async startSession(userId: string, promptId: string) {
+  async startSession(userId: string, promptId: string, role = 'USER') {
     const prompt = await interviewsRepo.findPromptById(promptId);
     if (!prompt) {
       throw Errors.notFound('Interview prompt');
     }
+
+    const limit = INTERVIEW_LIMITS[role as keyof typeof INTERVIEW_LIMITS] ?? INTERVIEW_LIMITS.USER;
+    if (limit !== Infinity) {
+      const count = await db.interviewSession.count({ where: { userId } });
+      if (count >= limit) {
+        throw new AppError(
+          'PLAN_LIMIT',
+          `Free accounts can start up to ${limit} interview sessions. Delete past sessions to start a new one.`,
+          402
+        );
+      }
+    }
+
     return interviewsRepo.createSession(userId, promptId, prompt.timeLimitMin);
   },
 

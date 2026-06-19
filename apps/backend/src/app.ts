@@ -43,6 +43,7 @@ import { simulationRouter } from './modules/simulation/simulation.router';
 import { interviewRouter } from './modules/interview/interview.router';
 import { communityRouter } from './modules/community/blueprints.router';
 import { aiRouter }        from './modules/ai/ai.router';
+import { usageRouter }     from './modules/usage/usage.router';
 import { billingRouter }   from './modules/billing/billing.router';
 import { adminRouter }     from './modules/admin/admin.router';
 
@@ -129,6 +130,7 @@ app.use('/api/users',     authenticate, usersRouter);
 app.use('/api/learn',     authenticate, learnRouter);
 app.use('/api/designs',    authenticate, designsRouter);
 app.use('/api/simulation', authenticate, simulationRouter);
+app.use('/api/usage',      authenticate, usageRouter);
 app.use('/api/interview',  authenticate, interviewRouter);
 app.use('/api/community', authenticate, communityRouter);
 app.use('/api/ai',        authenticate, aiRouter);

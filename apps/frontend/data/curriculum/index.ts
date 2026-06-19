@@ -9,6 +9,13 @@ import { module08Lessons } from './module-08';
 import { module09Lessons } from './module-09';
 import { module10Lessons } from './module-10';
 import { module11Lessons } from './module-11';
+import { module12Lessons } from './module-12';
+import { module13Lessons } from './module-13';
+import { module14Lessons } from './module-14';
+import { module15Lessons } from './module-15';
+import { module16Lessons } from './module-16';
+import { module17Lessons } from './module-17';
+import { module18Lessons } from './module-18';
 import type { CurriculumData } from './types';
 
 const tracks = [
@@ -221,6 +228,139 @@ const tracks = [
     isPublished: true,
     completedPct: 0,
   },
+  {
+    id: 'mod-12',
+    slug: 'coding-craft',
+    name: 'Best Coding Practices, Design Patterns & Clean Code',
+    description: 'Master the craft of writing production-quality code. Cover SOLID principles, creational/structural/behavioral design patterns, clean code and refactoring, API design, error handling, testing, concurrency patterns, functional programming, and dependency injection.',
+    level: 2,
+    order: 12,
+    iconUrl: '/icons/code.svg',
+    estimatedHours: 20,
+    learningGoals: [
+      'Apply SOLID principles to write maintainable object-oriented code',
+      'Recognize and implement Gang of Four design patterns',
+      'Write clean, testable, and refactored code following industry conventions',
+      'Design robust APIs with proper error handling and documentation',
+      'Master testing patterns including TDD, mocking, and test design',
+    ],
+    isPublished: true,
+    completedPct: 0,
+  },
+  {
+    id: 'mod-13',
+    slug: 'design-deep-dive',
+    name: 'System Design Deep Dives — Payments, Chat, Video, Ads & More',
+    description: 'Extend your system design skills with advanced real-world case studies. Design a chat system like WhatsApp, payment system like Stripe, video conferencing like Zoom, ad auctions, food delivery logistics, recommendation engines, and more.',
+    level: 3,
+    order: 13,
+    iconUrl: '/icons/deep-dive.svg',
+    estimatedHours: 20,
+    learningGoals: [
+      'Design real-time communication systems at WhatsApp scale',
+      'Architect payment systems with idempotency and reconciliation',
+      'Design video conferencing with WebRTC and SFU architecture',
+      'Build recommendation engines and ad auctions',
+      'Design multi-tenant SaaS platforms and content moderation pipelines',
+    ],
+    isPublished: true,
+    completedPct: 0,
+  },
+  {
+    id: 'mod-14',
+    slug: 'design-deep-dive-2',
+    name: 'System Design Deep Dives II — CDN, KMS, Monitoring, Data Pipelines & More',
+    description: 'Continue mastering advanced system design with CDN architecture from scratch, key management services, A/B testing platforms, monitoring/metrics systems, ETL data pipelines, distributed job queues, rate limiters, and geospatial services.',
+    level: 3,
+    order: 14,
+    iconUrl: '/icons/deep-dive.svg',
+    estimatedHours: 16,
+    learningGoals: [
+      'Design a CDN with edge caching, anycast routing, and cache hierarchies',
+      'Architect a KMS with envelope encryption and HSM-backed key storage',
+      'Build an A/B testing platform with consistent assignment and statistical analysis',
+      'Design monitoring systems with TSDB storage and Prometheus-style pull collection',
+      'Implement distributed job queues and rate limiters at scale',
+    ],
+    isPublished: true,
+    completedPct: 0,
+  },
+  {
+    id: 'mod-15',
+    slug: 'system-design-foundations',
+    name: 'System Design Foundations — Welcome, Core Concepts & Tradeoffs',
+    description: 'Start your system design journey with the foundational concepts: core terminology (latency, throughput, availability, consistency), the CAP theorem, and key tradeoffs that appear in every architecture decision.',
+    level: 1,
+    order: 15,
+    iconUrl: '/icons/foundations.svg',
+    estimatedHours: 8,
+    learningGoals: [
+      'Understand the system design mindset and senior engineer perspective',
+      'Master core terminology: latency, throughput, availability, consistency',
+      'Apply the CAP theorem to real-world tradeoff decisions',
+      'Choose between read-optimized and write-optimized storage engines',
+      'Navigate consistency models from strong to eventual',
+    ],
+    isPublished: true,
+    completedPct: 0,
+  },
+  {
+    id: 'mod-16',
+    slug: 'scalable-data-structures',
+    name: 'Scalable Data Structures — Bloom Filters, Geohash, Merkle Trees & More',
+    description: 'Master the probabilistic and specialized data structures that power large-scale systems: Bloom filters, Geohash, Merkle trees, consistent hashing, HyperLogLog, Count-Min Sketch, tries, skip lists, segment trees, R-trees, and bitmap indexes.',
+    level: 2,
+    order: 16,
+    iconUrl: '/icons/data-structures.svg',
+    estimatedHours: 12,
+    learningGoals: [
+      'Use Bloom filters for space-efficient set membership',
+      'Index spatial data with Geohash, S2, and H3',
+      'Verify data integrity with Merkle trees across replicas',
+      'Distribute data evenly with consistent hashing',
+      'Estimate cardinality with HyperLogLog and frequency with Count-Min Sketch',
+    ],
+    isPublished: true,
+    completedPct: 0,
+  },
+  {
+    id: 'mod-17',
+    slug: 'advanced-storage-patterns',
+    name: 'Advanced Storage Patterns — Caching, Streaming, Delivery & Transactions',
+    description: 'Dive deep into the patterns that make production systems reliable: cache warming, materialized views, connection pooling, erasure coding, SSE, webhooks, delivery semantics, dead letter queues, and the 3PC protocol.',
+    level: 2,
+    order: 17,
+    iconUrl: '/icons/storage-patterns.svg',
+    estimatedHours: 10,
+    learningGoals: [
+      'Prevent cache stampedes with cache warming strategies',
+      'Accelerate queries with materialized views',
+      'Manage database connections with connection pooling',
+      'Implement SSE and webhooks for real-time communication',
+      'Choose between at-most-once, at-least-once, and exactly-once delivery',
+    ],
+    isPublished: true,
+    completedPct: 0,
+  },
+  {
+    id: 'mod-18',
+    slug: 'advanced-security-identity',
+    name: 'Advanced Security & Identity — TLS, Encryption, Secrets, RBAC & SSO',
+    description: 'Secure your systems end-to-end: TLS protocol deep dive, encryption at rest with envelope encryption, secrets management with Vault, role-based access control, and SAML/SSO for federated identity.',
+    level: 3,
+    order: 18,
+    iconUrl: '/icons/security.svg',
+    estimatedHours: 8,
+    learningGoals: [
+      'Understand TLS 1.3 handshake and cipher suite negotiation',
+      'Implement encryption at rest with envelope encryption',
+      'Manage secrets securely with Vault and dynamic credentials',
+      'Design role-based access control for multi-tenant systems',
+      'Implement SAML and OIDC for single sign-on',
+    ],
+    isPublished: true,
+    completedPct: 0,
+  },
 ];
 
 function buildModules(slug: string, lessonsArray: any[]): any[] {
@@ -308,6 +448,13 @@ const allLessons = [
   ...module09Lessons,
   ...module10Lessons,
   ...module11Lessons,
+  ...module12Lessons,
+  ...module13Lessons,
+  ...module14Lessons,
+  ...module15Lessons,
+  ...module16Lessons,
+  ...module17Lessons,
+  ...module18Lessons,
 ];
 
 export const curriculumData: CurriculumData = {

@@ -7,9 +7,14 @@ import {
   Radio, Layout, Monitor, Shield, ChevronDown,
 } from 'lucide-react';
 import Link from 'next/link';
-import { curriculumData } from '../../../data/curriculum/index';
+import { curriculumData } from '../../data/curriculum/index';
+import { JsonLd } from '../../components/seo/JsonLd';
+import { collectionSchemaJsonLd } from '../../lib/seo';
 
-// ── Types ────────────────────────────────────────────────────────────────────
+// ── Public curriculum page: no auth required, full SEO ─────────────────────
+// Anyone can browse all tracks and lessons. Login is only needed for
+// saving progress (Mark Complete on individual lesson pages).
+
 interface FlatLesson {
   id: string;
   slug: string;
@@ -21,7 +26,6 @@ interface FlatLesson {
   trackName: string;
 }
 
-// ── Constants ─────────────────────────────────────────────────────────────────
 const BRAND   = '#FF6600';
 const BRAND_L = 'rgba(255,102,0,0.08)';
 const BRAND_B = 'rgba(255,102,0,0.20)';
@@ -47,7 +51,6 @@ const TRACK_ICONS: Record<string, React.ComponentType<any>> = {
   'production-operations':            Monitor,
 };
 
-// ── Build flat lesson list from local curriculum ──────────────────────────────
 function buildFlatLessons(): FlatLesson[] {
   const flat: FlatLesson[] = [];
   for (const [trackSlug, td] of Object.entries(curriculumData.trackDetails)) {
@@ -70,7 +73,6 @@ function buildFlatLessons(): FlatLesson[] {
 
 const ALL_LESSONS = buildFlatLessons();
 
-// ── Difficulty badge ──────────────────────────────────────────────────────────
 function DiffBadge({ d }: { d: string }) {
   const s = DIFF[d] ?? DIFF.BEGINNER;
   return (
@@ -82,7 +84,6 @@ function DiffBadge({ d }: { d: string }) {
   );
 }
 
-// ── Lesson row (search results) ───────────────────────────────────────────────
 function LessonRow({ l }: { l: FlatLesson }) {
   return (
     <Link href={`/learn/${l.trackSlug}/${l.slug}`} style={{
@@ -116,7 +117,6 @@ function LessonRow({ l }: { l: FlatLesson }) {
   );
 }
 
-// ── Expandable Track Card ─────────────────────────────────────────────────────
 function TrackCard({ track }: { track: any }) {
   const [open, setOpen] = useState(false);
   const Icon = TRACK_ICONS[track.slug] ?? BookOpen;
@@ -132,8 +132,6 @@ function TrackCard({ track }: { track: any }) {
       boxShadow: open ? `0 0 0 3px ${BRAND_L}` : 'none',
       transition: 'border-color 200ms, box-shadow 200ms',
     }}>
-
-      {/* ── Card header (always visible) ── */}
       <button
         onClick={() => setOpen(v => !v)}
         style={{
@@ -143,7 +141,6 @@ function TrackCard({ track }: { track: any }) {
         onMouseOver={e => { if (!open) (e.currentTarget.parentElement as HTMLElement).style.borderColor = BRAND_B; }}
         onMouseOut={e =>  { if (!open) (e.currentTarget.parentElement as HTMLElement).style.borderColor = 'var(--border)'; }}
       >
-        {/* Icon box */}
         <div style={{
           width: '44px', height: '44px', borderRadius: '12px', flexShrink: 0,
           background: open ? BRAND : BRAND_L,
@@ -153,8 +150,6 @@ function TrackCard({ track }: { track: any }) {
         }}>
           <Icon style={{ width: '20px', height: '20px', color: open ? '#fff' : BRAND }} />
         </div>
-
-        {/* Title block */}
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap', marginBottom: '5px' }}>
             <span className="mono" style={{
@@ -177,8 +172,6 @@ function TrackCard({ track }: { track: any }) {
             {track.description}
           </p>
         </div>
-
-        {/* Chevron */}
         <div style={{
           flexShrink: 0, marginTop: '2px',
           transform: open ? 'rotate(180deg)' : 'rotate(0deg)',
@@ -188,21 +181,8 @@ function TrackCard({ track }: { track: any }) {
         </div>
       </button>
 
-      {/* Progress bar */}
-      <div style={{ margin: '0 20px 16px' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
-          <span className="mono" style={{ fontSize: '9px', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Progress</span>
-          <span className="mono" style={{ fontSize: '9px', color: 'var(--text-muted)' }}>0%</span>
-        </div>
-        <div style={{ height: '3px', background: 'var(--border)', borderRadius: '2px', overflow: 'hidden' }}>
-          <div style={{ height: '100%', width: '0%', background: BRAND, borderRadius: '2px' }} />
-        </div>
-      </div>
-
-      {/* ── Expanded lesson list ── */}
       {open && (
         <div style={{ borderTop: `1px solid var(--border)` }}>
-          {/* Open full track CTA */}
           <div style={{ padding: '12px 20px', background: BRAND_L, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
             <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
               {totalLessons} lessons in this track
@@ -224,10 +204,8 @@ function TrackCard({ track }: { track: any }) {
             </Link>
           </div>
 
-          {/* Modules + lessons */}
           {modules.map((mod: any) => (
             <div key={mod.id}>
-              {/* Module header */}
               <div style={{
                 padding: '8px 20px 6px',
                 background: 'var(--bg-elevated)',
@@ -242,7 +220,6 @@ function TrackCard({ track }: { track: any }) {
                 </span>
               </div>
 
-              {/* Lesson rows */}
               {(mod.lessons ?? []).map((lesson: any, i: number) => (
                 <Link
                   key={lesson.id}
@@ -287,7 +264,6 @@ function TrackCard({ track }: { track: any }) {
   );
 }
 
-// ── Main Page ─────────────────────────────────────────────────────────────────
 export default function LearnCurriculumPage() {
   const tracks = curriculumData.tracks.filter(t => t?.slug);
 
@@ -297,7 +273,6 @@ export default function LearnCurriculumPage() {
 
   const isSearching = query.trim() !== '' || difficulty !== '';
 
-  // Local search — zero API calls
   const searchResults = useMemo<FlatLesson[]>(() => {
     if (!isSearching) return [];
     const q = query.trim().toLowerCase();
@@ -325,8 +300,16 @@ export default function LearnCurriculumPage() {
 
   return (
     <div style={{ maxWidth: '860px', margin: '0 auto', padding: '36px 24px', display: 'flex', flexDirection: 'column', gap: '28px' }}>
+      <JsonLd data={collectionSchemaJsonLd()} />
+      <JsonLd data={{
+        '@context': 'https://schema.org',
+        '@type': 'BreadcrumbList',
+        itemListElement: [
+          { '@type': 'ListItem', position: 1, name: 'Home', item: 'https://systemdesignos.com/' },
+          { '@type': 'ListItem', position: 2, name: 'Curriculum', item: 'https://systemdesignos.com/learn' },
+        ],
+      }} />
 
-      {/* ── Header ────────────────────────────────────────────────────────── */}
       <div style={{ display: 'flex', alignItems: 'flex-start', gap: '14px' }}>
         <div style={{
           width: '44px', height: '44px', borderRadius: '12px', flexShrink: 0,
@@ -345,9 +328,7 @@ export default function LearnCurriculumPage() {
         </div>
       </div>
 
-      {/* ── Search + Difficulty ────────────────────────────────────────────── */}
       <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', alignItems: 'center' }}>
-        {/* Search input */}
         <div style={{ position: 'relative', flex: '1 1 260px', minWidth: '200px' }}>
           <Search style={{ position: 'absolute', left: '13px', top: '50%', transform: 'translateY(-50%)', width: '14px', height: '14px', color: 'var(--text-muted)', pointerEvents: 'none' }} />
           <input
@@ -372,7 +353,6 @@ export default function LearnCurriculumPage() {
           )}
         </div>
 
-        {/* Difficulty chips */}
         <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
           {DIFFICULTIES.map(d => {
             const s = DIFF[d];
@@ -402,7 +382,6 @@ export default function LearnCurriculumPage() {
         </div>
       </div>
 
-      {/* ── SEARCH RESULTS ────────────────────────────────────────────────── */}
       {isSearching && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
           <p className="mono" style={{ fontSize: '11px', color: 'var(--text-muted)', margin: '0 0 4px' }}>
@@ -416,10 +395,8 @@ export default function LearnCurriculumPage() {
         </div>
       )}
 
-      {/* ── TRACK CARDS (when not searching) ──────────────────────────────── */}
       {!isSearching && (
         <>
-          {/* Track filter */}
           <div style={{ position: 'relative', maxWidth: '340px' }}>
             <Search style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', width: '13px', height: '13px', color: 'var(--text-muted)', pointerEvents: 'none' }} />
             <input

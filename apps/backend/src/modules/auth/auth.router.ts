@@ -79,7 +79,7 @@ authRouter.post('/logout', async (req, res, next) => {
   }
 });
 
-authRouter.post('/refresh', async (req, res, next) => {
+authRouter.post('/refresh', authLimiter, async (req, res, next) => {
   try {
     const cookies = parseCookies(req.headers.cookie);
     const token = cookies.refreshToken || req.body.refreshToken;
@@ -106,7 +106,7 @@ authRouter.post('/refresh', async (req, res, next) => {
   }
 });
 
-authRouter.post('/verify-email', validate(VerifyEmailBody), async (req, res, next) => {
+authRouter.post('/verify-email', authLimiter, validate(VerifyEmailBody), async (req, res, next) => {
   try {
     const result = await authService.verifyEmail(req.body.token);
     success(res, result);

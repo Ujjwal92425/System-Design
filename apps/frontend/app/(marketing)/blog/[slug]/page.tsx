@@ -1,3 +1,17 @@
+import type { Metadata } from 'next';
+import { generatePageMetadata } from '../../../../lib/seo';
+
+export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
+  const { slug } = await params;
+  const title = slug.replace(/-/g, ' ').replace(/\b\w/g, (c: string) => c.toUpperCase());
+  return generatePageMetadata({
+    title,
+    description: `Read about ${title} — a deep dive into system design concepts and architecture patterns.`,
+    path: `/blog/${slug}`,
+    type: 'article',
+  });
+}
+
 export default async function BlogPost({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
   return (

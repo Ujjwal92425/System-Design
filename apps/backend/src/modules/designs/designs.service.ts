@@ -14,7 +14,7 @@ import { AppError } from '../../utils/errors';
 
 /** Per-plan design creation limits */
 const PLAN_LIMITS = {
-  USER: 3,
+  USER: 2,
   PRO:  Infinity,
   ADMIN: Infinity,
   INSTRUCTOR: Infinity,

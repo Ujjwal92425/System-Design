@@ -1,14 +1,42 @@
+import type { Metadata } from 'next';
 import Link from 'next/link';
+import { generatePageMetadata, productSchemaJsonLd, SITE_NAME } from '../../../lib/seo';
+
+export const metadata: Metadata = generatePageMetadata({
+  title: 'Pricing',
+  description: 'Choose the right plan for your system design journey. Free, Pro, and Team plans with AI reviews, simulations, and unlimited designs.',
+  path: '/pricing',
+  keywords: ['pricing', 'plans', 'pro', 'team', 'subscription'],
+});
+
+const PLANS = [
+  { name: 'Free', price: '$0', desc: 'Fundamentals and sandbox builds', features: ['3 workspaces', '10 AI credits/mo', 'Basic components', 'PNG Exports'] },
+  { name: 'Pro', price: '$29', desc: 'Ideal for job seekers and active engineers', features: ['50 workspaces', '200 AI credits/mo', 'Advanced metrics & chaos simulator', 'Model answers & rubrics', 'PNG/SVG/PDF exports'] },
+  { name: 'Team', price: '$79', desc: 'For bootcamps and engineering teams', features: ['500 workspaces', '1000 AI credits/mo', 'Collaborative canvas', 'Instructor dashboards', 'Dedicated training modules'] },
+];
 
 export default function PricingPage() {
-  const plans = [
-    { name: 'Free', price: '$0', desc: 'Fundamentals and sandbox builds', features: ['3 workspaces', '10 AI credits/mo', 'Basic components', 'PNG Exports'] },
-    { name: 'Pro', price: '$29', desc: 'Ideal for job seekers and active engineers', features: ['50 workspaces', '200 AI credits/mo', 'Advanced metrics & chaos simulator', 'Model answers & rubrics', 'PNG/SVG/PDF exports'] },
-    { name: 'Team', price: '$79', desc: 'For bootcamps and engineering teams', features: ['500 workspaces', '1000 AI credits/mo', 'Collaborative canvas', 'Instructor dashboards', 'Dedicated training modules'] }
-  ];
+  const plans = PLANS;
 
   return (
-    <div className="py-24 px-6 max-w-6xl mx-auto space-y-12">
+    <>
+      {PLANS.map((p, i) => (
+        <script
+          key={i}
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{
+            __html: JSON.stringify(
+              productSchemaJsonLd({
+                name: `${SITE_NAME} ${p.name}`,
+                description: p.desc,
+                price: p.price.replace('$', ''),
+                features: p.features,
+              })
+            ),
+          }}
+        />
+      ))}
+      <div className="py-24 px-6 max-w-6xl mx-auto space-y-12">
       <div className="text-center space-y-4">
         <h1 className="text-4xl md:text-5xl font-extrabold">Predictable Plans for Every Stage</h1>
         <p className="text-gray-500 text-lg max-w-xl mx-auto">Choose a plan that fits your practice schedule. Cancel or upgrade anytime.</p>
@@ -40,6 +68,7 @@ export default function PricingPage() {
           </div>
         ))}
       </div>
-    </div>
+      </div>
+    </>
   );
 }

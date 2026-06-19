@@ -15,9 +15,10 @@ interface Prompt {
 interface PromptCardProps {
   prompt: Prompt;
   onStart: (id: string) => void;
+  disabled?: boolean;
 }
 
-export function PromptCard({ prompt, onStart }: PromptCardProps) {
+export function PromptCard({ prompt, onStart, disabled }: PromptCardProps) {
   const getDiffColor = (d: string) => {
     switch (d) {
       case 'EASY': return { bg: 'rgba(54, 201, 142, 0.1)', text: '#36C98E' };
@@ -99,10 +100,12 @@ export function PromptCard({ prompt, onStart }: PromptCardProps) {
         </div>
 
         <button
-          onClick={() => onStart(prompt.id)}
+          onClick={() => { if (!disabled) onStart(prompt.id); }}
+          disabled={disabled}
+          title={disabled ? 'Free limit reached. Delete past sessions to start a new one.' : ''}
           style={{
-            background: 'var(--accent-amber)',
-            color: '#080B14',
+            background: disabled ? 'var(--border)' : 'var(--accent-amber)',
+            color: disabled ? 'var(--text-muted)' : '#080B14',
             border: 'none',
             borderRadius: '6px',
             padding: '8px 14px',
@@ -111,12 +114,12 @@ export function PromptCard({ prompt, onStart }: PromptCardProps) {
             display: 'flex',
             alignItems: 'center',
             gap: '6px',
-            cursor: 'pointer',
+            cursor: disabled ? 'not-allowed' : 'pointer',
             transition: 'background-color 150ms ease'
           }}
           className="hover:opacity-90"
         >
-          <span>Start Attempt</span>
+          <span>{disabled ? 'Limit Reached' : 'Start Attempt'}</span>
           <ArrowRight style={{ width: '12px', height: '12px' }} />
         </button>
       </div>

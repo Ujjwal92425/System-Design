@@ -1,5 +1,13 @@
 import React from 'react';
+import type { Metadata } from 'next';
 import { MarketingHeader } from '../../components/layouts/MarketingHeader';
+import { generatePageMetadata } from '../../lib/seo';
+
+export const metadata: Metadata = generatePageMetadata({
+  title: 'System Design OS',
+  description: 'Master system design through interactive learning, architecture simulation, and AI-powered interview practice.',
+  path: '/',
+});
 
 export default function MarketingLayout({ children }: { children: React.ReactNode }) {
   return (

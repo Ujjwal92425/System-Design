@@ -2,7 +2,8 @@
 
 import Link from 'next/link';
 import { useTracks } from '../../../features/learn/useLearn';
-import { Loader2, BookOpen, Flame, LayoutDashboard, TrendingUp } from 'lucide-react';
+import { useUsage } from '../../../features/usage/useUsage';
+import { Loader2, BookOpen, Flame, LayoutDashboard, TrendingUp, Layers, Sparkles, AlertTriangle } from 'lucide-react';
 
 import { TrackProgressCard } from '@/components/dashboard/TrackProgressCard';
 import { NextLessonCard } from '@/components/dashboard/NextLessonCard';
@@ -43,6 +44,7 @@ function StatCard({ label, value, icon: Icon }: { label: string; value: string; 
 // ── Dashboard Page ────────────────────────────────────────────────────────────
 export default function DashboardPage() {
   const { tracks, loading } = useTracks();
+  const usage = useUsage();
 
   const validTracks = tracks.filter(t => t && t.slug);
 
@@ -102,6 +104,57 @@ export default function DashboardPage() {
           value="—"
           icon={Flame}
         />
+        <div style={{
+          background: 'var(--bg-surface)',
+          border: '1px solid var(--border)',
+          borderRadius: '12px',
+          padding: '20px',
+          display: 'flex',
+          flexDirection: 'column',
+          gap: '8px',
+        }}>
+          <p className="mono" style={{ fontSize: '10px', color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+            Free Tier Usage
+          </p>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <span style={{ fontSize: '12px', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                <Layers style={{ width: '12px', height: '12px' }} /> Canvases
+              </span>
+              <span className="mono" style={{
+                fontSize: '11px', fontWeight: 700,
+                color: usage.canvasExceeded ? '#EF4444' : 'var(--text-primary)',
+              }}>
+                {usage.canvasCount} / {usage.canvasLimit}
+              </span>
+            </div>
+            <div style={{ height: '4px', background: 'var(--border)', borderRadius: '99px', overflow: 'hidden' }}>
+              <div style={{ width: `${Math.min(100, (usage.canvasCount / usage.canvasLimit) * 100)}%`, height: '100%', background: usage.canvasExceeded ? '#EF4444' : '#FF6600', borderRadius: '99px', transition: 'width 300ms' }} />
+            </div>
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <span style={{ fontSize: '12px', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                <Sparkles style={{ width: '12px', height: '12px' }} /> Interviews
+              </span>
+              <span className="mono" style={{
+                fontSize: '11px', fontWeight: 700,
+                color: usage.interviewExceeded ? '#EF4444' : 'var(--text-primary)',
+              }}>
+                {usage.interviewCount} / {usage.interviewLimit}
+              </span>
+            </div>
+            <div style={{ height: '4px', background: 'var(--border)', borderRadius: '99px', overflow: 'hidden' }}>
+              <div style={{ width: `${Math.min(100, (usage.interviewCount / usage.interviewLimit) * 100)}%`, height: '100%', background: usage.interviewExceeded ? '#EF4444' : '#FF6600', borderRadius: '99px', transition: 'width 300ms' }} />
+            </div>
+          </div>
+          {usage.canvasExceeded && usage.interviewExceeded && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: '4px', marginTop: '2px' }}>
+              <AlertTriangle style={{ width: '11px', height: '11px', color: '#EF4444' }} />
+              <span style={{ fontSize: '10px', color: '#EF4444' }}>Limit reached. Delete old items to create new ones.</span>
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Two-column area: Next lesson + Track progress */}

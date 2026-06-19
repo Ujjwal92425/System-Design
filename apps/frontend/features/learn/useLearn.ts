@@ -1,12 +1,13 @@
 'use client';
 
 import { api } from '../../lib/api';
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import {
   getAllTracks,
   getTrackBySlug,
   getLessonBySlug,
 } from '../../data/curriculum/index';
+import { useProgressStore } from './progressStore';
 
 export interface TrackSummary {
   id: string;
@@ -78,20 +79,43 @@ export function useTracks() {
 }
 
 export function useTrack(slug: string) {
-  const [track, setTrack] = useState<TrackDetail | null>(null);
+  const [rawTrack, setRawTrack] = useState<TrackDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const lessonStatuses = useProgressStore((s) => s.lessonStatuses);
 
   useEffect(() => {
     if (!slug) return;
+    setLoading(true);
     api.get(`/learn/tracks/${slug}`)
-      .then(res => setTrack(res.data.data))
+      .then(res => setRawTrack(res.data.data))
       .catch(() => {
         // Local curriculum fallback
-        setTrack(getTrackBySlug(slug));
+        setRawTrack(getTrackBySlug(slug));
       })
       .finally(() => setLoading(false));
   }, [slug]);
+
+  const track = useMemo(() => {
+    if (!rawTrack) return null;
+    const modules = rawTrack.modules.map((m) => ({
+      ...m,
+      lessons: m.lessons.map((l) => ({
+        ...l,
+        status: lessonStatuses[l.id]?.status || l.status,
+      })),
+    }));
+    const totalLessons = modules.reduce((sum, m) => sum + m.lessons.length, 0);
+    const completedLessons = modules.reduce(
+      (sum, m) => sum + m.lessons.filter((l) => l.status === 'COMPLETE').length,
+      0
+    );
+    return {
+      ...rawTrack,
+      modules,
+      completedPct: totalLessons > 0 ? completedLessons / totalLessons : 0,
+    };
+  }, [rawTrack, lessonStatuses]);
 
   return { track, loading, error };
 }
@@ -137,12 +161,17 @@ export function useLesson(slug: string) {
   const [lesson, setLesson] = useState<LessonDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const lessonStatuses = useProgressStore((s) => s.lessonStatuses);
 
+  // Load lesson from API or local curriculum
   useEffect(() => {
     if (!slug) return;
     // Try API first, fall back to local curriculum data
     api.get(`/learn/lessons/${slug}`)
-      .then(res => setLesson(res.data.data))
+      .then(res => {
+        const data = res.data.data as LessonDetail;
+        setLesson(data);
+      })
       .catch(() => {
         // Local curriculum fallback
         const local = getLessonBySlug(slug);
@@ -155,12 +184,29 @@ export function useLesson(slug: string) {
       .finally(() => setLoading(false));
   }, [slug]);
 
+  // Reactively merge persisted progress from store (handles rehydration race)
+  useEffect(() => {
+    if (!lesson) return;
+    const stored = lessonStatuses[lesson.id];
+    if (stored && stored.status !== lesson.userState.status) {
+      setLesson(prev => {
+        if (!prev) return null;
+        return { ...prev, userState: { ...prev.userState, status: stored.status } };
+      });
+    }
+  }, [lessonStatuses, lesson?.id]);
+
   const updateState = useCallback(async (
     status?: 'NOT_STARTED' | 'IN_PROGRESS' | 'COMPLETE',
     resumeState?: { scrollPercent: number } | null,
     notes?: string
   ) => {
     if (!lesson) return;
+    // Persist locally first (works offline, survives refresh)
+    if (status !== undefined) {
+      useProgressStore.getState().updateLessonStatus(lesson.id, status);
+    }
+    // Try API (best effort — local persistence already handled)
     try {
       await api.post('/learn/progress/state', {
         lessonId: lesson.id,
@@ -169,7 +215,7 @@ export function useLesson(slug: string) {
         ...(notes !== undefined ? { notes } : {}),
       });
     } catch {
-      // Silently fail for local content — progress isn't persisted
+      // Silently fail — progress already saved locally
     }
     setLesson(prev => {
       if (!prev) return null;

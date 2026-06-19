@@ -40,25 +40,51 @@ export function DiagramEmbed({ nodes: rawNodes = [], edges: rawEdges = [], heigh
 
   const viewBox = `${minX} ${minY} ${Math.max(800, maxX - minX)} ${Math.max(height, maxY - minY)}`;
 
-  // Node Type Styling map
-  const NODE_COLORS: Record<string, { bg: string; border: string; text: string; dot: string }> = {
-    client:   { bg: 'var(--bg-surface)', border: '#FF6600', text: 'var(--text-primary)', dot: '#FF6600' },
-    dns:      { bg: 'var(--bg-surface)', border: '#22c55e', text: 'var(--text-primary)', dot: '#22c55e' },
-    lb:       { bg: 'var(--bg-surface)', border: '#FF6600', text: 'var(--text-primary)', dot: '#FF6600' },
-    web:      { bg: 'var(--bg-surface)', border: '#FF6600', text: 'var(--text-primary)', dot: '#FF6600' },
-    app:      { bg: 'var(--bg-surface)', border: '#FF6600', text: 'var(--text-primary)', dot: '#FF6600' },
-    cache:    { bg: 'var(--bg-surface)', border: '#FF6600', text: 'var(--text-primary)', dot: '#FF6600' },
-    db:       { bg: 'var(--bg-surface)', border: '#22c55e', text: 'var(--text-primary)', dot: '#22c55e' },
-    queue:    { bg: 'var(--bg-surface)', border: '#FF6600', text: 'var(--text-primary)', dot: '#FF6600' },
-    worker:   { bg: 'var(--bg-surface)', border: '#FF6600', text: 'var(--text-primary)', dot: '#FF6600' },
-    storage:  { bg: 'var(--bg-surface)', border: '#22c55e', text: 'var(--text-primary)', dot: '#22c55e' },
+  const NODE_COLORS: Record<string, { border: string; bg: string; dot: string; text: string }> = {
+    client:   { border: '#6366f1', bg: '#eef2ff', dot: '#6366f1', text: '#3730a3' },
+    dns:      { border: '#22c55e', bg: '#f0fdf4', dot: '#22c55e', text: '#15803d' },
+    lb:       { border: '#f97316', bg: '#fff7ed', dot: '#f97316', text: '#c2410c' },
+    cdn:      { border: '#0ea5e9', bg: '#f0f9ff', dot: '#0ea5e9', text: '#0369a1' },
+    web:      { border: '#3b82f6', bg: '#eff6ff', dot: '#3b82f6', text: '#1d4ed8' },
+    app:      { border: '#8b5cf6', bg: '#f5f3ff', dot: '#8b5cf6', text: '#6d28d9' },
+    cache:    { border: '#f59e0b', bg: '#fffbeb', dot: '#f59e0b', text: '#b45309' },
+    db:       { border: '#10b981', bg: '#ecfdf5', dot: '#10b981', text: '#047857' },
+    queue:    { border: '#ec4899', bg: '#fdf2f8', dot: '#ec4899', text: '#be185d' },
+    worker:   { border: '#64748b', bg: '#f8fafc', dot: '#64748b', text: '#334155' },
+    storage:  { border: '#06b6d4', bg: '#ecfeff', dot: '#06b6d4', text: '#0e7490' },
+    gateway:  { border: '#f97316', bg: '#fff7ed', dot: '#f97316', text: '#c2410c' },
+    auth:     { border: '#ef4444', bg: '#fef2f2', dot: '#ef4444', text: '#b91c1c' },
+    metrics:  { border: '#3b82f6', bg: '#eff6ff', dot: '#3b82f6', text: '#1d4ed8' },
+    default:  { border: '#94a3b8', bg: '#f8fafc', dot: '#94a3b8', text: '#475569' },
   };
 
   const getNodeCenter = (nodeId: string) => {
     const node = nodes.find(n => n.id === nodeId);
     if (!node) return { x: 0, y: 0 };
-    return { x: node.x + 80, y: node.y + 24 }; // Offset to middle of 160x48 node box
+    return { x: node.x + 80, y: node.y + 24 };
   };
+
+  function getEdgeEndpoints(
+    start: { x: number; y: number },
+    end: { x: number; y: number },
+    nodeW = 160,
+    nodeH = 48
+  ) {
+    const dx = end.x - start.x;
+    const dy = end.y - start.y;
+    const angle = Math.atan2(dy, dx);
+    const cosA = Math.abs(Math.cos(angle));
+    const sinA = Math.abs(Math.sin(angle));
+    const scaleW = cosA > 0.001 ? (nodeW / 2) / cosA : Infinity;
+    const scaleH = sinA > 0.001 ? (nodeH / 2) / sinA : Infinity;
+    const r = Math.min(scaleW, scaleH);
+    return {
+      x1: start.x + Math.cos(angle) * (r + 6),
+      y1: start.y + Math.sin(angle) * (r + 6),
+      x2: end.x - Math.cos(angle) * (r + 18),
+      y2: end.y - Math.sin(angle) * (r + 18),
+    };
+  }
 
   return (
     <div style={{
@@ -108,24 +134,7 @@ export function DiagramEmbed({ nodes: rawNodes = [], edges: rawEdges = [], heigh
           const start = getNodeCenter(edge.from);
           const end = getNodeCenter(edge.to);
 
-          // Calculate point on node boundaries to avoid overlap with arrow markers
-          const dx = end.x - start.x;
-          const dy = end.y - start.y;
-          const len = Math.sqrt(dx * dx + dy * dy);
-          if (len === 0) return null;
-
-          const ux = dx / len;
-          const uy = dy / len;
-
-          // Border offsets (node box is 160x48)
-          const offsetStart = 30;
-          const offsetEnd = 85; 
-
-          const x1 = start.x + ux * offsetStart;
-          const y1 = start.y + uy * offsetStart;
-          const x2 = end.x - ux * offsetEnd;
-          const y2 = end.y - uy * offsetEnd;
-
+          const { x1, y1, x2, y2 } = getEdgeEndpoints(start, end);
           const midX = (x1 + x2) / 2;
           const midY = (y1 + y2) / 2;
 
@@ -169,7 +178,7 @@ export function DiagramEmbed({ nodes: rawNodes = [], edges: rawEdges = [], heigh
 
         {/* Draw Nodes */}
         {nodes.map((node) => {
-          const colors = NODE_COLORS[node.type || 'app'] || NODE_COLORS.app;
+          const colors = NODE_COLORS[node.type || 'default'] || NODE_COLORS.default;
           return (
             <g key={node.id} transform={`translate(${node.x}, ${node.y})`}>
               {/* Card box */}

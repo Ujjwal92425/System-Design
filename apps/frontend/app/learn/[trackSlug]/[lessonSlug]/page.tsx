@@ -2,14 +2,20 @@
 
 import { use, useState, useEffect, useRef, useCallback } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import {
   ArrowLeft, ArrowRight, Bookmark, BookmarkCheck,
-  CheckCircle2, Clock, Building2, Tag, Loader2, AlertCircle
+  CheckCircle2, Clock, Building2, Tag, Loader2, AlertCircle, LogIn,
 } from 'lucide-react';
-import { LessonRenderer } from '../../../../../components/learn/LessonRenderer';
-import { ProgressBar } from '../../../../../components/learn/ProgressBar';
-import { QuizBlock } from '../../../../../components/learn/QuizBlock';
-import { useLesson } from '../../../../../features/learn/useLearn';
+import { LessonRenderer } from '../../../../components/learn/LessonRenderer';
+import { ProgressBar } from '../../../../components/learn/ProgressBar';
+import { QuizBlock } from '../../../../components/learn/QuizBlock';
+import { useLesson } from '../../../../features/learn/useLearn';
+import { useAuthStore } from '../../../../features/auth/authStore';
+import { Breadcrumbs } from '../../../../components/seo/Breadcrumb';
+import { FaqSchema } from '../../../../components/seo/FaqSchema';
+
+// ── Public lesson page: no auth required to read. Auth required for progress. ──
 
 export default function LessonPage({
   params,
@@ -18,12 +24,13 @@ export default function LessonPage({
 }) {
   const { trackSlug, lessonSlug } = use(params);
   const { lesson, loading, error, updateState, markComplete, toggleBookmark } = useLesson(lessonSlug);
+  const accessToken = useAuthStore(s => s.accessToken);
+  const router = useRouter();
 
   const [completing, setCompleting] = useState(false);
   const scrollPctRef = useRef(0);
   const inProgressFiredRef = useRef(false);
 
-  // ── Restore scroll position after content loads ─────────────────────────────
   useEffect(() => {
     if (!lesson) return;
     const saved = lesson.userState.resumeState?.scrollPercent;
@@ -37,20 +44,12 @@ export default function LessonPage({
     }, 200);
 
     return () => clearTimeout(restoreTimer);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [lesson?.id]);
 
-  // ── Track scroll ─────────────────────────────────────────────────────────────
   const handleScrollProgress = useCallback(
     (pct: number) => {
       scrollPctRef.current = pct;
-
-      // Mark IN_PROGRESS once the user reads past 10 %
-      if (
-        pct >= 10 &&
-        !inProgressFiredRef.current &&
-        lesson?.userState.status === 'NOT_STARTED'
-      ) {
+      if (pct >= 10 && !inProgressFiredRef.current && lesson?.userState.status === 'NOT_STARTED') {
         inProgressFiredRef.current = true;
         updateState('IN_PROGRESS');
       }
@@ -58,13 +57,10 @@ export default function LessonPage({
     [lesson?.userState.status, updateState]
   );
 
-  // ── Persist scroll on unmount / tab close ────────────────────────────────────
   useEffect(() => {
     if (!lesson) return;
-
     const saveScroll = () => {
       if (scrollPctRef.current > 1) {
-        // Use sendBeacon for guaranteed delivery on page unload
         const payload = JSON.stringify({
           lessonId: lesson.id,
           resumeState: { scrollPercent: Math.round(scrollPctRef.current) },
@@ -72,22 +68,24 @@ export default function LessonPage({
         navigator.sendBeacon?.('/api/learn/progress/state', new Blob([payload], { type: 'application/json' }));
       }
     };
-
     window.addEventListener('beforeunload', saveScroll);
     return () => {
-      saveScroll(); // also save on React unmount (SPA navigation)
+      saveScroll();
       window.removeEventListener('beforeunload', saveScroll);
     };
   }, [lesson?.id, lesson]);
 
-  // ── Mark complete handler ────────────────────────────────────────────────────
   const handleComplete = async () => {
+    // Require auth to mark complete — soft prompt for anonymous users
+    if (!accessToken) {
+      router.push(`/login?redirect=/learn/${trackSlug}/${lessonSlug}`);
+      return;
+    }
     setCompleting(true);
     await markComplete();
     setCompleting(false);
   };
 
-  // ── Loading / Error states ───────────────────────────────────────────────────
   if (loading) {
     return (
       <div className="flex items-center justify-center py-32">
@@ -119,22 +117,15 @@ export default function LessonPage({
 
   return (
     <>
-      {/* Reading progress bar — fixed at top of viewport */}
       <ProgressBar onProgressChange={handleScrollProgress} />
 
       <div className="max-w-4xl mx-auto px-8 py-10 space-y-8">
-        {/* Breadcrumb */}
-        <nav className="flex items-center space-x-2 text-xs text-gray-500">
-          <Link href="/learn" className="hover:text-gray-700 transition">Curriculum</Link>
-          <span>/</span>
-          <Link href={`/learn/${trackSlug}`} className="hover:text-gray-700 transition">
-            {lesson.module.track.name}
-          </Link>
-          <span>/</span>
-          <span className="text-gray-700">{lesson.title}</span>
-        </nav>
+        <Breadcrumbs items={[
+          { name: 'Curriculum', path: '/learn' },
+          { name: lesson.module.track.name, path: `/learn/${trackSlug}` },
+          { name: lesson.title, path: '' },
+        ]} />
 
-        {/* Lesson header */}
         <div className="space-y-4">
           <div className="flex items-start justify-between gap-4">
             <h1 className="text-3xl font-black tracking-tight text-gray-900 leading-tight">
@@ -151,7 +142,6 @@ export default function LessonPage({
             </button>
           </div>
 
-          {/* Meta chips */}
           <div className="flex flex-wrap items-center gap-2">
             <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wide border ${DIFFICULTY_COLORS[lesson.difficulty] ?? DIFFICULTY_COLORS.beginner}`}>
               {lesson.difficulty}
@@ -168,7 +158,6 @@ export default function LessonPage({
             )}
           </div>
 
-          {/* Companies */}
           {lesson.companies.length > 0 && (
             <div className="flex items-center space-x-2 flex-wrap gap-y-1">
               <Building2 className="w-3.5 h-3.5 text-gray-500" />
@@ -180,7 +169,6 @@ export default function LessonPage({
             </div>
           )}
 
-          {/* Tags */}
           {lesson.tags.length > 0 && (
             <div className="flex items-center space-x-2 flex-wrap gap-y-1">
               <Tag className="w-3.5 h-3.5 text-gray-500" />
@@ -195,23 +183,28 @@ export default function LessonPage({
 
         <div className="border-t border-gray-200" />
 
-        {/* Lesson Content */}
         <div className="min-h-[400px]">
           <LessonRenderer mdxSource={lesson.content} />
         </div>
 
-        {/* Quiz Block (if lesson has a quiz) */}
+        {hasQuiz && (
+          <FaqSchema
+            questions={lesson.quizzes[0].questions.map(q => ({
+              question: q.content,
+              answer: q.explanation,
+            }))}
+          />
+        )}
+
         {hasQuiz && (
           <QuizBlock
             quiz={lesson.quizzes[0]}
             onSuccess={() => {
-              // Quiz passed → lesson auto-marked complete on backend; sync local state
               markComplete();
             }}
           />
         )}
 
-        {/* Manual "Mark Complete" CTA — only shown when there is no quiz */}
         {!hasQuiz && !isComplete && (
           <div className="border border-indigo-200 bg-indigo-50 rounded-2xl p-6 flex items-center justify-between">
             <div>
@@ -222,16 +215,26 @@ export default function LessonPage({
             </div>
             <button
               onClick={handleComplete}
-              disabled={completing}
+              disabled={completing && !!accessToken}
               className="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-500 disabled:bg-indigo-600/50 text-white rounded-xl text-sm font-semibold transition flex items-center space-x-2"
             >
-              {completing ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle2 className="w-4 h-4" />}
-              <span>Mark Complete</span>
+              {!accessToken ? (
+                <>
+                  <LogIn className="w-4 h-4" />
+                  <span>Sign in to Complete</span>
+                </>
+              ) : completing ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : (
+                <>
+                  <CheckCircle2 className="w-4 h-4" />
+                  <span>Mark Complete</span>
+                </>
+              )}
             </button>
           </div>
         )}
 
-        {/* Prev / Next navigation */}
         <div className="grid grid-cols-2 gap-4 pt-4 border-t border-gray-200">
           {lesson.navigation.prev ? (
             <Link

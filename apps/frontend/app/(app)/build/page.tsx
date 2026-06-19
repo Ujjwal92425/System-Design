@@ -7,9 +7,11 @@ import { api } from '@/lib/api';
 import { 
   FolderPlus, Loader2, AlertCircle, Compass, History, 
   Trash2, ChevronRight, Layers, LayoutGrid, FileJson,
-  Sparkles, Link as LinkIcon, MessageCircle, Video, Navigation, MessageSquare, CreditCard
+  Sparkles, Link as LinkIcon, MessageCircle, Video, Navigation, MessageSquare, CreditCard,
+  AlertTriangle,
 } from 'lucide-react';
 import { SCENARIO_TEMPLATES } from '@/data/scenarios';
+import { useUsage, incrementCanvas } from '@/features/usage/useUsage';
 
 const ICON_MAP: Record<string, any> = {
   Link: LinkIcon,
@@ -46,6 +48,7 @@ interface Template {
 
 export default function BuildListPage() {
   const router = useRouter();
+  const usage = useUsage();
   const [designs, setDesigns] = useState<Design[]>([]);
   const [templates, setTemplates] = useState<Template[]>([]);
   const [loading, setLoading] = useState(true);
@@ -69,7 +72,8 @@ export default function BuildListPage() {
       api.get('/designs/templates')
     ])
       .then(([designsRes, templatesRes]) => {
-        setDesigns(designsRes.data.data || []);
+        const designsList = designsRes.data.data || [];
+        setDesigns(designsList);
         setTemplates(templatesRes.data.data || []);
       })
       .catch((err) => {
@@ -100,6 +104,7 @@ export default function BuildListPage() {
       }
       const res = await api.post('/designs', payload);
       const newDesign = res.data.data;
+      incrementCanvas();
       router.push(`/build/${newDesign.id}`);
     } catch (err: any) {
       setCreateError(err.response?.data?.message || err.message || 'Failed to create workspace');
@@ -153,32 +158,40 @@ export default function BuildListPage() {
           </p>
         </div>
         
-        <button
-          onClick={() => {
-            setNewTitle('');
-            setSelectedTemplateId(null);
-            setShowCreateModal(true);
-          }}
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: '8px',
-            padding: '10px 20px',
-            background: 'var(--accent-amber)',
-            color: '#ffffff',
-            border: 'none',
-            borderRadius: '8px',
-            fontSize: '13px',
-            fontWeight: 700,
-            cursor: 'pointer',
-            transition: 'opacity 150ms ease',
-          }}
-          onMouseOver={(e) => (e.currentTarget.style.opacity = '0.85')}
-          onMouseOut={(e) => (e.currentTarget.style.opacity = '1')}
-        >
-          <FolderPlus style={{ width: '16px', height: '16px' }} />
-          <span>New Design</span>
-        </button>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+          <span className="mono" style={{ fontSize: '11px', color: usage.canvasExceeded ? '#EF4444' : 'var(--text-muted)', background: 'var(--bg-surface)', padding: '4px 10px', borderRadius: '6px', border: '1px solid var(--border)' }}>
+            {usage.canvasCount} / {usage.canvasLimit} canvases
+          </span>
+          <button
+            onClick={() => {
+              if (usage.canvasExceeded) return;
+              setNewTitle('');
+              setSelectedTemplateId(null);
+              setShowCreateModal(true);
+            }}
+            disabled={usage.canvasExceeded}
+            title={usage.canvasExceeded ? `Free limit reached. Delete an existing canvas first.` : 'Create new canvas'}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+              padding: '10px 20px',
+              background: usage.canvasExceeded ? 'var(--border)' : 'var(--accent-amber)',
+              color: usage.canvasExceeded ? 'var(--text-muted)' : '#ffffff',
+              border: 'none',
+              borderRadius: '8px',
+              fontSize: '13px',
+              fontWeight: 700,
+              cursor: usage.canvasExceeded ? 'not-allowed' : 'pointer',
+              transition: 'opacity 150ms ease',
+            }}
+            onMouseOver={(e) => { if (!usage.canvasExceeded) e.currentTarget.style.opacity = '0.85'; }}
+            onMouseOut={(e) => e.currentTarget.style.opacity = '1'}
+          >
+            <FolderPlus style={{ width: '16px', height: '16px' }} />
+            <span>{usage.canvasExceeded ? 'Limit Reached' : 'New Design'}</span>
+          </button>
+        </div>
       </div>
 
       {error && (
@@ -216,25 +229,32 @@ export default function BuildListPage() {
               <p style={{ margin: '4px 0 16px', fontSize: '12px', color: 'var(--text-muted)' }}>
                 Start a sandbox canvas or pick an interview template to get rolling.
               </p>
-              <button
-                onClick={() => {
-                  setNewTitle('');
-                  setSelectedTemplateId(null);
-                  setShowCreateModal(true);
-                }}
-                style={{
-                  padding: '8px 16px',
-                  background: 'transparent',
-                  border: '1px solid var(--border-bright)',
-                  color: 'var(--text-primary)',
-                  borderRadius: '6px',
-                  fontSize: '12px',
-                  fontWeight: 600,
-                  cursor: 'pointer',
-                }}
-              >
-                Create blank workspace
-              </button>
+              {usage.canvasExceeded ? (
+                <p style={{ margin: 0, fontSize: '12px', color: '#EF4444', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px' }}>
+                  <AlertTriangle style={{ width: '12px', height: '12px' }} />
+                  Free limit reached. Delete an existing canvas to create a new one.
+                </p>
+              ) : (
+                <button
+                  onClick={() => {
+                    setNewTitle('');
+                    setSelectedTemplateId(null);
+                    setShowCreateModal(true);
+                  }}
+                  style={{
+                    padding: '8px 16px',
+                    background: 'transparent',
+                    border: '1px solid var(--border-bright)',
+                    color: 'var(--text-primary)',
+                    borderRadius: '6px',
+                    fontSize: '12px',
+                    fontWeight: 600,
+                    cursor: 'pointer',
+                  }}
+                >
+                  Create blank workspace
+                </button>
+              )}
             </div>
           ) : (
             <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '14px' }}>
@@ -359,12 +379,12 @@ export default function BuildListPage() {
                 <div
                   key={t.id}
                   onClick={() => {
+                    if (usage.canvasExceeded) return;
                     setNewTitle(`My ${t.name}`);
                     setSelectedTemplateId(t.id);
                     setShowCreateModal(true);
                   }}
                   style={{
-                    padding: '16px',
                     background: 'var(--bg-surface)',
                     border: '1px solid var(--border)',
                     borderRadius: '10px',
@@ -425,6 +445,7 @@ export default function BuildListPage() {
               <div
                 key={t.id}
                 onClick={() => {
+                  if (usage.canvasExceeded) return;
                   setNewTitle(`My ${t.name}`);
                   setSelectedTemplateId(t.id);
                   setShowCreateModal(true);
@@ -434,7 +455,7 @@ export default function BuildListPage() {
                   background: 'var(--bg-surface)',
                   border: '1px solid var(--border)',
                   borderRadius: '12px',
-                  cursor: 'pointer',
+                  cursor: usage.canvasExceeded ? 'not-allowed' : 'pointer',
                   transition: 'all 150ms ease',
                   display: 'flex',
                   flexDirection: 'column',

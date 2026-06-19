@@ -6,10 +6,12 @@ import { useEffect, useState } from 'react';
 import { CalloutBlock } from './CalloutBlock';
 import { CodeBlock } from './CodeBlock';
 import { DiagramEmbed } from './DiagramEmbed';
+import { RoughDiagram } from './RoughDiagram';
 
 const COMPONENTS = {
   Callout: CalloutBlock,
   Diagram: DiagramEmbed,
+  RoughDiagram: RoughDiagram,
   pre: (props: any) => <CodeBlock {...props} />,
   h1: (props: any) => (
     <h1
