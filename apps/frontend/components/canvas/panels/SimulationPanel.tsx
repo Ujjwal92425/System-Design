@@ -10,9 +10,11 @@ import { SimNodeTable } from '../../simulation/SimNodeTable';
 import { SystemHealthBadge } from '../../simulation/SystemHealthBadge';
 import { ChaosPanel } from '../../simulation/ChaosPanel';
 import { ObservabilityDashboard } from '../../simulation/ObservabilityDashboard';
+import { ErrorBoundary } from '../../simulation/ErrorBoundary';
 import {
   ChevronDown, ChevronUp, Radio, GripHorizontal,
   LayoutDashboard, BarChart3, Sliders, Activity, Zap, Terminal,
+  Loader2, AlertTriangle,
 } from 'lucide-react';
 
 type SimTab = 'controls' | 'metrics' | 'chaos' | 'events';
@@ -35,6 +37,10 @@ interface SimulationPanelProps {
     updateScenario: (scen: string) => void;
     setNodeChaos: (nodeId: string, mode: string) => void;
     reset: () => void;
+    // FIX: Health tracking fields exposed from worker/store
+    workerError: string | null;
+    isPaused: boolean;
+    startupPhase: 'idle' | 'starting' | 'running' | 'error';
   };
   height: number;
   onResize: (newHeight: number) => void;
@@ -50,8 +56,22 @@ const TABS: { id: SimTab; label: string; icon: typeof Sliders }[] = [
 ];
 
 function getOutlookText(simulation: SimulationPanelProps['simulation']) {
+  // FIX: Show worker error status prominently
+  if (simulation.workerError) {
+    return `Worker error: ${simulation.workerError}. Press Reset to dismiss.`;
+  }
+  if (simulation.isPaused) {
+    return 'Simulation paused due to an error. Press Reset to restart.';
+  }
   if (!simulation.isRunning) {
     return 'Configure traffic and load profile, then press Start to run the simulation.';
+  }
+  // FIX: Show loading state during first tick delay
+  if (simulation.startupPhase === 'starting') {
+    return 'Initializing simulation tick loop. First metrics arriving in ~1 second...';
+  }
+  if (!simulation.currentMetrics) {
+    return 'Waiting for initial metrics from worker...';
   }
   const health = simulation.currentMetrics?.systemHealth;
   if (health === 'RED') return 'Critical: nodes are failing or queues are overflowing. Check the Metrics tab or inject healing via Chaos.';
@@ -75,8 +95,11 @@ export function SimulationPanel({
   const startYRef = useRef(0);
   const startHeightRef = useRef(0);
 
+  // FIX: Filter out NOTE/GROUP nodes for the Chaos panel.
+  // Use n.type (the system-design type, not the ReactFlow render type)
+  // to ensure correct filtering even when nodeType and type differ.
   const archNodes = nodes.filter((n) => {
-    const t = n.data?.nodeType || n.type;
+    const t = (n as any).type || n.data?.nodeType;
     return t !== 'NOTE' && t !== 'GROUP';
   });
 
@@ -117,11 +140,26 @@ export function SimulationPanel({
     prevRunningRef.current = simulation.isRunning;
   }, [simulation.isRunning]);
 
+  // FIX: Show worker error banner when worker crashes
+  const showErrorBanner = simulation.workerError && simulation.isPaused;
+
   return (
     <div
       className="border-t border-yc-border bg-yc-bg-alt flex flex-col flex-shrink-0 overflow-hidden z-20"
       style={{ height: isOpen ? `${height}px` : '44px' }}
     >
+      {showErrorBanner && (
+        <div className="flex items-center gap-2 px-4 py-1.5 bg-red-50 border-b border-red-200 text-red-700 text-[10px] font-mono">
+          <AlertTriangle className="w-3 h-3 flex-shrink-0" />
+          <span className="flex-1 truncate">Worker error: {simulation.workerError}</span>
+          <button
+            onClick={(e) => { e.stopPropagation(); simulation.reset(); }}
+            className="px-2 py-0.5 bg-red-100 hover:bg-red-200 rounded text-[9px] font-bold transition"
+          >
+            DISMISS
+          </button>
+        </div>
+      )}
       {isOpen && (
         <div
           className="h-1.5 bg-yc-border/50 hover:bg-yc-accent/30 cursor-row-resize flex-shrink-0 flex items-center justify-center transition-colors group"
@@ -226,6 +264,13 @@ export function SimulationPanel({
 
               {/* Tab content */}
               <div className="flex-1 overflow-y-auto p-4 min-h-0">
+                {/* FIX: Wrap simulation content in ErrorBoundary so a render crash
+                    in any sub-component (MetricsChart, SimNodeTable, etc.) doesn't
+                    crash the entire Workspace page */}
+                <ErrorBoundary
+                  fallbackTitle="Simulation panel render error"
+                  onReset={simulation.reset}
+                >
                 {activeTab === 'controls' && (
                   <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                     <div className="flex flex-col gap-3">
@@ -298,6 +343,7 @@ export function SimulationPanel({
                     )}
                   </div>
                 )}
+                </ErrorBoundary>
               </div>
             </>
           )}

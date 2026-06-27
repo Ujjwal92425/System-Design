@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import {
   ArrowLeft, ArrowRight, Bookmark, BookmarkCheck,
-  CheckCircle2, Clock, Building2, Tag, Loader2, AlertCircle, LogIn,
+  CheckCircle2, Clock, Building2, Tag, Loader2, AlertCircle, LogIn, Crown, Edit3,
 } from 'lucide-react';
 import { LessonRenderer } from '../../../../../components/learn/LessonRenderer';
 import { ProgressBar } from '../../../../../components/learn/ProgressBar';
@@ -28,6 +28,34 @@ export default function LessonPage({
   const router = useRouter();
 
   const [completing, setCompleting] = useState(false);
+  const [localNotes, setLocalNotes] = useState('');
+  const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved'>('idle');
+  const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  useEffect(() => {
+    if (lesson) {
+      setLocalNotes(lesson.userState.notes || '');
+    }
+  }, [lesson?.id]);
+
+  const handleNotesChange = (val: string) => {
+    setLocalNotes(val);
+    setSaveStatus('saving');
+    
+    if (saveTimeoutRef.current) {
+      clearTimeout(saveTimeoutRef.current);
+    }
+    
+    saveTimeoutRef.current = setTimeout(async () => {
+      try {
+        await updateState(undefined, undefined, val);
+        setSaveStatus('saved');
+        setTimeout(() => setSaveStatus('idle'), 2000);
+      } catch {
+        setSaveStatus('idle');
+      }
+    }, 1000);
+  };
   const scrollPctRef = useRef(0);
   const inProgressFiredRef = useRef(false);
 
@@ -183,11 +211,71 @@ export default function LessonPage({
 
         <div className="border-t border-gray-200" />
 
-        <div className="min-h-[400px]">
-          <LessonRenderer mdxSource={lesson.content} />
-        </div>
+        {lesson.isLocked ? (
+          <div className="relative overflow-hidden rounded-2xl border border-indigo-200 bg-gradient-to-br from-indigo-50 via-white to-purple-50 p-10 text-center">
+            <div className="absolute top-0 right-0 w-48 h-48 bg-indigo-200/20 rounded-full -translate-y-1/2 translate-x-1/2 blur-3xl" />
+            <div className="relative space-y-4">
+              <div className="mx-auto w-16 h-16 rounded-2xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center shadow-lg shadow-indigo-200">
+                <Crown className="w-8 h-8 text-white" />
+              </div>
+              <h2 className="text-xl font-bold text-gray-900">PRO Lesson</h2>
+              <p className="text-sm text-gray-600 max-w-md mx-auto">
+                {lesson.lockedMessage || 'This lesson requires a PRO subscription.'}
+              </p>
+              <Link
+                href="/pricing"
+                className="inline-flex items-center space-x-2 px-6 py-3 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white rounded-xl font-semibold text-sm transition shadow-lg shadow-indigo-200"
+              >
+                <Crown className="w-4 h-4" />
+                <span>Upgrade to PRO</span>
+              </Link>
+            </div>
+          </div>
+        ) : (
+          <div className="space-y-8">
+            <div className="min-h-[400px]">
+              <LessonRenderer mdxSource={lesson.content ?? ''} />
+            </div>
 
-        {hasQuiz && (
+            {/* Personal Notes Panel */}
+            <div className="bg-white border border-gray-200 rounded-2xl p-6 shadow-sm space-y-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center space-x-2">
+                  <div className="p-2 bg-indigo-50 text-indigo-600 rounded-xl">
+                    <Edit3 className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <h3 className="text-base font-bold text-gray-900">Personal Notes</h3>
+                    <p className="text-xs text-gray-500">Your notes are private and saved automatically to the cloud.</p>
+                  </div>
+                </div>
+                <div>
+                  {saveStatus === 'saving' && (
+                    <span className="flex items-center space-x-1.5 text-xs text-gray-400">
+                      <Loader2 className="w-3.5 h-3.5 animate-spin text-indigo-500" />
+                      <span>Saving...</span>
+                    </span>
+                  )}
+                  {saveStatus === 'saved' && (
+                    <span className="flex items-center space-x-1 text-xs text-emerald-600 font-medium">
+                      <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" />
+                      <span>Saved to Cloud</span>
+                    </span>
+                  )}
+                </div>
+              </div>
+              <textarea
+                value={localNotes}
+                onChange={(e) => handleNotesChange(e.target.value)}
+                placeholder={accessToken ? "Jot down key architectural tradeoffs, capacity formulas, or interview tips..." : "Please sign in to take notes."}
+                disabled={!accessToken}
+                className="w-full h-32 p-4 bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-sm leading-relaxed text-gray-700 placeholder-gray-400 resize-none transition-all outline-none disabled:opacity-50"
+              />
+            </div>
+          </div>
+        )}
+
+        {!lesson.isLocked && hasQuiz && (
           <FaqSchema
             questions={lesson.quizzes[0].questions.map(q => ({
               question: q.content,
@@ -196,7 +284,7 @@ export default function LessonPage({
           />
         )}
 
-        {hasQuiz && (
+        {!lesson.isLocked && hasQuiz && (
           <QuizBlock
             quiz={lesson.quizzes[0]}
             onSuccess={() => {
@@ -205,7 +293,7 @@ export default function LessonPage({
           />
         )}
 
-        {!hasQuiz && !isComplete && (
+        {!lesson.isLocked && !hasQuiz && !isComplete && (
           <div className="border border-indigo-200 bg-indigo-50 rounded-2xl p-6 flex items-center justify-between">
             <div>
               <p className="text-sm font-semibold text-gray-900">Done reading?</p>

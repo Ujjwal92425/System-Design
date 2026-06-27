@@ -3,15 +3,18 @@
 import { MDXRemote } from 'next-mdx-remote';
 import { serialize } from 'next-mdx-remote/serialize';
 import { useEffect, useState } from 'react';
+import remarkGfm from 'remark-gfm';
 import { CalloutBlock } from './CalloutBlock';
 import { CodeBlock } from './CodeBlock';
 import { DiagramEmbed } from './DiagramEmbed';
 import { RoughDiagram } from './RoughDiagram';
+import { Mermaid } from './Mermaid';
 
 const COMPONENTS = {
   Callout: CalloutBlock,
   Diagram: DiagramEmbed,
   RoughDiagram: RoughDiagram,
+  Mermaid: Mermaid,
   pre: (props: any) => <CodeBlock {...props} />,
   h1: (props: any) => (
     <h1
@@ -143,6 +146,43 @@ const COMPONENTS = {
       {...props}
     />
   ),
+  table: (props: any) => (
+    <div style={{ overflowX: 'auto', marginBottom: '16px' }}>
+      <table
+        style={{
+          width: '100%',
+          borderCollapse: 'collapse',
+          fontSize: '13px',
+          lineHeight: '1.5',
+        }}
+        {...props}
+      />
+    </div>
+  ),
+  th: (props: any) => (
+    <th
+      style={{
+        border: '1px solid var(--border)',
+        padding: '8px 12px',
+        fontWeight: 700,
+        textAlign: 'left',
+        background: 'var(--bg-elevated)',
+        color: 'var(--text-primary)',
+        whiteSpace: 'nowrap',
+      }}
+      {...props}
+    />
+  ),
+  td: (props: any) => (
+    <td
+      style={{
+        border: '1px solid var(--border)',
+        padding: '8px 12px',
+        color: 'var(--text-secondary)',
+      }}
+      {...props}
+    />
+  ),
 };
 
 interface LessonRendererProps {
@@ -150,17 +190,29 @@ interface LessonRendererProps {
 }
 
 export function LessonRenderer({ mdxSource }: LessonRendererProps) {
-  const [compiled, setCompiled] = useState<any>(null);
+  const [compiled, setCompiled] = useState<any>('__loading__');
 
   useEffect(() => {
-    serialize(mdxSource, {
+    let cancelled = false;
+    setCompiled('__loading__');
+
+    // Programmatically strip the "Next Steps" section from the end of the content
+    const cleanedSource = mdxSource
+      .replace(/\n*##\s*(?:\d+\.)?\s*Next\s*Steps?[\s\S]*$/i, '')
+      .trim();
+
+    serialize(cleanedSource, {
       mdxOptions: {
         development: process.env.NODE_ENV === 'development',
+        remarkPlugins: [remarkGfm],
       },
-    }).then(setCompiled);
+    })
+      .then(result => { if (!cancelled) setCompiled(result); })
+      .catch(() => { if (!cancelled) setCompiled('__error__'); });
+    return () => { cancelled = true; };
   }, [mdxSource]);
 
-  if (!compiled) {
+  if (compiled === '__loading__') {
     return (
       <div className="space-y-3 animate-pulse">
         <div className="h-4 bg-gray-200 rounded w-3/4" />
@@ -169,6 +221,10 @@ export function LessonRenderer({ mdxSource }: LessonRendererProps) {
         <div className="h-4 bg-gray-200 rounded w-2/3" />
       </div>
     );
+  }
+
+  if (compiled === '__error__') {
+    return <p className="text-sm text-red-500">Failed to render lesson content.</p>;
   }
 
   return (

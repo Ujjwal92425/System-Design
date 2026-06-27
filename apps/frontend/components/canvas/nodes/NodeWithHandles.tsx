@@ -180,17 +180,37 @@ function NodeWithHandles({ id, data, selected }: NodeProps) {
       {/* Resize handles (shown when selected) */}
       {selected && <NodeResizer minWidth={120} minHeight={50} />}
 
-      {/* 4-sided Target Handles (inputs) - visible on node hover */}
-      <Handle type="target" position={Position.Top} className="!w-3 !h-3 border-2 border-yc-accent bg-white opacity-0 group-hover:opacity-100 transition-opacity" />
-      <Handle type="target" position={Position.Bottom} className="!w-3 !h-3 border-2 border-yc-accent bg-white opacity-0 group-hover:opacity-100 transition-opacity" />
-      <Handle type="target" position={Position.Left} className="!w-3 !h-3 border-2 border-yc-accent bg-white opacity-0 group-hover:opacity-100 transition-opacity" />
-      <Handle type="target" position={Position.Right} className="!w-3 !h-3 border-2 border-yc-accent bg-white opacity-0 group-hover:opacity-100 transition-opacity" />
+      {/* ── Multi-port connection system ────────────────────────────────────
+        Each side has N ports so multiple wires can connect to DISTINCT handles.
+        Without unique `id` props, all wires on the same side bind to one handle.
+        Each port gets a unique id like "target-left-0", "source-right-2", etc.
+      */}
+      {[0, 1, 2, 3].map((i) => (
+        <Handle
+          key={`target-left-${i}`}
+          type="target"
+          position={Position.Left}
+          id={`target-left-${i}`}
+          style={{ top: `${25 + i * 18}%` }}
+          className="!w-3 !h-3 border-2 border-yc-accent bg-white opacity-0 group-hover:opacity-100 transition-opacity"
+        />
+      ))}
+      {[0, 1, 2, 3].map((i) => (
+        <Handle
+          key={`source-right-${i}`}
+          type="source"
+          position={Position.Right}
+          id={`source-right-${i}`}
+          style={{ top: `${25 + i * 18}%` }}
+          className="!w-3 !h-3 border-2 border-yc-accent bg-yc-accent opacity-0 group-hover:opacity-100 transition-opacity"
+        />
+      ))}
 
-      {/* 4-sided Source Handles (outputs) - visible on node hover */}
-      <Handle type="source" position={Position.Top} className="!w-3 !h-3 border-2 border-yc-accent bg-yc-accent opacity-0 group-hover:opacity-100 transition-opacity" />
-      <Handle type="source" position={Position.Bottom} className="!w-3 !h-3 border-2 border-yc-accent bg-yc-accent opacity-0 group-hover:opacity-100 transition-opacity" />
-      <Handle type="source" position={Position.Left} className="!w-3 !h-3 border-2 border-yc-accent bg-yc-accent opacity-0 group-hover:opacity-100 transition-opacity" />
-      <Handle type="source" position={Position.Right} className="!w-3 !h-3 border-2 border-yc-accent bg-yc-accent opacity-0 group-hover:opacity-100 transition-opacity" />
+      {/* Side handles (1 each) for top-down / bottom-up connections */}
+      <Handle type="target" position={Position.Top} id="target-top" className="!w-3 !h-3 border-2 border-yc-accent bg-white opacity-0 group-hover:opacity-100 transition-opacity" />
+      <Handle type="target" position={Position.Bottom} id="target-bottom" className="!w-3 !h-3 border-2 border-yc-accent bg-white opacity-0 group-hover:opacity-100 transition-opacity" />
+      <Handle type="source" position={Position.Top} id="source-top" className="!w-3 !h-3 border-2 border-yc-accent bg-yc-accent opacity-0 group-hover:opacity-100 transition-opacity" />
+      <Handle type="source" position={Position.Bottom} id="source-bottom" className="!w-3 !h-3 border-2 border-yc-accent bg-yc-accent opacity-0 group-hover:opacity-100 transition-opacity" />
 
       {/* Header */}
       <div className="flex items-center gap-2 mb-1">

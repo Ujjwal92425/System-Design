@@ -1,22 +1,7 @@
-import { module01Lessons } from './module-01';
-import { module02Lessons } from './module-02';
-import { module03Lessons } from './module-03';
-import { module04Lessons } from './module-04';
-import { module05Lessons } from './module-05';
-import { module06Lessons } from './module-06';
-import { module07Lessons } from './module-07';
-import { module08Lessons } from './module-08';
-import { module09Lessons } from './module-09';
-import { module10Lessons } from './module-10';
-import { module11Lessons } from './module-11';
-import { module12Lessons } from './module-12';
-import { module13Lessons } from './module-13';
-import { module14Lessons } from './module-14';
-import { module15Lessons } from './module-15';
-import { module16Lessons } from './module-16';
-import { module17Lessons } from './module-17';
-import { module18Lessons } from './module-18';
-import type { CurriculumData } from './types';
+// ═══════════════════════════════════════════════════════════════════════════════
+// Lightweight curriculum metadata for offline nav shell & SEO.
+// Full lesson content lives in PostgreSQL (see packages/db/seed scripts).
+// ═══════════════════════════════════════════════════════════════════════════════
 
 const tracks = [
   {
@@ -363,124 +348,15 @@ const tracks = [
   },
 ];
 
-function buildModules(slug: string, lessonsArray: any[]): any[] {
-  const track = tracks.find((t) => t.slug === slug);
-  if (!track) return [];
-  const moduleLessons = lessonsArray.filter((l) => l && l.slug && l.slug.startsWith(slug));
-  return [
-    {
-      id: `${slug}-module`,
-      name: track.name,
-      description: track.description,
-      order: 1,
-      estimatedMin: (track.estimatedHours || 10) * 60,
-      lessons: moduleLessons
-        .sort((a, b) => {
-          const aNum = parseInt(a.slug.split('-').pop() || '0');
-          const bNum = parseInt(b.slug.split('-').pop() || '0');
-          return aNum - bNum;
-        })
-        .map((l, i) => ({
-          id: l.id,
-          slug: l.slug,
-          title: l.title,
-          order: i + 1,
-          estimatedMin: l.estimatedMin,
-          difficulty: l.difficulty,
-          tags: l.tags,
-          isPublished: true,
-          status: 'NOT_STARTED' as const,
-        })),
-    },
-  ];
+export function getAllTracks() {
+  return tracks;
 }
-
-function buildLessonDetails(lessonsArray: any[], slug: string): Record<string, any> {
-  const details: Record<string, any> = {};
-  const track = tracks.find((t) => t.slug === slug);
-  const moduleLessons = lessonsArray.filter((l) => l && l.slug && l.slug.startsWith(slug)).sort((a, b) => {
-    const aNum = parseInt(a.slug.split('-').pop() || '0');
-    const bNum = parseInt(b.slug.split('-').pop() || '0');
-    return aNum - bNum;
-  });
-
-  moduleLessons.forEach((l, i) => {
-    const prev = i > 0 ? { slug: moduleLessons[i - 1].slug, title: moduleLessons[i - 1].title } : null;
-    const next = i < moduleLessons.length - 1 ? { slug: moduleLessons[i + 1].slug, title: moduleLessons[i + 1].title } : null;
-
-    details[l.slug] = {
-      id: l.id,
-      slug: l.slug,
-      title: l.title,
-      content: l.content,
-      estimatedMin: l.estimatedMin,
-      difficulty: l.difficulty,
-      companies: l.companies,
-      tags: l.tags,
-      module: {
-        id: `${slug}-module`,
-        name: track?.name || '',
-        track: { slug, name: track?.name || '' },
-      },
-      userState: {
-        status: 'NOT_STARTED' as const,
-        bookmarked: false,
-        notes: null,
-        resumeState: null,
-      },
-      navigation: { prev, next },
-      quizzes: [],
-    };
-  });
-
-  return details;
-}
-
-const allLessons = [
-  ...module01Lessons,
-  ...module02Lessons,
-  ...module03Lessons,
-  ...module04Lessons,
-  ...module05Lessons,
-  ...module06Lessons,
-  ...module07Lessons,
-  ...module08Lessons,
-  ...module09Lessons,
-  ...module10Lessons,
-  ...module11Lessons,
-  ...module12Lessons,
-  ...module13Lessons,
-  ...module14Lessons,
-  ...module15Lessons,
-  ...module16Lessons,
-  ...module17Lessons,
-  ...module18Lessons,
-];
-
-export const curriculumData: CurriculumData = {
-  tracks,
-  trackDetails: Object.fromEntries(
-    tracks.map((t) => [
-      t.slug,
-      {
-        ...t,
-        modules: buildModules(t.slug, allLessons),
-      },
-    ])
-  ),
-  lessonDetails: Object.fromEntries(
-    tracks.map((t) => Object.entries(buildLessonDetails(allLessons, t.slug))).flat()
-  ),
-};
 
 export function getTrackBySlug(slug: string) {
-  return curriculumData.trackDetails[slug] || null;
+  return tracks.find(t => t.slug === slug) || null;
 }
 
-export function getLessonBySlug(slug: string) {
-  return curriculumData.lessonDetails[slug] || null;
-}
-
-export function getAllTracks() {
-  return curriculumData.tracks;
+export function getLessonBySlug(_slug: string) {
+  // Content lives in PostgreSQL — this is a no-op fallback for legacy callers
+  return null;
 }

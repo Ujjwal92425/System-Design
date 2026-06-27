@@ -1,38 +1,51 @@
 'use client';
 
 import { useParams } from 'next/navigation';
+import { useState, useEffect, useMemo } from 'react';
+import { api } from '../../../../lib/api';
+import { getTrackBySlug } from '../../../../data/curriculum/index';
 import {
-  curriculumData, getTrackBySlug,
-} from '../../../../data/curriculum/index';
-import {
-  ArrowLeft, ChevronRight, Clock, BookOpen, CheckCircle, Circle, Zap, BarChart3,
+  ArrowLeft, ChevronRight, Clock, BookOpen, CheckCircle, Circle, Loader2, AlertCircle,
 } from 'lucide-react';
 import Link from 'next/link';
-import { useMemo } from 'react';
 import { useProgressStore } from '../../../../features/learn/progressStore';
 import { JsonLd } from '../../../../components/seo/JsonLd';
 import { breadcrumbSchemaJsonLd, collectionPageSchemaJsonLd } from '../../../../lib/seo';
 import { BRAND, BRAND_L, BRAND_B, DiffBadge, PROGRESS_COLORS } from '../../../../components/ui/curriculum-shared';
 
 // ── Public track page: full lesson listing with progress overlay ──────────
-// Anyone can view. Progress is shown from localStorage if available.
+// Data fetched from API (backend Postgres), progress from localStorage.
 
 export default function TrackPage() {
   const params = useParams();
   const trackSlug = params.trackSlug as string;
-  const track = curriculumData.tracks.find(t => t.slug === trackSlug);
-  const detail = curriculumData.trackDetails[trackSlug] as any;
-  const modules = detail?.modules ?? [];
+  const meta = getTrackBySlug(trackSlug);
+
+  const [track, setTrack] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!trackSlug) return;
+    api.get(`/learn/tracks/${trackSlug}`)
+      .then(res => {
+        const data = res.data?.data ?? res.data;
+        setTrack(data);
+      })
+      .catch(err => setError(err?.message || 'Failed to load track'))
+      .finally(() => setLoading(false));
+  }, [trackSlug]);
 
   const lessonStatuses = useProgressStore(s => s.lessonStatuses);
 
   const lessonIds = useMemo(() => {
+    if (!track) return new Set<string>();
     const ids = new Set<string>();
-    for (const mod of modules) {
+    for (const mod of track.modules ?? []) {
       for (const l of mod.lessons ?? []) ids.add(l.id);
     }
     return ids;
-  }, [modules]);
+  }, [track]);
 
   const trackProgress = useMemo(() => {
     const total = lessonIds.size;
@@ -41,12 +54,21 @@ export default function TrackPage() {
     return { completed, total, percent: total > 0 ? Math.round((completed / total) * 100) : 0 };
   }, [lessonIds, lessonStatuses]);
 
-  if (!track) {
+  if (loading) {
+    return (
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '80px 24px' }}>
+        <Loader2 className="w-8 h-8 text-indigo-500 animate-spin" />
+      </div>
+    );
+  }
+
+  if (error || !track) {
     return (
       <div style={{ textAlign: 'center', padding: '80px 24px' }}>
+        <AlertCircle style={{ margin: '0 auto 16px' }} />
         <h1 style={{ fontSize: '24px', fontWeight: 700, marginBottom: '8px' }}>Track Not Found</h1>
         <p style={{ color: 'var(--text-muted)', marginBottom: '24px' }}>
-          The track you are looking for does not exist.
+          {error || 'The track you are looking for does not exist.'}
         </p>
         <Link href="/learn" style={{ color: BRAND, fontWeight: 600 }}>
           ← Back to Curriculum
@@ -54,6 +76,8 @@ export default function TrackPage() {
       </div>
     );
   }
+
+  const modules: any[] = track.modules ?? [];
 
   return (
     <div style={{ maxWidth: '860px', margin: '0 auto', padding: '36px 24px', display: 'flex', flexDirection: 'column', gap: '28px' }}>
@@ -162,7 +186,7 @@ export default function TrackPage() {
 
             {modLessons.map((lesson: any, li: number) => {
               const state = lessonStatuses[lesson.id];
-              const status = state?.status ?? 'NOT_STARTED';
+              const status = state?.status ?? lesson.status ?? 'NOT_STARTED';
               const isCompleted = status === 'COMPLETE';
               return (
                 <Link

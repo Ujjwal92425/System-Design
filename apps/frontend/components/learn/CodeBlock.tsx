@@ -1,5 +1,6 @@
 import { useState, useMemo } from 'react';
 import { Copy, Check, FileCode, Network } from 'lucide-react';
+import { Mermaid } from './Mermaid';
 
 interface CodeBlockProps {
   children?: React.ReactNode;
@@ -27,8 +28,22 @@ export function CodeBlock({ children, ...props }: CodeBlockProps) {
     setTimeout(() => setCopied(false), 2000);
   };
 
+  // Check if language is mermaid
+  const isMermaid = useMemo(() => {
+    if (typeof children === 'object' && children !== null) {
+      if ('props' in (children as any)) {
+        const className = (children as any).props?.className;
+        if (typeof className === 'string' && className.includes('language-mermaid')) {
+          return true;
+        }
+      }
+    }
+    return false;
+  }, [children]);
+
   // Detect if the code block represents an ASCII diagram
   const isAsciiDiagram = useMemo(() => {
+    if (isMermaid) return false;
     const lines = codeText.split('\n');
     let matchesCount = 0;
     for (const line of lines) {
@@ -45,7 +60,11 @@ export function CodeBlock({ children, ...props }: CodeBlockProps) {
       }
     }
     return matchesCount >= 2;
-  }, [codeText]);
+  }, [codeText, isMermaid]);
+
+  if (isMermaid) {
+    return <Mermaid chart={codeText} />;
+  }
 
   if (isAsciiDiagram) {
     return (

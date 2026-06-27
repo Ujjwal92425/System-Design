@@ -41,30 +41,7 @@ export function AppHeader() {
         ))}
       </div>
 
-      <div className="flex items-center space-x-4 sm:space-x-6 flex-shrink-0">
-        <Link
-          href="/docs"
-          className="text-xs font-medium text-yc-text-muted hover:text-yc-text transition flex items-center space-x-1 whitespace-nowrap"
-        >
-          <HelpCircle className="w-3.5 h-3.5" />
-          <span className="hidden sm:inline">Documentation</span>
-        </Link>
-
-        {user && (
-          <div className="flex items-center space-x-3 border-l border-yc-border pl-4 sm:pl-6">
-            <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold tracking-wider uppercase whitespace-nowrap border ${
-              user.role === 'ADMIN'
-                ? 'bg-red-50 text-red-700 border-red-200'
-                : user.role === 'PRO' || user.role === 'INSTRUCTOR'
-                ? 'bg-yc-accent/10 text-yc-accent border-yc-accent/20'
-                : 'bg-yc-bg-card text-yc-text-muted border-yc-border'
-            }`}>
-              <Sparkles className="w-2.5 h-2.5 mr-1" />
-              <span className="hidden sm:inline">{user.role} </span>Member
-            </span>
-          </div>
-        )}
-      </div>
+      <div className="flex-shrink-0" />
     </header>
   );
 }

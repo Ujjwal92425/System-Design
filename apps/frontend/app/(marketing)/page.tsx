@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
+import { useAuth } from '@/features/auth/useAuth';
 
 function LogoIcon() {
   return (
@@ -46,6 +47,13 @@ function useCountUp(target: number, duration = 1800, inView = false) {
 }
 
 export default function LandingPage() {
+  const { user } = useAuth();
+  const [mounted, setMounted] = useState(false);
+  
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
   const [scrolled, setScrolled] = useState(false);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const scrollProgress = useScrollProgress();
@@ -136,22 +144,26 @@ export default function LandingPage() {
 
           {/* Desktop center nav */}
           <div className="hidden lg:flex items-center space-x-8">
-            <a href="#learn" className="text-sm text-yc-text-muted hover:text-yc-text transition">Learn</a>
-            <a href="#build" className="text-sm text-yc-text-muted hover:text-yc-text transition">Build</a>
-            <a href="#evaluate" className="text-sm text-yc-text-muted hover:text-yc-text transition">Evaluate</a>
-            <a href="#pricing" className="text-sm text-yc-text-muted hover:text-yc-text transition">Pricing</a>
+            <Link href="/learn" className="text-sm text-yc-text-muted hover:text-yc-text transition">Learn</Link>
+            <Link href="/build" className="text-sm text-yc-text-muted hover:text-yc-text transition">Build</Link>
+            <Link href="/community" className="text-sm text-yc-text-muted hover:text-yc-text transition">Community</Link>
+            <Link href="/interview" className="text-sm text-yc-text-muted hover:text-yc-text transition">Evaluate</Link>
+            <Link href="/pricing" className="text-sm text-yc-text-muted hover:text-yc-text transition">Pricing</Link>
           </div>
 
           {/* Desktop right actions */}
           <div className="hidden lg:flex items-center space-x-4">
-            <Link href="/login" className="text-sm text-yc-text-muted hover:text-yc-text transition" data-track="nav:login_click">Login</Link>
-            <Link
-              href="/signup"
-              className="text-sm font-medium px-5 py-2.5 bg-yc-accent text-white rounded-lg hover:bg-yc-accent-hover transition"
-              data-track="nav:signup_click"
-            >
-              Apply
-            </Link>
+            {mounted && user ? (
+              <Link
+                href="/dashboard"
+                className="text-sm font-medium px-5 py-2.5 bg-yc-accent text-white rounded-lg hover:bg-yc-accent-hover transition"
+                data-track="nav:profile_click"
+              >
+                Profile
+              </Link>
+            ) : (
+              <Link href="/login" className="text-sm text-yc-text-muted hover:text-yc-text transition" data-track="nav:login_click">Login</Link>
+            )}
           </div>
 
           {/* Mobile hamburger */}
@@ -198,21 +210,25 @@ export default function LandingPage() {
             </button>
           </div>
           <nav className="flex flex-col space-y-6">
-            <a href="#learn" onClick={() => setDrawerOpen(false)} className="text-base text-yc-text-muted hover:text-yc-text transition">Learn</a>
-            <a href="#build" onClick={() => setDrawerOpen(false)} className="text-base text-yc-text-muted hover:text-yc-text transition">Build</a>
-            <a href="#evaluate" onClick={() => setDrawerOpen(false)} className="text-base text-yc-text-muted hover:text-yc-text transition">Evaluate</a>
-            <a href="#pricing" onClick={() => setDrawerOpen(false)} className="text-base text-yc-text-muted hover:text-yc-text transition">Pricing</a>
+            <Link href="/learn" onClick={() => setDrawerOpen(false)} className="text-base text-yc-text-muted hover:text-yc-text transition">Learn</Link>
+            <Link href="/build" onClick={() => setDrawerOpen(false)} className="text-base text-yc-text-muted hover:text-yc-text transition">Build</Link>
+            <Link href="/community" onClick={() => setDrawerOpen(false)} className="text-base text-yc-text-muted hover:text-yc-text transition">Community</Link>
+            <Link href="/interview" onClick={() => setDrawerOpen(false)} className="text-base text-yc-text-muted hover:text-yc-text transition">Evaluate</Link>
+            <Link href="/pricing" onClick={() => setDrawerOpen(false)} className="text-base text-yc-text-muted hover:text-yc-text transition">Pricing</Link>
           </nav>
           <div className="mt-auto flex flex-col space-y-4">
-                <Link href="/login" onClick={() => setDrawerOpen(false)} className="text-center text-sm text-yc-text-muted" data-track="mobile_nav:login_click">Login</Link>
-            <Link
-              href="/signup"
-              onClick={() => setDrawerOpen(false)}
-              className="text-center text-sm font-medium px-5 py-3 bg-yc-accent text-white rounded-lg"
-              data-track="mobile_nav:signup_click"
-            >
-              Apply
-            </Link>
+            {mounted && user ? (
+              <Link
+                href="/dashboard"
+                onClick={() => setDrawerOpen(false)}
+                className="text-center text-sm font-medium px-5 py-3 bg-yc-accent text-white rounded-lg"
+                data-track="mobile_nav:profile_click"
+              >
+                Profile
+              </Link>
+            ) : (
+              <Link href="/login" onClick={() => setDrawerOpen(false)} className="text-center text-sm text-yc-text-muted" data-track="mobile_nav:login_click">Login</Link>
+            )}
           </div>
         </div>
       </div>
@@ -243,13 +259,23 @@ export default function LandingPage() {
               </p>
 
               <div className="flex flex-wrap gap-4">
-                <Link
-                  href="/signup"
-                  className="inline-flex items-center px-7 py-3.5 bg-yc-accent text-white text-sm font-medium rounded-lg hover:bg-yc-accent-hover transition"
-                  data-track="hero:start_learning_free"
-                >
-                  Start learning free
-                </Link>
+                {mounted && user ? (
+                  <Link
+                    href="/dashboard"
+                    className="inline-flex items-center px-7 py-3.5 bg-yc-accent text-white text-sm font-medium rounded-lg hover:bg-yc-accent-hover transition"
+                    data-track="hero:go_to_workspace"
+                  >
+                    Go to Workspace
+                  </Link>
+                ) : (
+                  <Link
+                    href="/signup"
+                    className="inline-flex items-center px-7 py-3.5 bg-yc-accent text-white text-sm font-medium rounded-lg hover:bg-yc-accent-hover transition"
+                    data-track="hero:start_learning_free"
+                  >
+                    Start learning free
+                  </Link>
+                )}
                 <Link
                   href="/learn"
                   className="inline-flex items-center px-7 py-3.5 border border-yc-border text-yc-text-muted text-sm font-medium rounded-lg hover:border-yc-text/30 hover:text-yc-text transition"
@@ -739,13 +765,23 @@ export default function LandingPage() {
               You get <strong>2 architecture canvases</strong> and <strong>2 interview sessions</strong>
               — enough to master system design.
             </p>
-            <Link
-              href="/signup"
-              className="inline-flex items-center mt-8 px-7 py-3.5 bg-yc-accent text-white text-sm font-medium rounded-lg hover:bg-yc-accent-hover transition"
-              data-track="cta:start_building_free"
-            >
-              Start building free
-            </Link>
+            {mounted && user ? (
+              <Link
+                href="/dashboard"
+                className="inline-flex items-center mt-8 px-7 py-3.5 bg-yc-accent text-white text-sm font-medium rounded-lg hover:bg-yc-accent-hover transition"
+                data-track="cta:go_to_workspace"
+              >
+                Go to Workspace
+              </Link>
+            ) : (
+              <Link
+                href="/signup"
+                className="inline-flex items-center mt-8 px-7 py-3.5 bg-yc-accent text-white text-sm font-medium rounded-lg hover:bg-yc-accent-hover transition"
+                data-track="cta:start_building_free"
+              >
+                Start building free
+              </Link>
+            )}
           </div>
         </div>
       </section>
@@ -763,11 +799,11 @@ export default function LandingPage() {
               Most engineers spend that time re-reading the same articles. Start building and scoring your designs today.
             </p>
             <Link
-              href="/signup"
+              href={mounted && user ? '/dashboard' : '/signup'}
               className="inline-flex items-center px-8 py-4 bg-yc-accent text-white text-sm font-medium rounded-lg hover:bg-yc-accent-hover transition"
-              data-track="cta:final_start_learning"
+              data-track={mounted && user ? 'cta:final_go_to_workspace' : 'cta:final_start_learning'}
             >
-              Start learning free &rarr;
+              {mounted && user ? 'Go to Workspace' : 'Start learning free &rarr;'}
             </Link>
             <p className="text-xs text-yc-text-muted mt-4">
               Free forever. No credit card needed.

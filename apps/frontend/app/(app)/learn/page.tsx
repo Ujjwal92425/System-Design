@@ -1,30 +1,18 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import {
   BookOpen, Search, Clock, ChevronRight, X,
   Layers, BarChart2, Zap, Database, Server, GitBranch,
-  Radio, Layout, Monitor, Shield, ChevronDown,
+  Radio, Layout, Monitor, Shield, ChevronDown, Loader2,
 } from 'lucide-react';
 import Link from 'next/link';
-import { curriculumData } from '../../../data/curriculum/index';
+import { api } from '../../../lib/api';
 import { JsonLd } from '../../../components/seo/JsonLd';
 import { collectionSchemaJsonLd } from '../../../lib/seo';
 
 // ── Public curriculum page: no auth required, full SEO ─────────────────────
-// Anyone can browse all tracks and lessons. Login is only needed for
-// saving progress (Mark Complete on individual lesson pages).
-
-interface FlatLesson {
-  id: string;
-  slug: string;
-  title: string;
-  difficulty: string;
-  estimatedMin: number;
-  tags: string[];
-  trackSlug: string;
-  trackName: string;
-}
+// Anyone can browse all tracks and lessons. Data fetched from API.
 
 const BRAND   = '#FF6600';
 const BRAND_L = 'rgba(255,102,0,0.08)';
@@ -51,28 +39,6 @@ const TRACK_ICONS: Record<string, React.ComponentType<any>> = {
   'production-operations':            Monitor,
 };
 
-function buildFlatLessons(): FlatLesson[] {
-  const flat: FlatLesson[] = [];
-  for (const [trackSlug, td] of Object.entries(curriculumData.trackDetails)) {
-    for (const mod of (td as any).modules ?? []) {
-      for (const l of mod.lessons ?? []) {
-        if (!l?.slug) continue;
-        flat.push({
-          id: l.id, slug: l.slug, title: l.title,
-          difficulty: l.difficulty ?? 'BEGINNER',
-          estimatedMin: l.estimatedMin ?? 20,
-          tags: l.tags ?? [],
-          trackSlug,
-          trackName: (td as any).name ?? '',
-        });
-      }
-    }
-  }
-  return flat;
-}
-
-const ALL_LESSONS = buildFlatLessons();
-
 function DiffBadge({ d }: { d: string }) {
   const s = DIFF[d] ?? DIFF.BEGINNER;
   return (
@@ -84,9 +50,9 @@ function DiffBadge({ d }: { d: string }) {
   );
 }
 
-function LessonRow({ l }: { l: FlatLesson }) {
+function LessonRow({ l, trackSlug }: { l: any; trackSlug: string }) {
   return (
-    <Link href={`/learn/${l.trackSlug}/${l.slug}`} style={{
+    <Link href={`/learn/${trackSlug}/${l.slug}`} style={{
       display: 'flex', alignItems: 'center', justifyContent: 'space-between',
       padding: '13px 16px', background: 'var(--bg-surface)',
       border: '1px solid var(--border)', borderRadius: '10px',
@@ -101,7 +67,7 @@ function LessonRow({ l }: { l: FlatLesson }) {
         </p>
         <div style={{ display: 'flex', gap: '6px', marginTop: '3px', flexWrap: 'wrap', alignItems: 'center' }}>
           <span className="mono" style={{ fontSize: '10px', color: 'var(--text-muted)' }}>{l.trackName}</span>
-          {l.tags.slice(0, 2).map(t => (
+          {(l.tags ?? []).slice(0, 2).map((t: string) => (
             <span key={t} className="mono" style={{ fontSize: '9px', color: BRAND, background: BRAND_L, border: `1px solid ${BRAND_B}`, padding: '1px 5px', borderRadius: '3px' }}>#{t}</span>
           ))}
         </div>
@@ -119,10 +85,23 @@ function LessonRow({ l }: { l: FlatLesson }) {
 
 function TrackCard({ track }: { track: any }) {
   const [open, setOpen] = useState(false);
+  const [detail, setDetail] = useState<any>(null);
   const Icon = TRACK_ICONS[track.slug] ?? BookOpen;
-  const detail = curriculumData.trackDetails[track.slug] as any;
-  const modules: any[] = detail?.modules ?? [];
-  const totalLessons = modules.reduce((s: number, m: any) => s + (m.lessons?.length ?? 0), 0);
+
+  useEffect(() => {
+    if (open && !detail) {
+      api.get(`/learn/tracks/${track.slug}`)
+        .then(res => {
+          const data = res.data?.data ?? res.data;
+          setDetail(data);
+        })
+        .catch(() => { /* silent */ });
+    }
+  }, [open, track.slug, detail]);
+
+  const totalLessons = detail
+    ? (detail.modules ?? []).reduce((s: number, m: any) => s + (m.lessons?.length ?? 0), 0)
+    : 0;
 
   return (
     <div style={{
@@ -183,7 +162,7 @@ function TrackCard({ track }: { track: any }) {
         </div>
       </button>
 
-      {open && (
+      {open && detail && (
         <div style={{ borderTop: `1px solid var(--border)` }}>
           <div style={{ padding: '12px 20px', background: BRAND_L, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
             <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
@@ -208,7 +187,7 @@ function TrackCard({ track }: { track: any }) {
             </Link>
           </div>
 
-          {modules.map((mod: any) => (
+          {(detail.modules ?? []).map((mod: any) => (
             <div key={mod.id}>
               <div style={{
                 padding: '8px 20px 6px',
@@ -269,41 +248,37 @@ function TrackCard({ track }: { track: any }) {
 }
 
 export default function LearnCurriculumPage() {
-  const tracks = curriculumData.tracks.filter(t => t?.slug);
+  const [tracks, setTracks] = useState<any[]>([]);
+  const [tracksLoading, setTracksLoading] = useState(true);
+
+  useEffect(() => {
+    api.get('/learn/tracks')
+      .then(res => {
+        const data = Array.isArray(res.data.data) ? res.data.data : (Array.isArray(res.data) ? res.data : []);
+        setTracks(data);
+      })
+      .catch(() => { /* silent */ })
+      .finally(() => setTracksLoading(false));
+  }, []);
 
   const [query, setQuery] = useState('');
   const [difficulty, setDifficulty] = useState('');
-  const [trackFilter, setTrackFilter] = useState('');
-
-  const isSearching = query.trim() !== '' || difficulty !== '';
-
-  const searchResults = useMemo<FlatLesson[]>(() => {
-    if (!isSearching) return [];
-    const q = query.trim().toLowerCase();
-    return ALL_LESSONS.filter(l => {
-      if (difficulty && l.difficulty !== difficulty) return false;
-      if (!q) return true;
-      return (
-        l.title.toLowerCase().includes(q) ||
-        l.tags.some(t => t.toLowerCase().includes(q)) ||
-        l.trackName.toLowerCase().includes(q)
-      );
-    });
-  }, [query, difficulty, isSearching]);
 
   const filteredTracks = useMemo(() => {
-    if (!trackFilter.trim()) return tracks;
-    const f = trackFilter.toLowerCase();
-    return tracks.filter(t =>
-      t.name.toLowerCase().includes(f) ||
-      (t.description ?? '').toLowerCase().includes(f)
-    );
-  }, [tracks, trackFilter]);
+    const q = query.trim().toLowerCase();
+    return tracks.filter(track => {
+      const matchesText = !q ||
+        track.name.toLowerCase().includes(q) ||
+        (track.description ?? '').toLowerCase().includes(q);
+
+      return matchesText;
+    });
+  }, [tracks, query]);
 
   const clearSearch = () => { setQuery(''); setDifficulty(''); };
 
   return (
-    <div style={{ maxWidth: '860px', margin: '0 auto', padding: '36px 24px', display: 'flex', flexDirection: 'column', gap: '28px' }}>
+    <div style={{ maxWidth: '1080px', margin: '0 auto', padding: '36px 24px', display: 'flex', flexDirection: 'column', gap: '28px' }}>
       <JsonLd data={collectionSchemaJsonLd()} />
       <JsonLd data={{
         '@context': 'https://schema.org',
@@ -327,7 +302,7 @@ export default function LearnCurriculumPage() {
             Curriculum
           </h1>
           <p style={{ fontSize: '13px', color: 'var(--text-muted)', marginTop: '2px' }}>
-            {tracks.length} tracks · {ALL_LESSONS.length} lessons — from DNS to distributed consensus
+            {tracksLoading ? 'Loading...' : `${tracks.length} tracks`}
           </p>
         </div>
       </div>
@@ -337,7 +312,7 @@ export default function LearnCurriculumPage() {
           <Search style={{ position: 'absolute', left: '13px', top: '50%', transform: 'translateY(-50%)', width: '14px', height: '14px', color: 'var(--text-muted)', pointerEvents: 'none' }} />
           <input
             type="text"
-            placeholder="Search lessons by name, tag, or concept…"
+            placeholder="Search tracks…"
             value={query}
             onChange={e => setQuery(e.target.value)}
             style={{
@@ -386,52 +361,20 @@ export default function LearnCurriculumPage() {
         </div>
       </div>
 
-      {isSearching && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-          <p className="mono" style={{ fontSize: '11px', color: 'var(--text-muted)', margin: '0 0 4px' }}>
-            {searchResults.length} lesson{searchResults.length !== 1 ? 's' : ''} found
-          </p>
-          {searchResults.length === 0 ? (
-            <div style={{ textAlign: 'center', padding: '60px 0', color: 'var(--text-muted)', fontSize: '14px' }}>
-              No lessons match your search.
-            </div>
-          ) : searchResults.map(l => <LessonRow key={l.id} l={l} />)}
+      {tracksLoading ? (
+        <div style={{ display: 'flex', justifyContent: 'center', padding: '80px 0' }}>
+          <Loader2 className="w-8 h-8 text-indigo-500 animate-spin" />
         </div>
-      )}
-
-      {!isSearching && (
-        <>
-          <div style={{ position: 'relative', maxWidth: '340px' }}>
-            <Search style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', width: '13px', height: '13px', color: 'var(--text-muted)', pointerEvents: 'none' }} />
-            <input
-              type="text"
-              placeholder="Filter tracks…"
-              value={trackFilter}
-              onChange={e => setTrackFilter(e.target.value)}
-              style={{
-                width: '100%', background: 'var(--bg-elevated)',
-                border: '1px solid var(--border)', borderRadius: '8px',
-                paddingLeft: '32px', paddingRight: '14px',
-                paddingTop: '8px', paddingBottom: '8px',
-                fontSize: '13px', color: 'var(--text-primary)', outline: 'none', boxSizing: 'border-box',
-              }}
-              onFocus={e => { e.currentTarget.style.borderColor = BRAND; }}
-              onBlur={e =>  { e.currentTarget.style.borderColor = 'var(--border)'; }}
-            />
-          </div>
-
-          {filteredTracks.length === 0 ? (
-            <div style={{ textAlign: 'center', padding: '80px 0', color: 'var(--text-muted)', fontSize: '14px' }}>
-              No tracks match "{trackFilter}".
-            </div>
-          ) : (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-              {filteredTracks.map(track => (
-                <TrackCard key={track.id} track={track} />
-              ))}
-            </div>
-          )}
-        </>
+      ) : filteredTracks.length === 0 ? (
+        <div style={{ textAlign: 'center', padding: '80px 0', color: 'var(--text-muted)', fontSize: '14px' }}>
+          No tracks match your search criteria.
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+          {filteredTracks.map(track => (
+            <TrackCard key={track.id} track={track} />
+          ))}
+        </div>
       )}
     </div>
   );

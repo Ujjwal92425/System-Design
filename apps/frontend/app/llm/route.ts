@@ -1,17 +1,7 @@
 import { SITE_NAME, SITE_DESCRIPTION, SITE_URL } from '../../lib/seo';
-import { curriculumData } from '../../data/curriculum/index';
+import { getAllTracks } from '../../data/curriculum/index';
 
 export const runtime = 'edge';
-
-function stripMdx(mdx: string, maxLen = 500): string {
-  return mdx
-    .replace(/```[\s\S]*?```/g, '')
-    .replace(/~~~[\s\S]*?~~~/g, '')
-    .replace(/[#*_~`>\[\]()]/g, '')
-    .replace(/\n{3,}/g, '\n\n')
-    .trim()
-    .slice(0, maxLen);
-}
 
 export async function GET() {
   const lines: string[] = [];
@@ -39,24 +29,13 @@ export async function GET() {
   // Tracks
   lines.push('## Tracks & Lessons');
   lines.push('');
-  for (const t of curriculumData.tracks) {
-    const td = (curriculumData.trackDetails as any)[t.slug];
-    const totalLessons = (td?.modules ?? []).reduce(
-      (s: number, m: any) => s + (m.lessons?.length ?? 0), 0
-    );
+  const allTracks = getAllTracks();
+  for (const t of allTracks) {
     lines.push(`### ${t.name}`);
-    lines.push(`- Level: ${t.level} | Lessons: ${totalLessons} | Hours: ${t.estimatedHours}h`);
+    lines.push(`- Level: ${t.level} | Hours: ${t.estimatedHours}h`);
     lines.push(`- URL: ${SITE_URL}/learn/${t.slug}`);
     if (t.learningGoals?.length) {
       lines.push(`- Goals: ${t.learningGoals.join('; ')}`);
-    }
-    lines.push('');
-
-    // List lessons in this track
-    for (const mod of td?.modules ?? []) {
-      for (const l of mod.lessons ?? []) {
-        lines.push(`  - [${l.title}](${SITE_URL}/learn/${t.slug}/${l.slug}) - ${l.estimatedMin}min, ${l.difficulty}`);
-      }
     }
     lines.push('');
   }
@@ -82,24 +61,6 @@ export async function GET() {
     lines.push(`- ${c}`);
   }
   lines.push('');
-
-  // Sample content summaries
-  lines.push('## Summary of First Lesson');
-  lines.push('');
-  const firstLesson = curriculumData.tracks[0];
-  if (firstLesson) {
-    const td = (curriculumData.trackDetails as any)[firstLesson.slug];
-    const firstMod = td?.modules?.[0];
-    const firstL = firstMod?.lessons?.[0];
-    if (firstL) {
-      const detail = (curriculumData.lessonDetails as any)[firstL.slug];
-      if (detail?.content) {
-        lines.push(stripMdx(detail.content, 800));
-        lines.push('');
-        lines.push(`Full lesson: ${SITE_URL}/learn/${firstLesson.slug}/${firstL.slug}`);
-      }
-    }
-  }
 
   // Metadata
   lines.push('## Metadata');

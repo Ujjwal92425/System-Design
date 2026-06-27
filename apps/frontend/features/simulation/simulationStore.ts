@@ -20,10 +20,19 @@ function filterSimNodes(nodes: any[]) {
   });
 }
 
+// FIX: Expanded entry point types — now includes API_GATEWAY, REVERSE_PROXY, CDN
+// and LOAD_BALANCER as valid traffic origins. Previously only WEB_SERVER/CLIENT
+// types were accepted, which caused the simulation to silently refuse to start
+// for valid architectures that start with a gateway or CDN.
+const ENTRY_POINT_TYPES = new Set([
+  'WEB_SERVER', 'CLIENT', 'BROWSER', 'MOBILE_APP', 'DESKTOP_APP',
+  'API_GATEWAY', 'REVERSE_PROXY', 'CDN', 'LOAD_BALANCER',
+]);
+
 function hasEntryPoint(nodes: any[]) {
   return filterSimNodes(nodes).some((n) => {
-    const t = n.data?.nodeType || n.type;
-    return ['WEB_SERVER', 'CLIENT', 'BROWSER', 'MOBILE_APP', 'DESKTOP_APP'].includes(t);
+    const t = (n.data?.nodeType || n.type).toUpperCase();
+    return ENTRY_POINT_TYPES.has(t);
   });
 }
 
@@ -37,6 +46,11 @@ interface SimulationState {
   currentMetrics: any | null;
   eventsLog: SimulationEvent[];
   bridge: SimulationWorkerBridge | null;
+  // FIX: Added health/timeout tracking
+  workerError: string | null;
+  isPaused: boolean;
+  lastTickAt: number | null;
+  startupPhase: 'idle' | 'starting' | 'running' | 'error';
 
   startSimulation: (nodes: any[], edges: any[]) => void;
   stopSimulation: () => void;
@@ -59,6 +73,11 @@ export const useSimulationStore = create<SimulationState>((set, get) => ({
   currentMetrics: null,
   eventsLog: [],
   bridge: null,
+  // FIX: Added health/timeout tracking fields
+  workerError: null,
+  isPaused: false,
+  lastTickAt: null,
+  startupPhase: 'idle',
 
   addEvent: (type, message, severity = 'INFO') => {
     const timeStr = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
@@ -91,11 +110,31 @@ export const useSimulationStore = create<SimulationState>((set, get) => ({
 
     if (!currentBridge) {
       currentBridge = new SimulationWorkerBridge();
+
+      // FIX: Wire error/paused callbacks so worker crashes surface in the UI
+      currentBridge.onError((error: any) => {
+        const msg = error.message || 'Unknown worker error';
+        get().addEvent('WORKER', `Simulation worker error: ${msg}`, 'ERROR');
+        set({ workerError: msg, isRunning: false, startupPhase: 'error', isPaused: true });
+      });
+
+      currentBridge.onPaused((reason: any) => {
+        const msg = reason?.reason || 'Simulation paused due to error';
+        get().addEvent('WORKER', msg, 'ERROR');
+        set({ isPaused: true, startupPhase: 'error' });
+      });
+
       set({ bridge: currentBridge });
     }
 
-    // Reset log and add start event
-    set({ eventsLog: [] });
+    // Reset state before starting
+    set({
+      eventsLog: [],
+      workerError: null,
+      isPaused: false,
+      lastTickAt: null,
+      startupPhase: 'starting',
+    });
     const addEventFn = get().addEvent;
     addEventFn('SYSTEM', 'Simulation started. Monitoring graph nodes...', 'INFO');
 
@@ -103,6 +142,9 @@ export const useSimulationStore = create<SimulationState>((set, get) => ({
     
     currentBridge.start((metrics) => {
       set((prev) => {
+        // Record last tick time for health monitoring
+        const now = Date.now();
+
         // Forward worker-generated events (OOM, GC, HPA, etc.) to the event log
         if (metrics.events?.length) {
           metrics.events.forEach((evt: any) => {
@@ -135,12 +177,14 @@ export const useSimulationStore = create<SimulationState>((set, get) => ({
         
         return {
           currentMetrics: metrics,
-          metricsHistory: history
+          metricsHistory: history,
+          lastTickAt: now,
+          startupPhase: 'running',
         };
       });
     }, () => {
       addEventFn('SYSTEM', 'Simulation completed after 300 ticks.', 'INFO');
-      set({ isRunning: false });
+      set({ isRunning: false, startupPhase: 'idle' });
     });
 
     set({ isRunning: true });
@@ -222,7 +266,12 @@ export const useSimulationStore = create<SimulationState>((set, get) => ({
       currentMetrics: null,
       failedNodes: [],
       nodeChaosModes: {},
-      eventsLog: []
+      eventsLog: [],
+      // FIX: Reset health tracking fields
+      workerError: null,
+      isPaused: false,
+      lastTickAt: null,
+      startupPhase: 'idle',
     });
   }
 }));

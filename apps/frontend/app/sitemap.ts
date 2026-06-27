@@ -1,6 +1,6 @@
 import type { MetadataRoute } from 'next';
 import { SITE_URL } from '../lib/seo';
-import { curriculumData } from '../data/curriculum/index';
+import { getAllTracks } from '../data/curriculum/index';
 
 export default function sitemap(): MetadataRoute.Sitemap {
   const staticPages: MetadataRoute.Sitemap = [
@@ -11,30 +11,17 @@ export default function sitemap(): MetadataRoute.Sitemap {
     { url: `${SITE_URL}/blog`, lastModified: new Date(), changeFrequency: 'weekly', priority: 0.7 },
   ];
 
-  const trackPages: MetadataRoute.Sitemap = curriculumData.tracks.map((track) => ({
+  const allTracks = getAllTracks();
+
+  const trackPages: MetadataRoute.Sitemap = allTracks.map((track: any) => ({
     url: `${SITE_URL}/learn/${track.slug}`,
     lastModified: new Date(),
     changeFrequency: 'weekly' as const,
     priority: 0.8,
   }));
 
-  const lessonSlugs = new Set<string>();
-  const lessonPages: MetadataRoute.Sitemap = [];
+  // Lesson sitemap entries require fetching from API — omitted here.
+  // They can be added via the dynamic API-based sitemap route.
 
-  for (const [trackSlug, td] of Object.entries(curriculumData.trackDetails)) {
-    for (const mod of (td as any).modules ?? []) {
-      for (const l of mod.lessons ?? []) {
-        if (!l?.slug || lessonSlugs.has(l.slug)) continue;
-        lessonSlugs.add(l.slug);
-        lessonPages.push({
-          url: `${SITE_URL}/learn/${trackSlug}/${l.slug}`,
-          lastModified: new Date(),
-          changeFrequency: 'monthly' as const,
-          priority: 0.7,
-        });
-      }
-    }
-  }
-
-  return [...staticPages, ...trackPages, ...lessonPages];
+  return [...staticPages, ...trackPages];
 }

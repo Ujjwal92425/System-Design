@@ -40,7 +40,6 @@ export default async function TrackLayout({
   const schemas: Record<string, unknown>[] = [];
 
   if (track) {
-    const totalLessons = track.modules.reduce((s, m) => s + m.lessons.length, 0);
     schemas.push(
       courseSchemaJsonLd({
         name: track.name,
@@ -49,7 +48,7 @@ export default async function TrackLayout({
         level: track.level,
         estimatedHours: track.estimatedHours || 0,
         learningGoals: track.learningGoals || [],
-        lessonCount: totalLessons,
+        lessonCount: 0, // will be replaced once track detail is fetched client-side
       })
     );
     schemas.push(

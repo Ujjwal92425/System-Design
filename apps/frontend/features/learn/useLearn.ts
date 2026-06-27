@@ -2,12 +2,8 @@
 
 import { api } from '../../lib/api';
 import { useState, useEffect, useCallback, useMemo } from 'react';
-import {
-  getAllTracks,
-  getTrackBySlug,
-  getLessonBySlug,
-} from '../../data/curriculum/index';
 import { useProgressStore } from './progressStore';
+import { useAuthStore } from '../auth/authStore';
 
 export interface TrackSummary {
   id: string;
@@ -55,22 +51,13 @@ export function useTracks() {
 
   useEffect(() => {
     let cancelled = false;
-    // Try API first, fall back to local curriculum data
     api.get('/learn/tracks')
       .then(res => {
         if (cancelled) return;
         const data = Array.isArray(res.data.data) ? res.data.data : (Array.isArray(res.data) ? res.data : []);
         setTracks(data);
       })
-      .catch(() => {
-        if (cancelled) return;
-        try {
-          const local = getAllTracks();
-          setTracks(Array.isArray(local) ? local.filter(t => t && t.slug) : []);
-        } catch {
-          setTracks([]);
-        }
-      })
+      .catch(err => { if (!cancelled) setError(err?.message || 'Failed to load tracks'); })
       .finally(() => { if (!cancelled) setLoading(false); });
     return () => { cancelled = true; };
   }, []);
@@ -83,16 +70,18 @@ export function useTrack(slug: string) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const lessonStatuses = useProgressStore((s) => s.lessonStatuses);
+  const accessToken = useAuthStore((s) => s.accessToken);
 
   useEffect(() => {
     if (!slug) return;
     setLoading(true);
+    setError(null);
     api.get(`/learn/tracks/${slug}`)
-      .then(res => setRawTrack(res.data.data))
-      .catch(() => {
-        // Local curriculum fallback
-        setRawTrack(getTrackBySlug(slug));
+      .then(res => {
+        const data = res.data?.data ?? res.data;
+        setRawTrack(data as TrackDetail);
       })
+      .catch(err => setError(err?.message || `Track "${slug}" not found`))
       .finally(() => setLoading(false));
   }, [slug]);
 
@@ -102,7 +91,7 @@ export function useTrack(slug: string) {
       ...m,
       lessons: m.lessons.map((l) => ({
         ...l,
-        status: lessonStatuses[l.id]?.status || l.status,
+        status: accessToken ? l.status : (lessonStatuses[l.id]?.status || l.status),
       })),
     }));
     const totalLessons = modules.reduce((sum, m) => sum + m.lessons.length, 0);
@@ -115,7 +104,7 @@ export function useTrack(slug: string) {
       modules,
       completedPct: totalLessons > 0 ? completedLessons / totalLessons : 0,
     };
-  }, [rawTrack, lessonStatuses]);
+  }, [rawTrack, lessonStatuses, accessToken]);
 
   return { track, loading, error };
 }
@@ -124,7 +113,7 @@ export interface LessonDetail {
   id: string;
   slug: string;
   title: string;
-  content: string;
+  content: string | null;
   estimatedMin: number;
   difficulty: string;
   companies: string[];
@@ -155,6 +144,9 @@ export interface LessonDetail {
       order: number;
     }>;
   }>;
+  // Premium gating — when true, content will be null and a lockedMessage is returned
+  isLocked?: boolean;
+  lockedMessage?: string;
 }
 
 export function useLesson(slug: string) {
@@ -162,39 +154,37 @@ export function useLesson(slug: string) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const lessonStatuses = useProgressStore((s) => s.lessonStatuses);
+  const accessToken = useAuthStore((s) => s.accessToken);
 
-  // Load lesson from API or local curriculum
   useEffect(() => {
     if (!slug) return;
-    // Try API first, fall back to local curriculum data
+    setLoading(true);
+    setError(null);
     api.get(`/learn/lessons/${slug}`)
       .then(res => {
-        const data = res.data.data as LessonDetail;
-        setLesson(data);
+        const data = res.data?.data ?? res.data;
+        setLesson(data as LessonDetail);
       })
-      .catch(() => {
-        // Local curriculum fallback
-        const local = getLessonBySlug(slug);
-        if (local) {
-          setLesson(local as LessonDetail);
-        } else {
-          setError(`Lesson "${slug}" not found`);
-        }
-      })
+      .catch(err => setError(err?.message || `Lesson "${slug}" not found`))
       .finally(() => setLoading(false));
   }, [slug]);
 
-  // Reactively merge persisted progress from store (handles rehydration race)
+  // Merge persisted progress (status, bookmark, notes, resumeState) from localStorage only if not logged in
   useEffect(() => {
     if (!lesson) return;
     const stored = lessonStatuses[lesson.id];
-    if (stored && stored.status !== lesson.userState.status) {
+    if (stored && !accessToken) {
       setLesson(prev => {
         if (!prev) return null;
-        return { ...prev, userState: { ...prev.userState, status: stored.status } };
+        const merged = { ...prev.userState };
+        if (stored.status) merged.status = stored.status;
+        if (stored.bookmarked !== undefined) merged.bookmarked = stored.bookmarked;
+        if (stored.notes !== undefined) merged.notes = stored.notes;
+        if (stored.resumeState !== undefined) merged.resumeState = stored.resumeState;
+        return { ...prev, userState: merged };
       });
     }
-  }, [lessonStatuses, lesson?.id]);
+  }, [lessonStatuses, lesson?.id, accessToken]);
 
   const updateState = useCallback(async (
     status?: 'NOT_STARTED' | 'IN_PROGRESS' | 'COMPLETE',
@@ -202,10 +192,12 @@ export function useLesson(slug: string) {
     notes?: string
   ) => {
     if (!lesson) return;
+    const updates: Record<string, any> = {};
+    if (status !== undefined) updates.status = status;
+    if (resumeState !== undefined) updates.resumeState = resumeState;
+    if (notes !== undefined) updates.notes = notes;
     // Persist locally first (works offline, survives refresh)
-    if (status !== undefined) {
-      useProgressStore.getState().updateLessonStatus(lesson.id, status);
-    }
+    useProgressStore.getState().updateLessonProgress(lesson.id, updates);
     // Try API (best effort — local persistence already handled)
     try {
       await api.post('/learn/progress/state', {
@@ -219,11 +211,7 @@ export function useLesson(slug: string) {
     }
     setLesson(prev => {
       if (!prev) return null;
-      const next = { ...prev.userState };
-      if (status !== undefined) next.status = status;
-      if (resumeState !== undefined) next.resumeState = resumeState;
-      if (notes !== undefined) next.notes = notes;
-      return { ...prev, userState: next };
+      return { ...prev, userState: { ...prev.userState, ...updates } as LessonDetail['userState'] };
     });
   }, [lesson]);
 
@@ -232,6 +220,7 @@ export function useLesson(slug: string) {
   const toggleBookmark = useCallback(async () => {
     if (!lesson) return;
     const newVal = !lesson.userState.bookmarked;
+    useProgressStore.getState().updateLessonProgress(lesson.id, { bookmarked: newVal });
     try {
       await api.post('/learn/progress/bookmark', { lessonId: lesson.id, bookmarked: newVal });
     } catch {

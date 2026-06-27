@@ -1,16 +1,14 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '../../features/auth/useAuth';
-import { AppSidebar } from '../../components/layouts/AppSidebar';
-import { AppHeader } from '../../components/layouts/AppHeader';
+import { MarketingHeader } from '../../components/layouts/MarketingHeader';
 import { analytics } from '../../lib/analytics';
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const { user, loading, fetchMe } = useAuth();
   const router = useRouter();
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
 
   useEffect(() => {
     fetchMe().catch(() => {
@@ -41,15 +39,9 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   }
 
   return (
-    <div className="flex min-h-screen bg-yc-bg">
-      <AppSidebar
-        collapsed={sidebarCollapsed}
-        onToggleCollapse={() => setSidebarCollapsed((prev) => !prev)}
-      />
-      <div className="flex-1 flex flex-col min-w-0 transition-all duration-300">
-        <AppHeader />
-        <main className="flex-1 overflow-y-auto">{children}</main>
-      </div>
+    <div className="flex flex-col min-h-screen bg-yc-bg">
+      <MarketingHeader />
+      <main className="flex-1 flex flex-col min-w-0">{children}</main>
     </div>
   );
 }

@@ -99,6 +99,20 @@ export default function CanvasWorkspace({ params }: { params: Promise<{ designId
   const [rightPanel, setRightPanel] = useState<'inspector' | 'latency' | 'ai-review' | null>('inspector');
 
   const simulation = useSimulation(nodes, edges);
+
+  // FIX: Simulation timeout detection — if no first tick arrives within 5s,
+  // emit a warning event. This catches cases where the worker crashes silently.
+  useEffect(() => {
+    if (!simulation.isRunning) return;
+    const timeout = setTimeout(() => {
+      if (!simulation.currentMetrics && simulation.startupPhase !== 'error') {
+        simulation.addEvent?.('TIMEOUT', 'No tick received in 5s — worker may be unresponsive. Try resetting.', 'ERROR');
+      }
+    }, 5000);
+    return () => clearTimeout(timeout);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [simulation.isRunning]);
+
   useCollaboration({ designId, enabled: true });
   const { layout } = useAutoLayout();
   const [interviewSessionId, setInterviewSessionId] = useState<string | null>(null);

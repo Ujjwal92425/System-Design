@@ -1,5 +1,5 @@
 import type { Metadata } from 'next';
-import { getLessonBySlug, getTrackBySlug } from '../../../../../data/curriculum/index';
+import { getTrackBySlug } from '../../../../../data/curriculum/index';
 import {
   generatePageMetadata,
   lessonSchemaJsonLd,
@@ -11,13 +11,27 @@ import {
 } from '../../../../../lib/seo';
 
 // ── Lesson layout: public metadata + full JSON-LD stack for SEO/AEO ────────
+// Lesson metadata is fetched from the API (content lives in PostgreSQL).
+const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
+
 export async function generateMetadata({
   params,
 }: {
   params: Promise<{ trackSlug: string; lessonSlug: string }>;
 }): Promise<Metadata> {
   const { trackSlug, lessonSlug } = await params;
-  const lesson = getLessonBySlug(lessonSlug);
+  let lesson: any = null;
+
+  try {
+    const res = await fetch(`${API_BASE}/learn/lessons/${lessonSlug}`, {
+      headers: { Authorization: `Bearer ${process.env.API_SERVICE_KEY || ''}` },
+      next: { revalidate: 3600 },
+    });
+    if (res.ok) {
+      const json = await res.json();
+      lesson = json.data ?? json;
+    }
+  } catch { /* fall through to default metadata */ }
 
   if (!lesson) {
     return generatePageMetadata({
@@ -35,7 +49,7 @@ export async function generateMetadata({
     path: `/learn/${trackSlug}/${lessonSlug}`,
     keywords: [...(lesson.tags || []), lesson.difficulty, 'system design'],
     type: 'article',
-    ...(lesson.companies.length > 0 ? { authors: lesson.companies } : {}),
+    ...(lesson.companies?.length > 0 ? { authors: lesson.companies } : {}),
   });
 }
 
@@ -47,7 +61,20 @@ export default async function LessonLayout({
   params: Promise<{ trackSlug: string; lessonSlug: string }>;
 }) {
   const { lessonSlug, trackSlug } = await params;
-  const lesson = getLessonBySlug(lessonSlug);
+
+  // Fetch lesson metadata for JSON-LD schemas
+  let lesson: any = null;
+  try {
+    const res = await fetch(`${API_BASE}/learn/lessons/${lessonSlug}`, {
+      headers: { Authorization: `Bearer ${process.env.API_SERVICE_KEY || ''}` },
+      next: { revalidate: 3600 },
+    });
+    if (res.ok) {
+      const json = await res.json();
+      lesson = json.data ?? json;
+    }
+  } catch { /* schemas will be empty */ }
+
   const track = getTrackBySlug(trackSlug);
 
   const schemas: Record<string, unknown>[] = [];

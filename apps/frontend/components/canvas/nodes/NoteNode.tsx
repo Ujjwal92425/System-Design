@@ -32,14 +32,21 @@ function NoteNode({ data, selected, id }: NodeProps) {
       }`}
       style={{ backgroundColor: color }}
     >
-      <Handle type="target" position={Position.Top} className="!w-3 !h-3 !bg-white !border-2 !border-yc-accent" />
-      <Handle type="source" position={Position.Top} className="!w-3 !h-3 !bg-yc-accent !border-2 !border-white" />
-      <Handle type="target" position={Position.Bottom} className="!w-3 !h-3 !bg-white !border-2 !border-yc-accent" />
-      <Handle type="source" position={Position.Bottom} className="!w-3 !h-3 !bg-yc-accent !border-2 !border-white" />
-      <Handle type="target" position={Position.Left} className="!w-3 !h-3 !bg-white !border-2 !border-yc-accent" />
-      <Handle type="source" position={Position.Left} className="!w-3 !h-3 !bg-yc-accent !border-2 !border-white" />
-      <Handle type="target" position={Position.Right} className="!w-3 !h-3 !bg-white !border-2 !border-yc-accent" />
-      <Handle type="source" position={Position.Right} className="!w-3 !h-3 !bg-yc-accent !border-2 !border-white" />
+      {/* Multi-port: input ports on left, output ports on right */}
+      {[0, 1, 2, 3].map((i) => (
+        <Handle key={`nt-target-left-${i}`} type="target" position={Position.Left} id={`target-left-${i}`} style={{ top: `${25 + i * 18}%` }} className="!w-3 !h-3 !bg-white !border-2 !border-yc-accent" />
+      ))}
+      {[0, 1, 2, 3].map((i) => (
+        <Handle key={`nt-source-right-${i}`} type="source" position={Position.Right} id={`source-right-${i}`} style={{ top: `${25 + i * 18}%` }} className="!w-3 !h-3 !bg-yc-accent !border-2 !border-white" />
+      ))}
+      <Handle type="target" position={Position.Top} id="target-top" className="!w-3 !h-3 !bg-white !border-2 !border-yc-accent" />
+      <Handle type="source" position={Position.Top} id="source-top" className="!w-3 !h-3 !bg-yc-accent !border-2 !border-white" />
+      <Handle type="target" position={Position.Bottom} id="target-bottom" className="!w-3 !h-3 !bg-white !border-2 !border-yc-accent" />
+      <Handle type="source" position={Position.Bottom} id="source-bottom" className="!w-3 !h-3 !bg-yc-accent !border-2 !border-white" />
+      <Handle type="target" position={Position.Left} id="target-left" className="!w-3 !h-3 !bg-white !border-2 !border-yc-accent" />
+      <Handle type="source" position={Position.Left} id="source-left" className="!w-3 !h-3 !bg-yc-accent !border-2 !border-white" />
+      <Handle type="target" position={Position.Right} id="target-right" className="!w-3 !h-3 !bg-white !border-2 !border-yc-accent" />
+      <Handle type="source" position={Position.Right} id="source-right" className="!w-3 !h-3 !bg-yc-accent !border-2 !border-white" />
 
       <div className="flex items-center gap-2 px-3 py-2 border-b border-black/10">
         <StickyNote className="w-3.5 h-3.5 text-gray-600" />

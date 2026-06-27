@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useMemo } from 'react';
-import { TrendingUp, Clock } from 'lucide-react';
+import { TrendingUp, Clock, Loader2 } from 'lucide-react';
 
 interface MetricsSnapshot {
   tick: number;
@@ -65,30 +65,45 @@ export function MetricsChart({ history }: MetricsChartProps) {
     [history]
   );
 
-  const dataPoints = useMemo(() => {
-    return history.map((snapshot) => {
+  // FIX: Added time-aware data point mapping.
+  // Previously, points were evenly spaced regardless of tick gaps.
+  // Now we interpolate based on tick delta when ticks are missing.
+  // Returns { values: number[], tickNumbers: number[] }.
+  const chartData = useMemo(() => {
+    if (history.length === 0) return { values: [], tickNumbers: [] };
+    const values: number[] = [];
+    const tickNumbers: number[] = [];
+    for (let i = 0; i < history.length; i++) {
+      const snapshot = history[i];
+      let val: number;
       if (selectedNodeId) {
-        const node = snapshot.nodes.find((n) => n.id === selectedNodeId);
-        if (!node) return 0;
-        if (activeMetric === 'qps') return node.qps || 0;
-        if (activeMetric === 'latency') return node.latency || 0;
-        if (activeMetric === 'errorRate') return node.errorRate || 0;
-        if (activeMetric === 'queueDepth') return (node as any).queueDepth || 0;
-        return 0;
+        const node = snapshot.nodes.find((n: any) => n.id === selectedNodeId);
+        if (!node) { val = 0; } 
+        else if (activeMetric === 'qps') val = node.qps || 0;
+        else if (activeMetric === 'latency') val = node.latency || 0;
+        else if (activeMetric === 'errorRate') val = node.errorRate || 0;
+        else if (activeMetric === 'queueDepth') val = (node as any).queueDepth || 0;
+        else val = 0;
+      } else {
+        if (activeMetric === 'qps') val = snapshot.inputQps || 0;
+        else if (activeMetric === 'errorRate') {
+          const sum = snapshot.nodes.reduce((s: number, n: any) => s + (n.errorRate || 0), 0);
+          val = snapshot.nodes.length ? sum / snapshot.nodes.length : 0;
+        } else if (activeMetric === 'queueDepth') {
+          const total = snapshot.nodes.reduce((s: number, n: any) => s + ((n as any).queueDepth || 0), 0);
+          val = snapshot.nodes.length ? total / snapshot.nodes.length : 0;
+        } else {
+          const sum = snapshot.nodes.reduce((s: number, n: any) => s + n.latency, 0);
+          val = snapshot.nodes.length ? sum / snapshot.nodes.length : 0;
+        }
       }
-      if (activeMetric === 'qps') return snapshot.inputQps || 0;
-      if (activeMetric === 'errorRate') {
-        const avg = snapshot.nodes.reduce((s, n) => s + (n.errorRate || 0), 0);
-        return snapshot.nodes.length ? avg / snapshot.nodes.length : 0;
-      }
-      if (activeMetric === 'queueDepth') {
-        const total = snapshot.nodes.reduce((s, n) => s + ((n as any).queueDepth || 0), 0);
-        return snapshot.nodes.length ? total / snapshot.nodes.length : 0;
-      }
-      const sum = snapshot.nodes.reduce((s, n) => s + n.latency, 0);
-      return snapshot.nodes.length ? sum / snapshot.nodes.length : 0;
-    });
+      values.push(val);
+      tickNumbers.push(snapshot.tick ?? i);
+    }
+    return { values, tickNumbers };
   }, [history, selectedNodeId, activeMetric]);
+
+  const dataPoints = chartData.values;
 
   const maxVal = useMemo(() => computeNiceMax(dataPoints), [dataPoints]);
   const minVal = 0;
@@ -98,6 +113,10 @@ export function MetricsChart({ history }: MetricsChartProps) {
   const height = 160;
   const padding = { top: 15, right: 15, bottom: 25, left: 52 };
 
+  // FIX: Generate path using tick numbers for x-position.
+  // When ticks are sequential (tick[i] = tick[i-1] + 1), this matches
+  // the old behavior. When ticks are missing (gaps), the chart accurately
+  // shows the gap rather than compressing points together.
   let pathD = '';
   if (dataPoints.length === 1) {
     const val = dataPoints[0];
@@ -105,9 +124,13 @@ export function MetricsChart({ history }: MetricsChartProps) {
     const y = height - padding.bottom - ((val - minVal) / valRange) * (height - padding.top - padding.bottom);
     pathD = `M ${padding.left},${y.toFixed(1)} L ${x.toFixed(1)},${y.toFixed(1)}`;
   } else if (dataPoints.length > 1) {
-    const segments = dataPoints.map((val, idx) => {
-      const x = padding.left + (idx / (dataPoints.length - 1)) * (width - padding.left - padding.right);
-      const y = height - padding.bottom - ((val - minVal) / valRange) * (height - padding.top - padding.bottom);
+    const firstTick = chartData.tickNumbers[0];
+    const lastTick = chartData.tickNumbers[chartData.tickNumbers.length - 1];
+    const tickRange = Math.max(1, lastTick - firstTick);
+    const segments = chartData.tickNumbers.map((tick, idx) => {
+      const normalizedTick = (tick - firstTick) / tickRange;
+      const x = padding.left + normalizedTick * (width - padding.left - padding.right);
+      const y = height - padding.bottom - ((dataPoints[idx] - minVal) / valRange) * (height - padding.top - padding.bottom);
       return `${x.toFixed(1)},${y.toFixed(1)}`;
     });
     pathD = `M ${segments.join(' L ')}`;
@@ -168,8 +191,10 @@ export function MetricsChart({ history }: MetricsChartProps) {
 
       <div className="flex-1 relative min-h-[120px]">
         {history.length === 0 ? (
-          <div className="absolute inset-0 flex items-center justify-center text-yc-text-muted font-mono text-[11px]">
-            Awaiting simulation tick metrics...
+          <div className="absolute inset-0 flex flex-col items-center justify-center text-yc-text-muted font-mono text-[11px] gap-2">
+            <Loader2 className="w-5 h-5 text-yc-accent animate-spin" />
+            <span>Awaiting simulation tick metrics...</span>
+            <span className="text-[9px] text-gray-400">First tick arrives ~1s after start</span>
           </div>
         ) : (
           <svg viewBox={`0 0 ${width} ${height}`} className="w-full h-full block">

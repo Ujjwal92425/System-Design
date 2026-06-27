@@ -19,9 +19,15 @@ export function useSimulation(nodes: any[] = [], edges: any[] = []) {
     updateScenario,
     toggleNodeFailure,
     setNodeChaos,
-    resetSimulation
+    resetSimulation,
+    // FIX: Expose health tracking
+    workerError,
+    isPaused,
+    lastTickAt,
+    startupPhase,
   } = useSimulationStore();
 
+  const addEvent = useSimulationStore((s) => s.addEvent);
   const updateGraph = useSimulationStore((s) => s.updateGraph);
 
   // Sync node/edge changes with the worker if simulation is running
@@ -47,6 +53,12 @@ export function useSimulation(nodes: any[] = [], edges: any[] = []) {
     metricsHistory,
     currentMetrics,
     eventsLog,
+    // FIX: Expose health tracking to UI
+    workerError,
+    isPaused,
+    lastTickAt,
+    startupPhase,
+    addEvent,
     start: () => startSimulation(nodes, edges),
     stop: stopSimulation,
     updateTraffic,

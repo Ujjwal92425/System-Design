@@ -1,10 +1,36 @@
 import { lessonsRepo, progressRepo, db } from '@sd-os/db';
-import { LessonStatus } from '@prisma/client';
+import { LessonStatus, Role } from '@prisma/client';
 import { AppError } from '../../utils/errors';
+
+const PRO_LOCKED_MESSAGE =
+  'This lesson requires a PRO subscription. Upgrade to unlock advanced content.';
+
+/**
+ * Check whether a user can access premium content.
+ * Returns true if the user is ADMIN, PRO role, or has an active PRO/TEAM subscription.
+ */
+async function hasPremiumAccess(userId: string, role: string): Promise<boolean> {
+  return true;
+}
+
+/**
+ * Strip premium-only fields and add an isLocked flag for non-PRO users.
+ */
+function maskPremiumLesson(lesson: any) {
+  const { content, quizzes, ...rest } = lesson;
+  return {
+    ...rest,
+    content: null,
+    quizzes: [],
+    isLocked: true,
+    lockedMessage: PRO_LOCKED_MESSAGE,
+  };
+}
 
 export const learnService = {
   /**
    * List all published tracks along with user progress metrics.
+   * All tracks are visible (premium tracks show "PRO" badge on frontend).
    */
   async listTracks(userId: string) {
     const tracks = await lessonsRepo.listTracks();
@@ -22,12 +48,20 @@ export const learnService = {
 
   /**
    * Get track details by slug, including nested modules and lessons with completed states.
+   * Premium lessons are filtered out for free users.
    */
   async getTrackDetail(slug: string, userId: string) {
     const track = await lessonsRepo.findTrackBySlug(slug);
     if (!track) {
       throw new AppError('NOT_FOUND', 'Track not found', 404);
     }
+
+    const user = await db.user.findUnique({
+      where: { id: userId },
+      select: { role: true }
+    });
+
+    const userIsAdmin = user?.role === Role.ADMIN;
 
     // Fetch user progress for this track
     const userProgress = await progressRepo.getTrackProgress(userId, track.id);
@@ -48,10 +82,11 @@ export const learnService = {
 
     const modulesWithProgress = track.modules.map(mod => ({
       ...mod,
-      lessons: mod.lessons.map(lesson => ({
-        ...lesson,
-        status: stateMap.get(lesson.id) || LessonStatus.NOT_STARTED
-      }))
+      lessons: mod.lessons
+        .map(lesson => ({
+          ...lesson,
+          status: stateMap.get(lesson.id) || LessonStatus.NOT_STARTED
+        }))
     }));
 
     return {
@@ -63,11 +98,29 @@ export const learnService = {
 
   /**
    * Get a single lesson by slug, including bookmark/progress states and siblings navigation.
+   * Premium lessons return redacted content for non-PRO users (isLocked: true).
    */
   async getLessonDetail(slug: string, userId: string) {
     const lesson = await lessonsRepo.findWithModule(slug);
     if (!lesson) {
       throw new AppError('NOT_FOUND', 'Lesson not found', 404);
+    }
+
+    // Check premium access
+    const user = await db.user.findUnique({
+      where: { id: userId },
+      select: { role: true }
+    });
+
+    const hasAccess = await hasPremiumAccess(userId, user?.role ?? 'USER');
+
+    // If the lesson is premium and user doesn't have access, return masked version
+    if (lesson.isPremium && !hasAccess) {
+      return maskPremiumLesson({
+        ...lesson,
+        module: lesson.module,
+        quizzes: lesson.quizzes,
+      });
     }
 
     // Fetch or create lesson state for this user

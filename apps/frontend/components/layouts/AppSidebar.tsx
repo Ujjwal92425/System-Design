@@ -14,8 +14,8 @@ import {
   LogOut,
   Sparkles,
   X,
-  ChevronLeft,
-  ChevronRight,
+  PanelLeftClose,
+  PanelLeftOpen,
 } from 'lucide-react';
 
 interface AppSidebarProps {
@@ -60,7 +60,7 @@ export function AppSidebar({ collapsed, onToggleCollapse }: AppSidebarProps) {
   ];
 
   const desktopSidebarContent = (
-    <div className="flex flex-col justify-between h-full">
+    <div className="flex flex-col justify-between flex-1">
       <div className="space-y-6">
         {/* Logo */}
         <Link href="/dashboard" className={`flex items-center ${collapsed ? 'justify-center' : 'space-x-2'} transition-all`}>
@@ -139,33 +139,39 @@ export function AppSidebar({ collapsed, onToggleCollapse }: AppSidebarProps) {
             )}
           </div>
         )}
-
-        {/* Collapse toggle */}
-        <button
-          onClick={onToggleCollapse}
-          className="hidden lg:flex items-center justify-center w-full py-2 rounded-xl text-yc-text-muted hover:text-yc-text hover:bg-yc-bg-card transition-colors"
-          title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
-          aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
-          data-track="sidebar:toggle_collapse"
-        >
-          {collapsed ? <ChevronRight className="w-4 h-4" /> : <ChevronLeft className="w-4 h-4" />}
-        </button>
       </div>
     </div>
   );
 
   return (
     <>
-      {/* Desktop sidebar — collapsible */}
-      <aside
-        className={`app-sidebar-desktop border-r border-yc-border bg-yc-bg h-screen sticky top-0 flex-shrink-0 overflow-y-auto transition-all duration-300 ${
-          collapsed ? 'w-16' : 'w-64'
-        }`}
-      >
-        <div className={`p-3 ${collapsed ? 'px-2' : 'p-4'}`}>
-          {desktopSidebarContent}
-        </div>
-      </aside>
+      {/* Desktop sidebar — collapsible wrapper */}
+      <div className={`relative hidden lg:block flex-shrink-0 transition-all duration-300 ${
+        collapsed ? 'w-16' : 'w-64'
+      }`}>
+        <aside
+          className="app-sidebar-desktop border-r border-yc-border bg-yc-bg h-screen sticky top-0 overflow-y-auto w-full flex flex-col"
+        >
+          <div className={`p-3 ${collapsed ? 'px-2' : 'p-4'} flex-1 flex flex-col`}>
+            {desktopSidebarContent}
+          </div>
+        </aside>
+
+        {/* Sidebar collapse button floating on the sideline (right border) on top */}
+        <button
+          onClick={onToggleCollapse}
+          className="absolute top-5 -right-3 z-50 flex items-center justify-center w-6 h-6 rounded-full border border-yc-border bg-yc-bg text-yc-text-muted hover:text-yc-text hover:bg-yc-bg-card shadow-sm transition-all duration-200 cursor-pointer"
+          title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+          aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+          data-track="sidebar:toggle_collapse"
+        >
+          {collapsed ? (
+            <PanelLeftOpen className="w-3.5 h-3.5" />
+          ) : (
+            <PanelLeftClose className="w-3.5 h-3.5" />
+          )}
+        </button>
+      </div>
 
       {/* Mobile overlay */}
       {mobileOpen && (
