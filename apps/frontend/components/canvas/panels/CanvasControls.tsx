@@ -14,17 +14,21 @@ interface CanvasControlsProps {
   onToggleGrid: () => void;
   isLocked: boolean;
   onToggleLock: () => void;
+  isRightPanelOpen?: boolean;
 }
 
 export function CanvasControls({
   zoom, onZoomIn, onZoomOut, onFitView, onReset,
   showMiniMap, onToggleMiniMap, showGrid, onToggleGrid, isLocked, onToggleLock,
+  isRightPanelOpen,
 }: CanvasControlsProps) {
   const btnClass = "w-8 h-8 flex items-center justify-center text-gray-500 hover:text-orange-600 hover:bg-orange-50 transition-colors border-r border-gray-200 last:border-r-0 first:rounded-l-lg last:rounded-r-lg";
   const btnClassActive = "w-8 h-8 flex items-center justify-center text-orange-600 bg-orange-50 hover:bg-orange-100 transition-colors border-r border-gray-200 last:border-r-0";
 
   return (
-    <div className="absolute bottom-4 right-4 z-20 flex items-center bg-white border border-gray-200 rounded-lg shadow-md">
+    <div className={`absolute bottom-4 z-20 flex items-center bg-white border border-gray-200 rounded-lg shadow-md transition-all duration-300 ${
+      isRightPanelOpen ? 'right-[304px] lg:right-4' : 'right-4'
+    }`}>
       <button onClick={onZoomOut} className={btnClass} title="Zoom Out">
         <ZoomOut className="w-4 h-4" />
       </button>

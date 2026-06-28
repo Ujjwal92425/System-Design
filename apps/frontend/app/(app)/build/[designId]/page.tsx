@@ -64,10 +64,6 @@ function createReactFlowEdge(ce: CanvasEdge): Edge {
   };
 }
 
-const MIN_SIM_HEIGHT = 250;
-const MAX_SIM_HEIGHT = 600;
-const DEFAULT_SIM_HEIGHT = 360;
-
 export default function CanvasWorkspace({ params }: { params: Promise<{ designId: string }> }) {
   const { designId } = use(params);
   const router = useRouter();
@@ -95,7 +91,6 @@ export default function CanvasWorkspace({ params }: { params: Promise<{ designId
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(true);
-  const [simHeight, setSimHeight] = useState(DEFAULT_SIM_HEIGHT);
   const [rightPanel, setRightPanel] = useState<'inspector' | 'latency' | 'ai-review' | null>('inspector');
 
   const simulation = useSimulation(nodes, edges);
@@ -268,7 +263,12 @@ export default function CanvasWorkspace({ params }: { params: Promise<{ designId
       selected: n.selected,
     }));
     setNodes(canvasNodes);
-  }, [setNodes]);
+
+    const hasSelected = canvasNodes.some((n) => n.selected);
+    if (hasSelected && rightPanel !== 'inspector') {
+      setRightPanel('inspector');
+    }
+  }, [setNodes, rightPanel, setRightPanel]);
 
   const handleRFEdgesChange = useCallback((updatedEdges: Edge[]) => {
     const canvasEdges: CanvasEdge[] = updatedEdges.map((e) => ({
@@ -595,6 +595,7 @@ export default function CanvasWorkspace({ params }: { params: Promise<{ designId
               onEditLabel={handleRFEditLabel}
               onExportImage={handleExportImage}
               onAddStickyNote={handleAddStickyNote}
+              isRightPanelOpen={!!rightPanel}
               simulation={{
                 isRunning: simulation.isRunning,
                 currentMetrics: simulation.currentMetrics,
@@ -604,21 +605,16 @@ export default function CanvasWorkspace({ params }: { params: Promise<{ designId
             />
           </div>
 
-          {/* Simulation panel: resizable via height prop */}
           <SimulationPanel
             nodes={nodes}
             edges={edges}
             simulation={simulation}
-            height={simHeight}
-            onResize={setSimHeight}
-            minHeight={MIN_SIM_HEIGHT}
-            maxHeight={MAX_SIM_HEIGHT}
           />
         </div>
 
         {/* Right Panels — overlay on mobile, sidebar on desktop */}
         {rightPanel && (
-          <aside className="fixed lg:static right-0 top-12 bottom-0 z-30 w-72 border-l border-yc-border bg-white flex-col overflow-y-auto shadow-xl lg:shadow-none lg:flex">
+          <aside className="fixed lg:static right-0 top-12 bottom-0 z-30 w-full sm:w-80 lg:w-72 border-l border-yc-border bg-white flex flex-col overflow-y-auto shadow-xl lg:shadow-none">
             <div className="flex items-center border-b border-yc-border flex-shrink-0">
               <div className="flex-1" />
               <div className="flex items-center gap-0.5">
@@ -655,7 +651,13 @@ export default function CanvasWorkspace({ params }: { params: Promise<{ designId
                 <X className="w-3.5 h-3.5" />
               </button>
             </div>
-            {rightPanel === 'inspector' && <InspectorPanel />}
+            {rightPanel === 'inspector' && (
+              <InspectorPanel
+                liveMetrics={simulation?.currentMetrics?.nodes?.find(
+                  (m: any) => m.id === nodes.find((n) => n.selected)?.id
+                )}
+              />
+            )}
             {rightPanel === 'latency' && <LatencyBudgetPanel nodes={nodes} edges={edges} />}
             {rightPanel === 'ai-review' && <AIReviewPanel nodes={nodes} edges={edges} />}
           </aside>

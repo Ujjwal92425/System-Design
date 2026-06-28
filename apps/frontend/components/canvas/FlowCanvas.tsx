@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useRef, useState, useEffect, useMemo } from 'react';
+import { useCallback, useRef, useState, useEffect } from 'react';
 import { toPng } from 'html-to-image';
 import {
   ReactFlow,
@@ -33,7 +33,7 @@ import FlowEdge from './edges/FlowEdge';
 import { CanvasControls } from './panels/CanvasControls';
 import { ContextMenu } from './panels/ContextMenu';
 import { useAutoLayout } from '@/features/canvas/useAutoLayout';
-import { PacketFlowOverlay } from '../simulation/PacketFlowOverlay';
+import { useCanvasStore } from '@/features/canvas/useCanvasStore';
 
 const nodeTypes: NodeTypes = { architectureNode: NodeWithHandles, noteNode: NoteNode, groupNode: GroupNode };
 const edgeTypes: EdgeTypes = { architectureEdge: FlowEdge };
@@ -51,6 +51,7 @@ interface FlowCanvasProps {
   onEdgeLabelChange: (edgeId: string, label: string) => void;
   onExportImage?: (dataUrl: string) => void;
   onAddStickyNote?: () => void;
+  isRightPanelOpen?: boolean;
   simulation?: {
     isRunning: boolean;
     currentMetrics: any;
@@ -71,6 +72,7 @@ function FlowCanvasInner({
   onEditLabel,
   onEdgeLabelChange,
   onExportImage,
+  isRightPanelOpen,
   simulation,
 }: FlowCanvasProps) {
   const reactFlowInstance = useReactFlow();
@@ -82,10 +84,7 @@ function FlowCanvasInner({
   const [showMiniMap, setShowMiniMap] = useState(false);
   const [showGrid, setShowGrid] = useState(true);
   const [isLocked, setIsLocked] = useState(false);
-  const [viewport, setViewport] = useState({ x: 0, y: 0, zoom: 1 });
   const syncVersionRef = useRef(0);
-
-  useOnViewportChange({ onChange: (vp) => setViewport(vp) });
 
   useEffect(() => {
     syncVersionRef.current++;
@@ -262,41 +261,8 @@ function FlowCanvasInner({
     return () => window.removeEventListener('keydown', handler);
   }, [nodes, setNodes, reactFlowInstance, onNodesChange]);
 
-  const packetEdges = useMemo(() => {
-    if (!simulation?.isRunning || !simulation?.currentMetrics) return [];
-    return edges
-      .filter((e) => {
-        const sourceNode = nodes.find((n) => n.id === e.source);
-        const targetNode = nodes.find((n) => n.id === e.target);
-        return sourceNode && targetNode;
-      })
-      .map((e) => {
-        const sourceNode = nodes.find((n) => n.id === e.source)!;
-        const targetNode = nodes.find((n) => n.id === e.target)!;
-        const sx = (sourceNode.position.x + (sourceNode.width || 160) / 2) * viewport.zoom + viewport.x;
-        const sy = (sourceNode.position.y + (sourceNode.height || 60) / 2) * viewport.zoom + viewport.y;
-        const tx = (targetNode.position.x + (targetNode.width || 160) / 2) * viewport.zoom + viewport.x;
-        const ty = (targetNode.position.y + (targetNode.height || 60) / 2) * viewport.zoom + viewport.y;
-        const metrics = simulation.currentMetrics?.nodes?.find((m: any) => m.id === e.source);
-        return {
-          id: e.id,
-          source: { x: sx, y: sy },
-          target: { x: tx, y: ty },
-          sourcePosition: e.sourceHandle?.replace('-handle', ''),
-          targetPosition: e.targetHandle?.replace('-handle', ''),
-          qps: metrics?.qps || 0,
-          errorRate: metrics?.errorRate || 0,
-        };
-      });
-  }, [edges, nodes, simulation, viewport]);
-
   return (
     <div className="w-full h-full relative overflow-hidden">
-      <PacketFlowOverlay
-        edges={packetEdges}
-        isRunning={Boolean(simulation?.isRunning)}
-        qps={simulation?.currentMetrics?.inputQps || 0}
-      />
       <ReactFlow
         nodes={nodes.map((n) => ({
           ...n,
@@ -313,6 +279,7 @@ function FlowCanvasInner({
             ...e.data,
             isSimulating: simulation?.isRunning,
             errorRate: simulation?.currentMetrics?.nodes?.find((m: any) => m.id === e.source)?.errorRate,
+            qps: simulation?.currentMetrics?.nodes?.find((m: any) => m.id === e.source)?.qps || 0,
             onLabelChange: onEdgeLabelChange,
           },
         }))}
@@ -387,6 +354,7 @@ function FlowCanvasInner({
         onToggleGrid={() => setShowGrid((v) => !v)}
         isLocked={isLocked}
         onToggleLock={() => setIsLocked((v) => !v)}
+        isRightPanelOpen={isRightPanelOpen}
       />
 
       {contextMenu && (

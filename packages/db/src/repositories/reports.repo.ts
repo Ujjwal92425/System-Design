@@ -26,4 +26,8 @@ export const reportsRepo = {
   async countPending() {
     return db.report.count({ where: { status: 'pending' } });
   },
+
+  async countPendingForBlueprint(blueprintId: string) {
+    return db.report.count({ where: { blueprintId, status: 'pending' } });
+  },
 };

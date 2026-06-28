@@ -100,6 +100,15 @@ export const AdminImportUsersBody = z.object({
 
 // ── Blueprint moderation schemas ──────────────────────────────────────────────
 
+export const AdminCreateBlueprintBody = z.object({
+  designId:    z.string().cuid(),
+  title:       z.string().min(2).max(120),
+  description: z.string().min(10).max(2000),
+  tags:        z.array(z.string()).max(10).default([]),
+  mediaUrls:   z.array(z.string().url()).max(5).optional(),
+  authorId:    z.string().cuid().optional(), // defaults to admin's own id
+});
+
 export const FeatureBlueprintBody = z.object({
   featured: z.boolean(),
 });

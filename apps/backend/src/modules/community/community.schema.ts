@@ -1,10 +1,16 @@
 import { z } from 'zod';
 
+export const UploadMediaSchema = z.object({
+  contentType: z.enum(['image/png', 'image/jpeg', 'image/webp']),
+  fileSize: z.number().max(5 * 1024 * 1024),
+});
+
 export const CreateBlueprintBody = z.object({
   designId: z.string().cuid(),
   title: z.string().min(2).max(120),
   description: z.string().min(10).max(2000),
   tags: z.array(z.string()).max(10).default([]),
+  mediaUrls: z.array(z.string().url()).max(5).optional(),
 });
 
 export const UpdateBlueprintBody = z.object({

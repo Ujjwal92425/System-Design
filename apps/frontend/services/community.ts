@@ -14,6 +14,7 @@ export interface CreateBlueprintData {
   title: string;
   description: string;
   tags: string[];
+  mediaUrls?: string[];
 }
 
 export interface UpdateBlueprintData {
@@ -40,6 +41,12 @@ export interface UpdateCollectionData {
 }
 
 export const communityService = {
+  // ── Media Upload ──────────────────────────────────────────────────────────
+  async getUploadUrl(contentType: string, fileSize: number) {
+    const res = await api.post('/community/upload-url', { contentType, fileSize });
+    return res.data.data;
+  },
+
   // ── Blueprints ──────────────────────────────────────────────────────────
   async listBlueprints(query: BlueprintQuery = {}) {
     const params = new URLSearchParams();

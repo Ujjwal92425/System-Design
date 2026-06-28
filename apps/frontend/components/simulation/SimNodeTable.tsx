@@ -59,7 +59,7 @@ export function SimNodeTable({ nodes, chaosModes = {} }: SimNodeTableProps) {
     <div className="border border-yc-border rounded-lg overflow-hidden">
       <div className="max-h-48 overflow-y-auto">
         <table className="w-full text-[10px] font-mono">
-          <thead className="bg-yc-bg-card sticky top-0 z-10">
+          <thead className="bg-gray-50 sticky top-0 z-10">
             <tr>
               {cols.map((c) => (
                 <th key={c.key} className="text-left px-2.5 py-1.5 text-yc-text-muted font-bold">
@@ -82,7 +82,7 @@ export function SimNodeTable({ nodes, chaosModes = {} }: SimNodeTableProps) {
               const isFailed = chaos === 'KILL' || n.errorRate > 50;
               const isWarn = !isFailed && (chaos || n.errorRate > 10 || n.latency > 150);
               return (
-                <tr key={n.id} className="border-t border-yc-border/50 hover:bg-yc-bg-card/50">
+                <tr key={n.id} className="border-t border-yc-border/50 hover:bg-gray-50">
                   <td className="px-2.5 py-1.5 text-yc-text font-semibold truncate max-w-[120px]">{n.label}</td>
                   <td className="px-2.5 py-1.5">{n.qps.toLocaleString()}</td>
                   <td className={`px-2.5 py-1.5 ${n.latency > 200 ? 'text-red-500' : n.latency > 100 ? 'text-amber-500' : ''}`}>

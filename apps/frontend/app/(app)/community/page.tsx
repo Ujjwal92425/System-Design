@@ -8,6 +8,7 @@ import { Loader2, Compass } from 'lucide-react';
 
 interface Blueprint {
   id: string; title: string; description: string; tags: string[];
+  mediaUrls?: string[];
   voteCount: number; forkCount: number; viewCount: number;
   publishedAt: string; isFeatured: boolean;
   _count: { comments: number };
@@ -72,7 +73,7 @@ export default function CommunityBlueprints() {
         </div>
       ) : (
         <>
-          <div className="grid gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-5">
             {blueprints.map((bp) => (
               <BlueprintCard
                 key={bp.id}
@@ -80,6 +81,7 @@ export default function CommunityBlueprints() {
                 title={bp.title}
                 description={bp.description}
                 tags={bp.tags}
+                mediaUrls={bp.mediaUrls}
                 voteCount={bp.voteCount}
                 forkCount={bp.forkCount}
                 viewCount={bp.viewCount}

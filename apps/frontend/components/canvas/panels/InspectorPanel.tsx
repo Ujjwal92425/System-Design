@@ -292,7 +292,7 @@ function FieldInput({ field, value, onChange }: { field: FieldDef; value: any; o
         type="text"
         value={value ?? ''}
         onChange={(e) => onChange(field.key, e.target.value)}
-        className="w-full rounded-md border border-slate-200 px-2 py-1.5 text-xs text-slate-700 focus:border-blue-400 focus:outline-none focus:ring-1 focus:ring-blue-200"
+        className="w-full rounded-md border border-yc-border bg-yc-bg px-2 py-1.5 text-xs text-yc-text focus:border-yc-accent focus:outline-none focus:ring-1 focus:ring-yc-accent/20"
       />
     );
   }
@@ -303,9 +303,9 @@ function FieldInput({ field, value, onChange }: { field: FieldDef; value: any; o
           type="number"
           value={value ?? ''}
           onChange={(e) => onChange(field.key, Number(e.target.value))}
-          className="flex-1 rounded-md border border-slate-200 px-2 py-1.5 text-xs text-slate-700 focus:border-blue-400 focus:outline-none focus:ring-1 focus:ring-blue-200"
+          className="flex-1 rounded-md border border-yc-border bg-yc-bg px-2 py-1.5 text-xs text-yc-text focus:border-yc-accent focus:outline-none focus:ring-1 focus:ring-yc-accent/20"
         />
-        {field.suffix && <span className="text-[10px] text-slate-400 font-mono">{field.suffix}</span>}
+        {field.suffix && <span className="text-[10px] text-yc-text-muted font-mono">{field.suffix}</span>}
       </div>
     );
   }
@@ -316,9 +316,9 @@ function FieldInput({ field, value, onChange }: { field: FieldDef; value: any; o
           type="checkbox"
           checked={!!value}
           onChange={(e) => onChange(field.key, e.target.checked)}
-          className="rounded border-slate-300 text-blue-600 focus:ring-blue-200"
+          className="rounded border-yc-border text-yc-accent focus:ring-yc-accent/20 bg-yc-bg"
         />
-        <span className="text-xs text-slate-600">Enabled</span>
+        <span className="text-xs text-yc-text">Enabled</span>
       </label>
     );
   }
@@ -327,7 +327,7 @@ function FieldInput({ field, value, onChange }: { field: FieldDef; value: any; o
       <select
         value={value ?? field.options[0]?.value ?? ''}
         onChange={(e) => onChange(field.key, e.target.value)}
-        className="w-full rounded-md border border-slate-200 px-2 py-1.5 text-xs text-slate-700 focus:border-blue-400 focus:outline-none focus:ring-1 focus:ring-blue-200 bg-white"
+        className="w-full rounded-md border border-yc-border bg-yc-bg px-2 py-1.5 text-xs text-yc-text focus:border-yc-accent focus:outline-none focus:ring-1 focus:ring-yc-accent/20"
       >
         {field.options.map((opt) => (
           <option key={opt.value} value={opt.value}>{opt.label}</option>
@@ -346,9 +346,9 @@ function FieldInput({ field, value, onChange }: { field: FieldDef; value: any; o
           step={field.step ?? 1}
           value={numVal}
           onChange={(e) => onChange(field.key, Number(e.target.value))}
-          className="flex-1 h-1.5 accent-blue-600"
+          className="flex-1 h-1.5 accent-yc-accent"
         />
-        <span className="text-[10px] font-mono text-slate-500 min-w-[4ch] text-right">
+        <span className="text-[10px] font-mono text-yc-text-muted min-w-[4ch] text-right">
           {numVal}{field.suffix ?? ''}
         </span>
       </div>
@@ -357,9 +357,10 @@ function FieldInput({ field, value, onChange }: { field: FieldDef; value: any; o
   return null;
 }
 
-export function InspectorPanel() {
+export function InspectorPanel({ liveMetrics }: { liveMetrics?: any }) {
   const { nodes, setNodes } = useCanvasStore();
   const selectedNode = useMemo(() => nodes.find((n) => n.selected), [nodes]);
+  const activeNode = selectedNode;
 
   const updateField = useCallback(
     (key: string, value: string | number | boolean) => {
@@ -375,29 +376,29 @@ export function InspectorPanel() {
     [selectedNode, nodes, setNodes],
   );
 
-  if (!selectedNode) {
+  if (!activeNode) {
     return (
-      <div className="flex w-64 flex-col border-l border-slate-200 bg-white">
-        <div className="flex items-center gap-2 border-b border-slate-100 px-4 py-3">
-          <Settings2 className="h-4 w-4 text-slate-400" />
-          <h2 className="text-sm font-semibold text-slate-400">Properties</h2>
+      <div className="flex w-full h-full flex-col bg-yc-bg-alt">
+        <div className="flex items-center gap-2 border-b border-yc-border px-4 py-3 bg-yc-bg-card">
+          <Settings2 className="h-4 w-4 text-yc-text-muted" />
+          <h2 className="text-sm font-semibold text-yc-text-muted">Properties</h2>
         </div>
-        <div className="flex flex-1 items-center justify-center px-4 text-center text-xs text-slate-400">
+        <div className="flex flex-1 items-center justify-center px-4 text-center text-xs text-yc-text-muted">
           Select a node on the canvas to inspect its properties
         </div>
       </div>
     );
   }
 
-  const fields = FIELD_CONFIGS[selectedNode.type] || FIELD_CONFIGS[selectedNode.data?.nodeType] || DEFAULT_FIELDS;
+  const fields = FIELD_CONFIGS[activeNode.type] || FIELD_CONFIGS[activeNode.data?.nodeType] || DEFAULT_FIELDS;
 
   return (
-    <div className="flex w-64 flex-col border-l border-slate-200 bg-white">
+    <div className="flex w-full h-full flex-col bg-yc-bg-alt">
       {/* Header */}
-      <div className="flex items-center gap-2 border-b border-slate-100 px-4 py-3">
-        {ICON_MAP[selectedNode.type] || <Settings2 className="h-4 w-4 text-slate-400" />}
-        <h2 className="text-sm font-semibold text-slate-800">
-          {selectedNode.data?.label || selectedNode.type.replace(/_/g, ' ')}
+      <div className="flex items-center gap-2 border-b border-yc-border px-4 py-3 bg-yc-bg-card">
+        {ICON_MAP[activeNode.type] || <Settings2 className="h-4 w-4 text-yc-text-muted" />}
+        <h2 className="text-sm font-semibold text-yc-text">
+          {activeNode.data?.label || activeNode.type.replace(/_/g, ' ')}
         </h2>
       </div>
 
@@ -406,12 +407,12 @@ export function InspectorPanel() {
         <div className="space-y-3">
           {fields.map((field) => (
             <div key={field.key}>
-              <label className="mb-1 block text-[11px] font-medium text-slate-500">
+              <label className="mb-1 block text-[11px] font-medium text-yc-text-muted">
                 {field.label}
               </label>
               <FieldInput
                 field={field}
-                value={selectedNode.data?.[field.key]}
+                value={activeNode.data?.[field.key]}
                 onChange={updateField}
               />
             </div>
@@ -419,36 +420,36 @@ export function InspectorPanel() {
         </div>
 
         {/* Simulation metrics overlay when running */}
-        {selectedNode.data?.qps !== undefined && (
-          <div className="mt-6 border-t border-slate-100 pt-3">
-            <h3 className="mb-2 text-[10px] font-semibold uppercase tracking-wider text-slate-400">
+        {liveMetrics && (
+          <div className="mt-6 border-t border-yc-border pt-3">
+            <h3 className="mb-2 text-[10px] font-semibold uppercase tracking-wider text-yc-accent">
               Simulation Live
             </h3>
-            <dl className="space-y-1 text-[11px] text-slate-500">
-              {selectedNode.data.qps !== undefined && (
+            <dl className="space-y-1 text-[11px] text-yc-text-muted">
+              {liveMetrics.qps !== undefined && (
                 <div className="flex justify-between">
                   <dt>Current QPS</dt>
-                  <dd className="font-mono text-slate-700">{Number(selectedNode.data.qps).toLocaleString()}</dd>
+                  <dd className="font-mono text-yc-text">{Number(liveMetrics.qps).toLocaleString()}</dd>
                 </div>
               )}
-              {selectedNode.data.errorRate !== undefined && (
+              {liveMetrics.errorRate !== undefined && (
                 <div className="flex justify-between">
                   <dt>Error Rate</dt>
-                  <dd className={cn("font-mono", (selectedNode.data.errorRate as number) > 30 ? "text-red-600" : "text-slate-700")}>
-                    {selectedNode.data.errorRate}%
+                  <dd className={cn("font-mono", (liveMetrics.errorRate as number) > 30 ? "text-red-600" : "text-yc-text")}>
+                    {liveMetrics.errorRate}%
                   </dd>
                 </div>
               )}
-              {selectedNode.data.cpu !== undefined && (
+              {liveMetrics.cpu !== undefined && (
                 <div className="flex justify-between">
                   <dt>CPU Util</dt>
-                  <dd className="font-mono text-slate-700">{selectedNode.data.cpu}%</dd>
+                  <dd className="font-mono text-yc-text">{liveMetrics.cpu}%</dd>
                 </div>
               )}
-              {selectedNode.data.queueDepth !== undefined && selectedNode.data.queueDepth > 0 && (
+              {liveMetrics.queueDepth !== undefined && liveMetrics.queueDepth > 0 && (
                 <div className="flex justify-between">
                   <dt>Queue Depth</dt>
-                  <dd className="font-mono text-amber-600">{selectedNode.data.queueDepth}</dd>
+                  <dd className="font-mono text-amber-600">{liveMetrics.queueDepth}</dd>
                 </div>
               )}
             </dl>
@@ -456,23 +457,23 @@ export function InspectorPanel() {
         )}
 
         {/* Node metadata */}
-        <div className="mt-6 border-t border-slate-100 pt-3">
-          <h3 className="mb-2 text-[10px] font-semibold uppercase tracking-wider text-slate-400">
+        <div className="mt-6 border-t border-yc-border pt-3">
+          <h3 className="mb-2 text-[10px] font-semibold uppercase tracking-wider text-yc-text-muted">
             Info
           </h3>
-          <dl className="space-y-1 text-[11px] text-slate-500">
+          <dl className="space-y-1 text-[11px] text-yc-text-muted">
             <div className="flex justify-between">
               <dt>Type</dt>
-              <dd className="font-mono text-slate-700">{selectedNode.type}</dd>
+              <dd className="font-mono text-yc-text">{activeNode.type}</dd>
             </div>
             <div className="flex justify-between">
               <dt>ID</dt>
-              <dd className="font-mono text-slate-700 max-w-[120px] truncate">{selectedNode.id}</dd>
+              <dd className="font-mono text-yc-text max-w-[120px] truncate">{activeNode.id}</dd>
             </div>
             <div className="flex justify-between">
               <dt>Position</dt>
-              <dd className="font-mono text-slate-700">
-                ({Math.round(selectedNode.position.x)}, {Math.round(selectedNode.position.y)})
+              <dd className="font-mono text-yc-text">
+                ({Math.round(activeNode.position.x)}, {Math.round(activeNode.position.y)})
               </dd>
             </div>
           </dl>

@@ -71,10 +71,16 @@ export function MetricsChart({ history }: MetricsChartProps) {
   // Returns { values: number[], tickNumbers: number[] }.
   const chartData = useMemo(() => {
     if (history.length === 0) return { values: [], tickNumbers: [] };
+    
+    // De-duplicate ticks and sort ascending
+    const uniqueHistory = history
+      .filter((snapshot, idx, self) => self.findIndex((s) => s.tick === snapshot.tick) === idx)
+      .sort((a, b) => (a.tick ?? 0) - (b.tick ?? 0));
+
     const values: number[] = [];
     const tickNumbers: number[] = [];
-    for (let i = 0; i < history.length; i++) {
-      const snapshot = history[i];
+    for (let i = 0; i < uniqueHistory.length; i++) {
+      const snapshot = uniqueHistory[i];
       let val: number;
       if (selectedNodeId) {
         const node = snapshot.nodes.find((n: any) => n.id === selectedNodeId);
@@ -110,13 +116,9 @@ export function MetricsChart({ history }: MetricsChartProps) {
   const valRange = maxVal - minVal || 1;
 
   const width = 540;
-  const height = 160;
-  const padding = { top: 15, right: 15, bottom: 25, left: 52 };
+  const height = 100;
+  const padding = { top: 10, right: 15, bottom: 20, left: 52 };
 
-  // FIX: Generate path using tick numbers for x-position.
-  // When ticks are sequential (tick[i] = tick[i-1] + 1), this matches
-  // the old behavior. When ticks are missing (gaps), the chart accurately
-  // shows the gap rather than compressing points together.
   let pathD = '';
   if (dataPoints.length === 1) {
     const val = dataPoints[0];
@@ -144,10 +146,10 @@ export function MetricsChart({ history }: MetricsChartProps) {
   });
 
   return (
-    <div className="bg-yc-bg-alt border border-yc-border rounded-xl p-5 flex flex-col gap-3.5 h-full">
+    <div className="bg-white border border-yc-border rounded-xl p-4 flex flex-col gap-2.5 h-[170px] w-full">
       <div className="flex justify-between items-center">
         <div>
-          <h4 className="text-sm text-yc-text m-0 font-bold flex items-center gap-1.5">
+          <h4 className="text-xs text-yc-text m-0 font-bold flex items-center gap-1.5">
             {activeMetric === 'qps' ? (
               <TrendingUp className="w-3.5 h-3.5 text-yc-accent" />
             ) : (
@@ -155,7 +157,7 @@ export function MetricsChart({ history }: MetricsChartProps) {
             )}
             <span>System Telemetry Chart</span>
           </h4>
-          <p className="mt-0.5 text-[11px] text-yc-text-muted">
+          <p className="mt-0.5 text-[10px] text-yc-text-muted">
             Real-time rolling charts for request throughput and performance.
           </p>
         </div>
@@ -164,21 +166,21 @@ export function MetricsChart({ history }: MetricsChartProps) {
           <select
             value={selectedNodeId}
             onChange={(e) => setSelectedNodeId(e.target.value)}
-            className="text-[9px] font-mono bg-yc-bg-card border border-yc-border rounded px-1.5 py-1 text-yc-text-muted focus:outline-none"
+            className="text-[9px] font-mono bg-white border border-yc-border rounded px-1.5 py-1 text-yc-text-muted focus:outline-none"
           >
             <option value="">All Nodes (Aggregate)</option>
             {nodeOptions.map((n) => (
               <option key={n.id} value={n.id}>{n.label}</option>
             ))}
           </select>
-          <div className="flex bg-yc-bg-card border border-yc-border rounded-md p-0.5">
+          <div className="flex bg-white border border-yc-border rounded-md p-0.5">
             {(['qps', 'latency', 'errorRate', 'queueDepth'] as const).map((m) => (
               <button
                 key={m}
                 onClick={() => setActiveMetric(m)}
                 className={`font-mono px-2 py-1 border-none rounded text-[9px] font-bold cursor-pointer transition-colors ${
                   activeMetric === m
-                    ? 'bg-yc-bg-alt text-yc-accent'
+                    ? 'bg-yc-accent/10 text-yc-accent'
                     : 'bg-transparent text-yc-text-muted'
                 }`}
               >
@@ -189,12 +191,11 @@ export function MetricsChart({ history }: MetricsChartProps) {
         </div>
       </div>
 
-      <div className="flex-1 relative min-h-[120px]">
+      <div className="flex-1 relative min-h-0">
         {history.length === 0 ? (
-          <div className="absolute inset-0 flex flex-col items-center justify-center text-yc-text-muted font-mono text-[11px] gap-2">
-            <Loader2 className="w-5 h-5 text-yc-accent animate-spin" />
+          <div className="absolute inset-0 flex flex-col items-center justify-center text-yc-text-muted font-mono text-[10px] gap-1">
+            <Loader2 className="w-4 h-4 text-yc-accent animate-spin" />
             <span>Awaiting simulation tick metrics...</span>
-            <span className="text-[9px] text-gray-400">First tick arrives ~1s after start</span>
           </div>
         ) : (
           <svg viewBox={`0 0 ${width} ${height}`} className="w-full h-full block">
@@ -205,15 +206,15 @@ export function MetricsChart({ history }: MetricsChartProps) {
                   y1={tick.y}
                   x2={width - padding.right}
                   y2={tick.y}
-                  stroke="#E5E2D9"
+                  stroke="#F3F1EB"
                   strokeWidth="1"
                   strokeDasharray="4 4"
                 />
                 <text
                   x={padding.left - 8}
-                  y={tick.y + 4}
+                  y={tick.y + 3}
                   fill="#666666"
-                  fontSize="9"
+                  fontSize="8"
                   fontFamily="monospace"
                   textAnchor="end"
                 >
@@ -228,7 +229,7 @@ export function MetricsChart({ history }: MetricsChartProps) {
                   d={pathD}
                   fill="none"
                   stroke="rgba(255,102,0,0.15)"
-                  strokeWidth="6"
+                  strokeWidth="5"
                   strokeLinecap="round"
                   strokeLinejoin="round"
                 />
@@ -245,7 +246,7 @@ export function MetricsChart({ history }: MetricsChartProps) {
                     cx={
                       dataPoints.length === 1
                         ? padding.left + (width - padding.left - padding.right) / 2
-                        : padding.left + ((dataPoints.length - 1) / (dataPoints.length - 1)) * (width - padding.left - padding.right)
+                        : padding.left + (width - padding.left - padding.right)
                     }
                     cy={height - padding.bottom - ((dataPoints[dataPoints.length - 1] - minVal) / valRange) * (height - padding.top - padding.bottom)}
                     r="3"
@@ -257,9 +258,9 @@ export function MetricsChart({ history }: MetricsChartProps) {
 
             <text
               x={padding.left}
-              y={height - 6}
+              y={height - 4}
               fill="#666666"
-              fontSize="9"
+              fontSize="8"
               fontFamily="monospace"
               textAnchor="start"
             >
@@ -267,9 +268,9 @@ export function MetricsChart({ history }: MetricsChartProps) {
             </text>
             <text
               x={width - padding.right}
-              y={height - 6}
+              y={height - 4}
               fill="#666666"
-              fontSize="9"
+              fontSize="8"
               fontFamily="monospace"
               textAnchor="end"
             >

@@ -131,6 +131,14 @@ export const adminService = {
     return res.data.data;
   },
 
+  async createBlueprint(data: {
+    designId: string; title: string; description: string; tags?: string[];
+    mediaUrls?: string[]; authorId?: string;
+  }) {
+    const res = await api.post('/admin/blueprints', data);
+    return res.data.data;
+  },
+
   async featureBlueprint(id: string, featured: boolean) {
     const res = await api.patch(`/admin/blueprints/${id}/feature`, { featured });
     return res.data.data;
@@ -141,6 +149,11 @@ export const adminService = {
     return res.data.data;
   },
 
+  async hardDeleteBlueprint(id: string) {
+    const res = await api.delete(`/admin/blueprints/${id}/hard`);
+    return res.data.data;
+  },
+
   async listPendingReports() {
     const res = await api.get('/admin/reports');
     return res.data.data;
@@ -148,6 +161,17 @@ export const adminService = {
 
   async reviewReport(id: string, status: string) {
     const res = await api.patch(`/admin/reports/${id}/review`, { status });
+    return res.data.data;
+  },
+
+  // ── Comment moderation ─────────────────────────────────────────────────
+  async listCommentsForBlueprint(blueprintId: string) {
+    const res = await api.get(`/admin/blueprints/${blueprintId}/comments`);
+    return res.data.data;
+  },
+
+  async deleteComment(id: string) {
+    const res = await api.delete(`/admin/comments/${id}`);
     return res.data.data;
   },
 };

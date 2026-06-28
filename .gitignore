@@ -1,24 +1,58 @@
-node_modules
-.next
-dist
-.turbo
+# Packages & Build Outputs
+node_modules/
+.next/
+dist/
+.turbo/
+.vercel/
+.serverless/
+.serverless_nextjs/
+
+# Local Environment Files
 .env
 .env.local
 .env.development.local
 .env.test.local
 .env.production.local
+
+# Logs
+*.log
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
 .pnpm-debug.log*
-coverage
-.nyc_output
-.docusaurus
-.serverless
-.serverless_nextjs
-.vercel
+logs/
+
+# Testing, Coverage & Diagnostics
+coverage/
+.nyc_output/
+.eslintcache
+.stylelintcache
+
+# IDEs & Code Editors
+.vscode/
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.swp
+
+# OS System Files
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Local Databases
+*.db
+*.db-journal
+*.sqlite
 
 # Documentation
 docs/
+.docusaurus/
+
+# Temporary Files
+.tmp/
+.temp/
 

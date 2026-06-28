@@ -35,6 +35,7 @@ interface CanvasState {
   lastSavedAt: Date | null;
   past: HistoryEntry[];
   future: HistoryEntry[];
+  hoveredNodeId: string | null;
 
   init: (nodes: CanvasNode[], edges: CanvasEdge[]) => void;
   setNodes: (nodes: CanvasNode[]) => void;
@@ -50,6 +51,7 @@ interface CanvasState {
   undo: () => void;
   redo: () => void;
   markSaved: () => void;
+  setHoveredNodeId: (id: string | null) => void;
 }
 
 const MAX_HISTORY = 50;
@@ -68,6 +70,7 @@ export const useCanvasStore = create<CanvasState>()(
       lastSavedAt: null,
       past: [],
       future: [],
+      hoveredNodeId: null,
 
       init(nodes, edges) {
         set({ nodes, edges, dirty: false, past: [], future: [] });
@@ -242,6 +245,7 @@ export const useCanvasStore = create<CanvasState>()(
       markSaved() {
         set({ dirty: false, lastSavedAt: new Date() });
       },
+      setHoveredNodeId: (id) => set({ hoveredNodeId: id }),
     }),
     { name: 'CanvasStore' }
   )

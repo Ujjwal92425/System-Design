@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { authorize } from '../../middleware/authorize';
 import { validate } from '../../middleware/validate';
+import { rateLimit } from '../../middleware/rateLimit';
 import { success } from '../../utils/response';
 import { AuthRequest } from '../../middleware/authenticate';
 import { communityService } from './community.service';
@@ -9,9 +10,23 @@ import {
   CreateCommentBody, UpdateCommentBody,
   VoteBody, CreateCollectionBody, UpdateCollectionBody,
   ReportBlueprintBody, AddToCollectionBody, BlueprintQuerySchema,
+  UploadMediaSchema,
 } from './community.schema';
 
 export const communityRouter = Router();
+
+const blueprintCreateLimit = rateLimit({ requests: 5, window: '1h', message: 'Max 5 blueprint posts per hour' });
+const likeLimit = rateLimit({ requests: 60, window: '1m', message: 'Max 60 likes per minute' });
+const commentLimit = rateLimit({ requests: 10, window: '1m', message: 'Max 10 comments per minute' });
+const reportLimit = rateLimit({ requests: 3, window: '1h', message: 'Max 3 reports per hour' });
+
+// ── Upload URL ─────────────────────────────────────────────────────────────────
+communityRouter.post('/upload-url', validate(UploadMediaSchema), async (req: AuthRequest, res, next) => {
+  try {
+    const result = await communityService.getUploadUrl(req.user!.id, req.body.contentType, req.body.fileSize);
+    res.status(201).json({ success: true, data: result });
+  } catch (err) { next(err); }
+});
 
 // ── Blueprints ─────────────────────────────────────────────────────────────────
 communityRouter.get('/blueprints', async (req: AuthRequest, res, next) => {
@@ -29,7 +44,7 @@ communityRouter.get('/blueprints/mine', async (req: AuthRequest, res, next) => {
   } catch (err) { next(err); }
 });
 
-communityRouter.post('/blueprints', validate(CreateBlueprintBody), async (req: AuthRequest, res, next) => {
+communityRouter.post('/blueprints', blueprintCreateLimit, validate(CreateBlueprintBody), async (req: AuthRequest, res, next) => {
   try {
     const bp = await communityService.createBlueprint(req.user!.id, req.body);
     res.status(201).json({ success: true, data: bp });
@@ -72,7 +87,7 @@ communityRouter.get('/blueprints/:id/comments', async (req: AuthRequest, res, ne
   } catch (err) { next(err); }
 });
 
-communityRouter.post('/blueprints/:id/comments', validate(CreateCommentBody), async (req: AuthRequest, res, next) => {
+communityRouter.post('/blueprints/:id/comments', commentLimit, validate(CreateCommentBody), async (req: AuthRequest, res, next) => {
   try {
     const comment = await communityService.createComment(req.params.id, req.user!.id, req.body);
     res.status(201).json({ success: true, data: comment });
@@ -93,8 +108,8 @@ communityRouter.delete('/comments/:id', async (req: AuthRequest, res, next) => {
   } catch (err) { next(err); }
 });
 
-// ── Votes ──────────────────────────────────────────────────────────────────────
-communityRouter.post('/blueprints/:id/vote', validate(VoteBody), async (req: AuthRequest, res, next) => {
+// ── Votes (Like/Unlike) ────────────────────────────────────────────────────────
+communityRouter.post('/blueprints/:id/vote', likeLimit, validate(VoteBody), async (req: AuthRequest, res, next) => {
   try {
     const result = await communityService.vote(req.params.id, req.user!.id, req.body.value);
     success(res, result);
@@ -109,7 +124,7 @@ communityRouter.get('/blueprints/:id/vote', async (req: AuthRequest, res, next) 
 });
 
 // ── Reports ────────────────────────────────────────────────────────────────────
-communityRouter.post('/blueprints/:id/report', validate(ReportBlueprintBody), async (req: AuthRequest, res, next) => {
+communityRouter.post('/blueprints/:id/report', reportLimit, validate(ReportBlueprintBody), async (req: AuthRequest, res, next) => {
   try {
     const report = await communityService.reportBlueprint(req.params.id, req.user!.id, req.body.reason);
     res.status(201).json({ success: true, data: report });

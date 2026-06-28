@@ -44,7 +44,7 @@ export const blueprintsRepo = {
   },
 
   async create(data: {
-    designId: string; authorId: string; title: string; description: string; tags: string[];
+    designId: string; authorId: string; title: string; description: string; tags: string[]; mediaUrls?: string[];
   }) {
     return db.blueprint.create({
       data: {
@@ -53,6 +53,7 @@ export const blueprintsRepo = {
         title: data.title,
         description: data.description,
         tags: data.tags,
+        mediaUrls: data.mediaUrls ?? [],
         isPublished: true,
         publishedAt: new Date(),
       },
@@ -79,6 +80,14 @@ export const blueprintsRepo = {
     return db.blueprint.update({ where: { id }, data: { forkCount: { increment: 1 } } });
   },
 
+  async incrementCommentCount(id: string) {
+    return db.blueprint.update({ where: { id }, data: { commentCount: { increment: 1 } } });
+  },
+
+  async decrementCommentCount(id: string) {
+    return db.blueprint.update({ where: { id }, data: { commentCount: { decrement: 1 } } });
+  },
+
   async listByAuthor(authorId: string) {
     return db.blueprint.findMany({
       where: { authorId, isPublished: true },
@@ -90,5 +99,13 @@ export const blueprintsRepo = {
     const aggregate = await db.vote.aggregate({ where: { blueprintId: id }, _sum: { value: true } });
     const total = aggregate._sum.value || 0;
     return db.blueprint.update({ where: { id }, data: { voteCount: total } });
+  },
+
+  async unpublish(id: string) {
+    return db.blueprint.update({ where: { id }, data: { isPublished: false } });
+  },
+
+  async hardDelete(id: string) {
+    return db.blueprint.delete({ where: { id } });
   },
 };

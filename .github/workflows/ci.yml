@@ -2,34 +2,43 @@ name: CI
 
 on:
   push:
-    branches: [ main ]
+    branches: [main]
   pull_request:
-    branches: [ main ]
+    branches: [main]
 
 jobs:
   build-lint-test:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      
-      - uses: pnpm/action-setup@v3
+
+      - uses: actions/setup-node@v4
         with:
-          version: 9.1.0
-          
-      - name: Use Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-          cache: 'pnpm'
+          node-version: "20"
+          cache: "npm"
 
       - name: Install dependencies
-        run: pnpm install --frozen-lockfile
+        run: npm ci
 
-      - name: Lint workspace
-        run: pnpm lint
+      - name: Lint
+        run: npm run lint
 
       - name: Typecheck
-        run: pnpm typecheck
+        run: npm run typecheck
+
+      - name: Build
+        run: npm run build
 
       - name: Run tests
-        run: pnpm test
+        run: npm test
+
+  docker-build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build backend image
+        run: docker build --build-arg APP=backend -t sdos-backend --target backend-runner .
+
+      - name: Build frontend image
+        run: docker build --build-arg APP=frontend -t sdos-frontend --target frontend-runner .

@@ -29,7 +29,7 @@ export function ChaosPanel({ nodes, nodeChaosModes, onSetNodeChaos }: ChaosPanel
   const [selectedMode, setSelectedMode] = useState<string>('KILL');
 
   return (
-    <div className="bg-yc-bg-alt border border-yc-border rounded-xl p-5 flex flex-col gap-3.5 h-full overflow-y-auto">
+    <div className="bg-white border border-yc-border rounded-xl p-5 flex flex-col gap-3.5 h-full overflow-y-auto">
       <div>
         <h4 className="text-sm text-yc-text m-0 font-bold flex items-center gap-1.5">
           <Zap className="w-3.5 h-3.5 text-yc-accent" />
@@ -40,7 +40,7 @@ export function ChaosPanel({ nodes, nodeChaosModes, onSetNodeChaos }: ChaosPanel
         </p>
       </div>
 
-      <div className="flex gap-1 p-1 bg-yc-bg-card border border-yc-border rounded-lg">
+      <div className="flex gap-1 p-1 bg-gray-50 border border-yc-border rounded-lg">
         {CHAOS_MODES.filter((m) => m.value !== 'none').map((mode) => {
           const Icon = mode.icon;
           return (
@@ -79,7 +79,7 @@ export function ChaosPanel({ nodes, nodeChaosModes, onSetNodeChaos }: ChaosPanel
                       : currentMode === 'THROTTLE' ? 'bg-amber-50 border-amber-200'
                       : currentMode === 'PARTITION' ? 'bg-purple-50 border-purple-200'
                       : 'bg-rose-50 border-rose-200'
-                    : 'bg-yc-bg-card border-yc-border'
+                    : 'bg-white border border-yc-border'
                 }`}
               >
                 <div>

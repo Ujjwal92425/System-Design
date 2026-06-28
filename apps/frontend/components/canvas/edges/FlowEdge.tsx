@@ -32,6 +32,7 @@ function FlowEdge({
   const label = String(data?.label || 'HTTP');
   const isSimulating = Boolean(data?.isSimulating);
   const errorRate = Number(data?.errorRate || 0);
+  const qps = Number(data?.qps || 0);
   const [hovered, setHovered] = useState(false);
 
   const strokeColor = !isSimulating
@@ -44,6 +45,9 @@ function FlowEdge({
 
   const strokeWidth = selected ? 3.5 : 3;
 
+  const packetCount = qps > 2000 ? 3 : qps > 500 ? 2 : qps > 0 ? 1 : 0;
+  const speed = qps > 2000 ? '1s' : qps > 500 ? '1.5s' : '2s';
+
   const handleLabelChange = useCallback((newLabel: string) => {
     const onChange = (data?.onLabelChange) as ((edgeId: string, label: string) => void) | undefined;
     if (onChange) {
@@ -53,7 +57,6 @@ function FlowEdge({
 
   return (
     <>
-      {/* Selection glow */}
       {selected && (
         <path
           d={edgePath}
@@ -65,7 +68,6 @@ function FlowEdge({
         />
       )}
 
-      {/* Hover glow */}
       {hovered && (
         <path
           d={edgePath}
@@ -88,14 +90,31 @@ function FlowEdge({
         }}
         className={cn(
           'hover:!stroke-[4px] transition-all',
-          isSimulating && 'animate-pulse-edge animate-flow-dash'
+          isSimulating && 'animate-flow-dash'
         )}
         markerEnd={markerEnd}
         onMouseEnter={() => setHovered(true)}
         onMouseLeave={() => setHovered(false)}
       />
 
-      {/* Hover tooltip */}
+      {isSimulating && packetCount > 0 && (
+        <>
+          {Array.from({ length: packetCount }).map((_, idx) => {
+            const delay = (idx * (1.5 / packetCount)).toFixed(2) + 's';
+            return (
+              <g key={`${id}-packet-${idx}`}>
+                <circle r="7" fill={strokeColor} opacity="0.15" className="pointer-events-none">
+                  <animateMotion dur={speed} repeatCount="indefinite" path={edgePath} begin={delay} />
+                </circle>
+                <circle r="4" fill={strokeColor} opacity="0.85" className="pointer-events-none">
+                  <animateMotion dur={speed} repeatCount="indefinite" path={edgePath} begin={delay} />
+                </circle>
+              </g>
+            );
+          })}
+        </>
+      )}
+
       {hovered && (
         <EdgeLabelRenderer>
           <div
@@ -104,14 +123,14 @@ function FlowEdge({
               transform: `translate(-50%, -100%) translate(${labelX}px,${labelY - 12}px)`,
             }}
           >
-            <div className="bg-gray-900 text-white text-[9px] font-mono px-2 py-1 rounded-md shadow-lg whitespace-nowrap">
+            <div className="bg-yc-bg-card text-yc-text text-[9px] font-mono px-2 py-1 rounded-md shadow-lg border border-yc-border whitespace-nowrap">
               {label} {isSimulating && errorRate > 0 ? `· ${errorRate}% err` : ''}
+              {isSimulating && qps > 0 ? ` · ${qps.toLocaleString()} qps` : ''}
             </div>
           </div>
         </EdgeLabelRenderer>
       )}
 
-      {/* Label */}
       <EdgeLabelRenderer>
         <div
           className="absolute nodrag nopan pointer-events-auto"
@@ -122,7 +141,7 @@ function FlowEdge({
           <select
             value={label}
             onChange={(e) => handleLabelChange(e.target.value)}
-            className="text-[10px] font-mono font-semibold bg-white border border-gray-200 rounded-md px-1.5 py-0.5 text-gray-600 cursor-pointer hover:border-orange-300 focus:outline-none focus:border-orange-500"
+            className="text-[10px] font-mono font-semibold bg-white border border-yc-border rounded-md px-1.5 py-0.5 text-yc-text cursor-pointer hover:border-yc-accent focus:outline-none focus:border-yc-accent"
             onClick={(e) => e.stopPropagation()}
           >
             {EDGE_LABELS.map((l) => (

@@ -12,7 +12,7 @@
  *    Prisma onDelete: Cascade (see schema.prisma).
  */
 
-import { db } from '@sd-os/db';
+import { db, blueprintsRepo, commentsRepo } from '@sd-os/db';
 import { Role } from '@prisma/client';
 import { AppError } from '../../utils/errors';
 import { analyticsService } from '../analytics/analytics.service';
@@ -628,10 +628,48 @@ export const adminService = {
     });
   },
 
+  async listCommentsForBlueprint(blueprintId: string) {
+    return db.comment.findMany({
+      where: { blueprintId },
+      orderBy: { createdAt: 'asc' },
+      include: {
+        user: { select: { id: true, name: true, email: true, avatarUrl: true } },
+      },
+    });
+  },
+
   async reviewReport(id: string, status: string) {
     return db.report.update({
       where: { id },
       data: { status, reviewedAt: new Date() },
     });
+  },
+
+  async createBlueprint(data: {
+    designId: string; title: string; description: string; tags: string[];
+    mediaUrls?: string[]; authorId?: string;
+  }, adminUserId: string) {
+    return blueprintsRepo.create({
+      designId: data.designId,
+      authorId: data.authorId ?? adminUserId,
+      title: data.title,
+      description: data.description,
+      tags: data.tags,
+      mediaUrls: data.mediaUrls,
+    });
+  },
+
+  async hardDeleteBlueprint(id: string) {
+    const bp = await db.blueprint.findUnique({ where: { id } });
+    if (!bp) throw new AppError('NOT_FOUND', 'Blueprint not found', 404);
+    await blueprintsRepo.hardDelete(id);
+    return { deleted: true };
+  },
+
+  async deleteComment(id: string) {
+    const comment = await db.comment.findUnique({ where: { id } });
+    if (!comment) throw new AppError('NOT_FOUND', 'Comment not found', 404);
+    await commentsRepo.adminDelete(id);
+    return { deleted: true };
   },
 };

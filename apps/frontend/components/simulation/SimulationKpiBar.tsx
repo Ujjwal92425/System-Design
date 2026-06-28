@@ -78,7 +78,7 @@ export function SimulationKpiBar({ currentMetrics, trafficQps, scenario }: Simul
   return (
     <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
       {kpis.map((kpi) => (
-        <div key={kpi.label} className="flex items-center gap-2.5 bg-yc-bg-card border border-yc-border rounded-lg px-3 py-2">
+        <div key={kpi.label} className="flex items-center gap-2.5 bg-white border border-yc-border rounded-lg px-3 py-2">
           <kpi.icon className={`w-3.5 h-3.5 flex-shrink-0 ${kpi.color}`} />
           <div className="min-w-0">
             <div className="text-[8px] font-semibold text-yc-text-muted uppercase tracking-wide">{kpi.label}</div>

@@ -1,6 +1,15 @@
+import sanitizeHtml from 'sanitize-html';
 import { blueprintsRepo, commentsRepo, votesRepo, collectionsRepo, reportsRepo, designsRepo } from '@sd-os/db';
 import { AppError } from '../../utils/errors';
 import { analyticsService } from '../analytics/analytics.service';
+import { storage } from '../../utils/storage';
+
+function sanitize(text: string): string {
+  return sanitizeHtml(text, {
+    allowedTags: [],
+    allowedAttributes: {},
+  });
+}
 
 export const communityService = {
   async listBlueprints(opts: { page: number; limit: number; sort?: string; topic?: string; difficulty?: string; search?: string }) {
@@ -15,24 +24,25 @@ export const communityService = {
     return bp;
   },
 
-  async createBlueprint(userId: string, data: { designId: string; title: string; description: string; tags: string[] }) {
-    const existing = await blueprintsRepo.findById(
-      (await blueprintsRepo.listByAuthor(userId))[0]?.id || ''
-    ).catch(() => null);
-
+  async createBlueprint(userId: string, data: { designId: string; title: string; description: string; tags: string[]; mediaUrls?: string[] }) {
     const bp = await blueprintsRepo.create({
       designId: data.designId,
       authorId: userId,
-      title: data.title,
-      description: data.description,
+      title: sanitize(data.title),
+      description: sanitize(data.description),
       tags: data.tags,
+      mediaUrls: data.mediaUrls,
     });
     analyticsService.track(userId, 'blueprint:created', { blueprintId: bp.id, title: data.title });
     return bp;
   },
 
   async updateBlueprint(id: string, userId: string, data: { title?: string; description?: string; tags?: string[] }) {
-    const bp = await blueprintsRepo.update(id, userId, data);
+    const cleaned: any = {};
+    if (data.title !== undefined) cleaned.title = sanitize(data.title);
+    if (data.description !== undefined) cleaned.description = sanitize(data.description);
+    if (data.tags !== undefined) cleaned.tags = data.tags;
+    const bp = await blueprintsRepo.update(id, userId, cleaned);
     analyticsService.track(userId, 'blueprint:updated', { blueprintId: id });
     return bp;
   },
@@ -74,7 +84,7 @@ export const communityService = {
     const comment = await commentsRepo.create({
       blueprintId,
       userId,
-      content: data.content,
+      content: sanitize(data.content),
       parentId: data.parentId,
     });
     analyticsService.track(userId, 'comment:created', { blueprintId, commentId: comment.id });
@@ -88,7 +98,7 @@ export const communityService = {
   },
 
   async updateComment(commentId: string, userId: string, content: string) {
-    return commentsRepo.update(commentId, userId, content);
+    return commentsRepo.update(commentId, userId, sanitize(content));
   },
 
   async vote(blueprintId: string, userId: string, value: number) {
@@ -107,7 +117,21 @@ export const communityService = {
   async reportBlueprint(blueprintId: string, userId: string, reason: string) {
     const report = await reportsRepo.create({ blueprintId, reporterId: userId, reason });
     analyticsService.track(userId, 'blueprint:reported', { blueprintId, reportId: report.id });
+
+    // Auto-moderation: hide blueprint if it has 5+ pending reports
+    const pendingCount = await reportsRepo.countPendingForBlueprint(blueprintId);
+    if (pendingCount >= 5) {
+      await blueprintsRepo.unpublish(blueprintId);
+      analyticsService.track('system', 'blueprint:auto-hidden', { blueprintId, reportCount: pendingCount });
+    }
+
     return report;
+  },
+
+  async getUploadUrl(userId: string, contentType: string, fileSize: number) {
+    const ext = contentType.split('/')[1] || 'png';
+    const filename = `${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
+    return storage.getPresignedUploadUrl(userId, filename, contentType);
   },
 
   // Collections

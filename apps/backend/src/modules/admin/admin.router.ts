@@ -46,7 +46,7 @@ import {
   CreateQuizBody,
   CreateQuestionBody, UpdateQuestionBody,
   AdminUpdateUserBody, AdminCreateUserBody, AdminImportUsersBody,
-  FeatureBlueprintBody, ReviewReportBody,
+  AdminCreateBlueprintBody, FeatureBlueprintBody, ReviewReportBody,
 } from './admin.schema';
 
 export const adminRouter = Router();
@@ -289,6 +289,13 @@ adminRouter.get('/blueprints', adminOnly, async (req: AuthRequest, res, next) =>
   } catch (err) { next(err); }
 });
 
+adminRouter.post('/blueprints', adminOnly, validate(AdminCreateBlueprintBody), async (req: AuthRequest, res, next) => {
+  try {
+    const bp = await adminService.createBlueprint(req.body, req.user!.id);
+    res.status(201).json({ success: true, data: bp });
+  } catch (err) { next(err); }
+});
+
 adminRouter.patch('/blueprints/:id/feature', adminOnly, validate(FeatureBlueprintBody), async (req: AuthRequest, res, next) => {
   try {
     const bp = await adminService.featureBlueprint(req.params.id, req.body.featured);
@@ -299,6 +306,27 @@ adminRouter.patch('/blueprints/:id/feature', adminOnly, validate(FeatureBlueprin
 adminRouter.delete('/blueprints/:id', adminOnly, async (req: AuthRequest, res, next) => {
   try {
     const result = await adminService.removeBlueprint(req.params.id);
+    success(res, result);
+  } catch (err) { next(err); }
+});
+
+adminRouter.delete('/blueprints/:id/hard', adminOnly, async (req: AuthRequest, res, next) => {
+  try {
+    const result = await adminService.hardDeleteBlueprint(req.params.id);
+    success(res, result);
+  } catch (err) { next(err); }
+});
+
+adminRouter.get('/blueprints/:id/comments', adminOnly, async (req: AuthRequest, res, next) => {
+  try {
+    const comments = await adminService.listCommentsForBlueprint(req.params.id);
+    success(res, comments);
+  } catch (err) { next(err); }
+});
+
+adminRouter.delete('/comments/:id', adminOnly, async (req: AuthRequest, res, next) => {
+  try {
+    const result = await adminService.deleteComment(req.params.id);
     success(res, result);
   } catch (err) { next(err); }
 });

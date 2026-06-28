@@ -238,6 +238,7 @@ model Lesson {
   difficulty   String                     // "beginner" | "intermediate" | "advanced"
   companies    String[]                   // ["google", "meta", "amazon"]
   tags         String[]
+  isPremium    Boolean  @default(false)   // requires PRO subscription to unlock
   isPublished  Boolean  @default(false)
   publishedAt  DateTime?
   createdAt    DateTime @default(now())
@@ -247,7 +248,7 @@ model Lesson {
   states       LessonState[]
 
   @@index([moduleId, order])
-  @@index([isPublished])
+  @@index([isPublished, isPremium])
   // Full-text search index created manually in migration (see seed.ts note)
 }
 
@@ -533,7 +534,9 @@ model Blueprint {
   title       String
   description String    @db.Text
   tags        String[]
+  mediaUrls   String[]  // screenshots/images gallery
   voteCount   Int       @default(0)
+  commentCount Int      @default(0)  // cached counter
   forkCount   Int       @default(0)
   viewCount   Int       @default(0)
   isPublished Boolean   @default(false)
