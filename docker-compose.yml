@@ -11,7 +11,7 @@ services:
     image: postgres:16-alpine
     environment:
       POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-SD_OS_DEFAULT_DEV_PASSWORD}
       POSTGRES_DB: sdos
     ports:
       - "5432:5432"
@@ -44,7 +44,7 @@ services:
     environment:
       NODE_ENV: production
       PORT: 4000
-      DATABASE_URL: postgresql://postgres:${POSTGRES_PASSWORD:-postgres}@postgres:5432/sdos
+      DATABASE_URL: postgresql://postgres:${POSTGRES_PASSWORD:-SD_OS_DEFAULT_DEV_PASSWORD}@postgres:5432/sdos
       REDIS_URL: redis://redis:6379
       JWT_SECRET: ${JWT_SECRET}
       JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET}
@@ -78,7 +78,7 @@ services:
     command: >
       sh -c "npx prisma migrate deploy --schema=/app/packages/db/prisma/schema.prisma"
     environment:
-      DATABASE_URL: postgresql://postgres:${POSTGRES_PASSWORD:-postgres}@postgres:5432/sdos
+      DATABASE_URL: postgresql://postgres:${POSTGRES_PASSWORD:-SD_OS_DEFAULT_DEV_PASSWORD}@postgres:5432/sdos
     depends_on:
       postgres:
         condition: service_healthy
