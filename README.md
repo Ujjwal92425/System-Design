@@ -1,2 +1,2 @@
-# System-Design-OS
+# System-Design
 
