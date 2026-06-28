@@ -1,0 +1,103 @@
+# ==============================================================
+# SD-OS Docker Compose (production-like local deployment)
+# ==============================================================
+# Usage: docker compose up -d
+# Frontend: http://localhost:3000
+# Backend:  http://localhost:4000
+# ==============================================================
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-SD_OS_DEFAULT_DEV_PASSWORD}
+      POSTGRES_DB: sdos
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build:
+      context: .
+      args:
+        APP: backend
+    image: sdos-backend
+    ports:
+      - "4000:4000"
+    environment:
+      NODE_ENV: production
+      PORT: 4000
+      DATABASE_URL: postgresql://postgres:${POSTGRES_PASSWORD:-SD_OS_DEFAULT_DEV_PASSWORD}@postgres:5432/sdos
+      REDIS_URL: redis://redis:6379
+      JWT_SECRET: ${JWT_SECRET}
+      JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET}
+      JWT_ACCESS_EXPIRES_IN: 15m
+      JWT_REFRESH_EXPIRES_DAYS: 7
+      FRONTEND_URL: http://localhost:3000
+      DISABLE_QUEUES: "true"
+      LOG_LEVEL: info
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      POSTHOG_API_KEY: ${POSTHOG_API_KEY:-}
+      POSTHOG_HOST: ${POSTHOG_HOST:-}
+      SMTP_HOST: ${SMTP_HOST:-}
+      SMTP_PORT: ${SMTP_PORT:-587}
+      SMTP_USER: ${SMTP_USER:-}
+      SMTP_PASS: ${SMTP_PASS:-}
+      EMAIL_FROM: ${EMAIL_FROM:-noreply@sdos.academy}
+      STRIPE_SECRET_KEY: ${STRIPE_SECRET_KEY:-}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  backend-migrate:
+    build:
+      context: .
+      args:
+        APP: backend
+    image: sdos-backend
+    command: >
+      sh -c "npx prisma migrate deploy --schema=/app/packages/db/prisma/schema.prisma"
+    environment:
+      DATABASE_URL: postgresql://postgres:${POSTGRES_PASSWORD:-SD_OS_DEFAULT_DEV_PASSWORD}@postgres:5432/sdos
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  frontend:
+    build:
+      context: .
+      args:
+        APP: frontend
+    image: sdos-frontend
+    ports:
+      - "3000:3000"
+    environment:
+      NODE_ENV: production
+      NEXT_PUBLIC_API_URL: http://localhost:4000
+      NEXT_PUBLIC_POSTHOG_KEY: ${NEXT_PUBLIC_POSTHOG_KEY:-}
+      NEXT_PUBLIC_POSTHOG_HOST: ${NEXT_PUBLIC_POSTHOG_HOST:-}
+    depends_on:
+      - backend
+
+volumes:
+  pgdata:

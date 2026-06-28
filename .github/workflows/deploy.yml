@@ -1,0 +1,69 @@
+name: Deploy
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  deploy-backend:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Log in to the Container registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build & push Docker image
+        env:
+          REGISTRY: ghcr.io
+          IMAGE_NAME: ${{ github.repository }}-backend
+        run: |
+          docker build --build-arg APP=backend -t $REGISTRY/$IMAGE_NAME:${{ github.sha }} --target backend-runner .
+          docker push $REGISTRY/$IMAGE_NAME:${{ github.sha }}
+
+      - name: Deploy to production
+        env:
+          IMAGE: ghcr.io/${{ github.repository }}-backend:${{ github.sha }}
+        run: |
+          echo "Deploy backend:"
+          echo "  Option A (Render):  docker pull $IMAGE && render deploy"
+          echo "  Option B (VPS):     scp + docker compose up"
+          echo "  Option C (K8s):     kubectl set image deployment/backend"
+
+  deploy-frontend:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Log in to the Container registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build & push Docker image
+        env:
+          REGISTRY: ghcr.io
+          IMAGE_NAME: ${{ github.repository }}-frontend
+        run: |
+          docker build --build-arg APP=frontend -t $REGISTRY/$IMAGE_NAME:${{ github.sha }} --target frontend-runner .
+          docker push $REGISTRY/$IMAGE_NAME:${{ github.sha }}
+
+      - name: Deploy to Vercel
+        run: |
+          echo "Deploy frontend to Vercel:"
+          echo "  Connect repo at https://vercel.com/import"
+          echo "  Set ROOT_DIRECTORY=apps/frontend"
+          echo "  Framework preset: Next.js"
+          echo "  Env vars: NEXT_PUBLIC_API_URL, NEXT_PUBLIC_POSTHOG_KEY"
