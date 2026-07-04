@@ -1,8 +1,10 @@
 import { Router } from 'express';
 import { AuthRequest } from '../../middleware/authenticate';
+import { validate } from '../../middleware/validate';
 import { success } from '../../utils/response';
 import { Errors } from '../../utils/errors';
 import { interviewService } from './interview.service';
+import { StartSessionBody, LinkDesignBody, SubmitSessionBody } from './interview.schema';
 
 export const interviewRouter = Router();
 
@@ -31,7 +33,7 @@ interviewRouter.get('/sessions/history', async (req: AuthRequest, res, next) => 
 });
 
 // 3. Start a new Interview Session
-interviewRouter.post('/sessions', async (req: AuthRequest, res, next) => {
+interviewRouter.post('/sessions', validate(StartSessionBody), async (req: AuthRequest, res, next) => {
   try {
     const userId = req.user?.id;
     const role = req.user?.role;
@@ -70,7 +72,7 @@ interviewRouter.post('/sessions/:id/hint', async (req: AuthRequest, res, next) =
 });
 
 // 6. Link Design Canvas to Session
-interviewRouter.post('/sessions/:id/design', async (req: AuthRequest, res, next) => {
+interviewRouter.post('/sessions/:id/design', validate(LinkDesignBody), async (req: AuthRequest, res, next) => {
   try {
     const userId = req.user?.id;
     if (!userId) throw Errors.unauthorized();
@@ -83,7 +85,7 @@ interviewRouter.post('/sessions/:id/design', async (req: AuthRequest, res, next)
 });
 
 // 7. Submit final Design for Scoring
-interviewRouter.post('/sessions/:id/submit', async (req: AuthRequest, res, next) => {
+interviewRouter.post('/sessions/:id/submit', validate(SubmitSessionBody), async (req: AuthRequest, res, next) => {
   try {
     const userId = req.user?.id;
     if (!userId) throw Errors.unauthorized();

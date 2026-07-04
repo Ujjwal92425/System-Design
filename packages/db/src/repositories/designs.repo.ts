@@ -17,10 +17,13 @@ import { db } from '../client';
 export const designsRepo = {
 
   /** List the authenticated user's non-deleted designs, newest first */
-  async listByUser(userId: string) {
+  async listByUser(userId: string, page = 1, limit = 20) {
+    const skip = (page - 1) * limit;
     return db.design.findMany({
       where: { userId, deletedAt: null },
       orderBy: { updatedAt: 'desc' },
+      skip,
+      take: limit,
       select: {
         id: true, title: true, description: true, isPublic: true,
         thumbnailUrl: true, createdAt: true, updatedAt: true,
@@ -122,14 +125,12 @@ export const designsRepo = {
     data: { nodes: any[]; edges: any[]; message?: string }
   ) {
     return db.$transaction(async (tx) => {
-      // Ownership check inside the transaction
       const design = await tx.design.findFirst({
         where: { id, userId, deletedAt: null },
         select: { id: true },
       });
       if (!design) throw new Error('Design not found or access denied');
 
-      // Determine next version number
       const latest = await tx.designVersion.findFirst({
         where: { designId: id },
         orderBy: { version: 'desc' },
@@ -137,7 +138,12 @@ export const designsRepo = {
       });
       const nextVersion = (latest?.version ?? 0) + 1;
 
-      // Create the immutable version snapshot
+      const existing = await tx.designVersion.findUnique({
+        where: { designId_version: { designId: id, version: nextVersion } },
+        select: { version: true },
+      });
+      if (existing) throw new Error('Version conflict — please retry');
+
       const version = await tx.designVersion.create({
         data: {
           designId: id,
@@ -148,7 +154,6 @@ export const designsRepo = {
         },
       });
 
-      // Touch the parent design so the list view sorts correctly
       await tx.design.update({
         where: { id },
         data: { updatedAt: new Date() },
@@ -177,6 +182,12 @@ export const designsRepo = {
    */
   async restore(id: string, userId: string, targetVersion: number) {
     return db.$transaction(async (tx) => {
+      const design = await tx.design.findFirst({
+        where: { id, userId, deletedAt: null },
+        select: { id: true },
+      });
+      if (!design) throw new Error('Design not found or access denied');
+
       const old = await tx.designVersion.findUnique({
         where: { designId_version: { designId: id, version: targetVersion } },
       });

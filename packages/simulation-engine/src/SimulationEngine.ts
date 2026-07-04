@@ -294,13 +294,6 @@ export class SimulationEngine {
 
       const incomingLoad = loadMap.get(id) ?? 0;
       if (visited.has(id)) {
-        // Still propagate load even if already visited (fan-in)
-        const neighbors = adjacency.get(id) || [];
-        for (const neighbor of neighbors) {
-          const existing = loadMap.get(neighbor) ?? 0;
-          loadMap.set(neighbor, existing + incomingLoad / Math.max(1, neighbors.length));
-          if (!visited.has(neighbor)) queue.push({ id: neighbor, load: loadMap.get(neighbor)!, hopLatency: cumulativeHopLatency + 2 });
-        }
         continue;
       }
       visited.add(id);
@@ -437,7 +430,8 @@ export class SimulationEngine {
         const splitLoad = isLB ? outgoing / downstreamCount : outgoing;
         loadMap.set(neighbor, existing + splitLoad);
         if (!visited.has(neighbor)) {
-          queue.push({ id: neighbor, load: loadMap.get(neighbor)!, hopLatency: cumulativeHopLatency + netLatencyPerHop });
+          const edgeLatency = GraphTraversal.getEdgeLatency(id, neighbor, this.graph);
+          queue.push({ id: neighbor, load: loadMap.get(neighbor)!, hopLatency: cumulativeHopLatency + netLatencyPerHop + edgeLatency });
         }
       }
     }

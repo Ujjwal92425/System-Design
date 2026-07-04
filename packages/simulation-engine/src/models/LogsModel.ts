@@ -14,7 +14,7 @@ export class LogsModel extends NodeModel {
 
     return {
       outgoingQps: Math.min(incomingQps, capacity),
-      passthrough: Math.min(incomingQps, capacity),
+      passthrough: 0,
       latency: isOverloaded
         ? 500 + ((incomingQps - capacity) / capacity) * 1000
         : isQuery

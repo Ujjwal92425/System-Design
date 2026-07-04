@@ -1,12 +1,30 @@
 export class MetricsCollector {
-  private history: any[] = [];
+  private static readonly CAPACITY = 100;
+  private buffer: any[];
+  private head: number;
+  private size: number;
 
-  record(metrics: any) {
-    this.history.push(metrics);
-    if (this.history.length > 100) this.history.shift();
+  constructor() {
+    this.buffer = new Array(MetricsCollector.CAPACITY);
+    this.head = 0;
+    this.size = 0;
   }
 
-  getHistory() {
-    return this.history;
+  record(metrics: any) {
+    const idx = (this.head + this.size) % MetricsCollector.CAPACITY;
+    this.buffer[idx] = metrics;
+    if (this.size < MetricsCollector.CAPACITY) {
+      this.size++;
+    } else {
+      this.head = (this.head + 1) % MetricsCollector.CAPACITY;
+    }
+  }
+
+  getHistory(): any[] {
+    const result: any[] = [];
+    for (let i = 0; i < this.size; i++) {
+      result.push(this.buffer[(this.head + i) % MetricsCollector.CAPACITY]);
+    }
+    return result;
   }
 }

@@ -16,17 +16,24 @@ export abstract class NodeModel {
   abstract process(incomingQps: number, config: any): NodeResult;
 }
 
+function logFact(n: number): number {
+  if (n <= 20) {
+    let r = 1;
+    for (let i = 2; i <= n; i++) r *= i;
+    return Math.log(r);
+  }
+  return 0.5 * Math.log(2 * Math.PI * n) + n * Math.log(n / Math.E);
+}
+
 export function erlangC(lmbda: number, mu: number, c: number): number {
   const rho = lmbda / (c * mu);
   if (rho >= 1) return 1;
-  function fact(n: number): number {
-    if (n <= 1) return 1;
-    let r = 1;
-    for (let i = 2; i <= n; i++) r *= i;
-    return r;
-  }
+  const cRho = c * rho;
   let sum = 0;
-  for (let k = 0; k < c; k++) sum += Math.pow(c * rho, k) / fact(k);
-  const top = Math.pow(c * rho, c) / (fact(c) * (1 - rho));
+  for (let k = 0; k < c; k++) {
+    sum += Math.exp(k * Math.log(cRho) - logFact(k));
+  }
+  const logTop = c * Math.log(cRho) - logFact(c) - Math.log(1 - rho);
+  const top = Math.exp(logTop);
   return top / (sum + top);
 }

@@ -15,6 +15,21 @@ interface PathResult {
   totalLatency: number;
 }
 
+const PROTOCOL_LATENCY_MS: Record<string, number> = {
+  'HTTP': 5,
+  'HTTPS': 5,
+  'gRPC': 2,
+  'TCP': 1,
+  'UDP': 0.5,
+  'Kafka': 3,
+  'Redis': 0.5,
+  'WebSocket': 3,
+};
+
+function getHopLatency(label: string): number {
+  return PROTOCOL_LATENCY_MS[label] ?? 5;
+}
+
 function findAllPaths(edges: CanvasEdge[], source: string, target: string): PathResult[] {
   const adjacency = new Map<string, { target: string; label: string }[]>();
   for (const edge of edges) {
@@ -35,7 +50,7 @@ function findAllPaths(edges: CanvasEdge[], source: string, target: string): Path
     const neighbors = adjacency.get(current) || [];
     for (const neighbor of neighbors) {
       path.push(neighbor.target);
-      dfs(neighbor.target, path, accumLatency + 5);
+      dfs(neighbor.target, path, accumLatency + getHopLatency(neighbor.label));
       path.pop();
     }
     visited.delete(current);
@@ -44,7 +59,7 @@ function findAllPaths(edges: CanvasEdge[], source: string, target: string): Path
   visited.add(source);
   const neighbors = adjacency.get(source) || [];
   for (const neighbor of neighbors) {
-    dfs(neighbor.target, [source, neighbor.target], 5);
+    dfs(neighbor.target, [source, neighbor.target], getHopLatency(neighbor.label));
   }
 
   return results;

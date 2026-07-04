@@ -61,7 +61,7 @@ function parseCookies(cookieHeader: string | undefined): Record<string, string> 
 authRouter.post('/logout', async (req, res, next) => {
   try {
     const cookies = parseCookies(req.headers.cookie);
-    const token = cookies.refreshToken || req.body.refreshToken;
+    const token = cookies.refreshToken;
     if (token) {
       await authService.logout(token);
     }
@@ -82,7 +82,7 @@ authRouter.post('/logout', async (req, res, next) => {
 authRouter.post('/refresh', authLimiter, async (req, res, next) => {
   try {
     const cookies = parseCookies(req.headers.cookie);
-    const token = cookies.refreshToken || req.body.refreshToken;
+    const token = cookies.refreshToken;
     if (!token) {
       throw new AppError('UNAUTHORIZED', 'No refresh token provided', 401);
     }

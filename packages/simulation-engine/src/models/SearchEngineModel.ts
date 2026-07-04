@@ -26,7 +26,7 @@ export class SearchEngineModel extends NodeModel {
       latency = isQuery ? 100 + (excess / shardCount) * 5 : 200;
     } else {
       const baseLatency = isQuery ? 10 : 50;
-      const sizeFactor = Math.log2(indexSizeGb / 10) * 5;
+      const sizeFactor = Math.max(0, Math.log2(indexSizeGb / 10)) * 5;
       const rho = queryQps / capacity;
       if (rho > 0.5) {
         const cProb = erlangC(queryQps, 100, shardCount);

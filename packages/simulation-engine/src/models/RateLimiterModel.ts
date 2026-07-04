@@ -15,7 +15,7 @@ export class RateLimiterModel extends NodeModel {
         passthrough: limit,
         latency: 2,
         errorRate: Math.min(90, (dropped / incomingQps) * 100),
-        queueDepth: Math.round(dropped * 2),
+        queueDepth: 0,
         cacheHitRate: 0,
         readReplicasUsed: 0,
         metrics: { rateLimit: limit, droppedPct: Math.round((dropped / incomingQps) * 100) },

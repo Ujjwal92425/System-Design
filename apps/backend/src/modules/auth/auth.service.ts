@@ -33,8 +33,9 @@ export const authService = {
 
     // Generate Verification Token (AUTH-01)
     const verificationToken = crypto.randomBytes(32).toString('hex');
+    const verificationTokenHash = hashToken(verificationToken);
     const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours
-    await usersRepo.createVerificationToken(user.id, verificationToken, expiresAt);
+    await usersRepo.createVerificationToken(user.id, verificationTokenHash, expiresAt);
 
     // Queue verification email
     try {
@@ -56,11 +57,12 @@ export const authService = {
 
     logger.debug({ userId: user.id, email: user.email }, 'User registered. Verification token created.');
 
-    return { user, verificationToken };
+    return { user };
   },
 
   async verifyEmail(token: string) {
-    const record = await usersRepo.findVerificationToken(token);
+    const tokenHash = hashToken(token);
+    const record = await usersRepo.findVerificationToken(tokenHash);
     if (!record) {
       throw new AppError('INVALID_VERIFICATION_TOKEN', 'Verification token is invalid, used, or expired', 400);
     }
@@ -85,6 +87,11 @@ export const authService = {
       throw new AppError('ACCOUNT_LOCKED', `Account is temporarily locked. Try again in ${remainingMin} minute(s).`, 403);
     }
 
+    // Check if account is soft-deleted
+    if (user.deletedAt) {
+      throw new AppError('UNAUTHORIZED', 'This account has been deactivated', 401);
+    }
+
     // If password is provided, verify it
     if (user.passwordHash && data.password) {
       const match = await bcrypt.compare(data.password, user.passwordHash);
@@ -99,7 +106,7 @@ export const authService = {
       throw new AppError('INVALID_CREDENTIALS', 'Invalid email or password', 401);
     }
 
-    // Reset login attempts on successful login
+    // Reset login attempts and clear expired locks on successful login
     await usersRepo.resetLoginAttempts(user.id);
 
     // Generate tokens
@@ -175,8 +182,9 @@ export const authService = {
     }
 
     const token = crypto.randomBytes(32).toString('hex');
+    const tokenHash = hashToken(token);
     const expiresAt = new Date(Date.now() + 60 * 60 * 1000); // 1 hour
-    await usersRepo.createPasswordResetToken(user.id, token, expiresAt);
+    await usersRepo.createPasswordResetToken(user.id, tokenHash, expiresAt);
 
     // Queue password reset email
     try {
@@ -193,11 +201,12 @@ export const authService = {
 
     logger.debug({ userId: user.id }, 'Password reset token created.');
 
-    return { success: true, resetToken: token };
+    return { success: true };
   },
 
   async resetPassword(token: string, newPassword?: string) {
-    const record = await usersRepo.findPasswordResetToken(token);
+    const tokenHash = hashToken(token);
+    const record = await usersRepo.findPasswordResetToken(tokenHash);
     if (!record) {
       throw new AppError('INVALID_RESET_TOKEN', 'Password reset token is invalid, used, or expired', 400);
     }

@@ -46,6 +46,7 @@ import { aiRouter }        from './modules/ai/ai.router';
 import { usageRouter }     from './modules/usage/usage.router';
 import { billingRouter }   from './modules/billing/billing.router';
 import { adminRouter }     from './modules/admin/admin.router';
+import { handleStripeWebhook } from './modules/billing/webhook.handler';
 
 // ── Background Job Workers (self-registering) ────────────────────────────────
 // These files import themselves and register BullMQ workers on startup.
@@ -95,6 +96,11 @@ app.use(
     exposedHeaders: ['X-Request-Id', 'X-RateLimit-Remaining', 'X-RateLimit-Reset'],
   })
 );
+
+// ── 2.5. Stripe Webhook (raw body, no auth — before JSON parser) ────────────
+// Stripe requires the raw request body for signature verification.
+// This MUST be registered before express.json() which would consume the body.
+app.post('/api/billing/webhook', express.raw({ type: 'application/json' }), handleStripeWebhook);
 
 // ── 3. Body Parsers ───────────────────────────────────────────────────────────
 app.use(express.json({ limit: '2mb' }));

@@ -9,7 +9,7 @@ export class ObjectStorageModel extends NodeModel {
     const isOverloaded = incomingQps > capacity;
 
     return {
-      outgoingQps: incomingQps,
+      outgoingQps: Math.min(incomingQps, capacity),
       passthrough: 0,
       latency: isOverloaded ? 100 + (incomingQps - capacity) / 10 : 30,
       errorRate: isOverloaded ? Math.min(50, ((incomingQps - capacity) / incomingQps) * 100) : 0,

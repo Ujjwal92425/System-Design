@@ -37,8 +37,12 @@ const EnvSchema = z.object({
   REDIS_URL: z.string().default('redis://localhost:6379'),
 
   // ── Auth ─────────────────────────────────────────────────────────────────────
-  JWT_SECRET: z.string().min(32, 'JWT_SECRET must be at least 32 characters'),
-  JWT_REFRESH_SECRET: z.string().min(32, 'JWT_REFRESH_SECRET must be at least 32 characters'),
+  JWT_SECRET: z.string()
+    .min(32, 'JWT_SECRET must be at least 32 characters')
+    .refine((s) => !s.startsWith('CHANGE_ME'), 'JWT_SECRET must not be the default placeholder value'),
+  JWT_REFRESH_SECRET: z.string()
+    .min(32, 'JWT_REFRESH_SECRET must be at least 32 characters')
+    .refine((s) => !s.startsWith('CHANGE_ME'), 'JWT_REFRESH_SECRET must not be the default placeholder value'),
   // Access token TTL (e.g. "15m", "1h") — used by auth.service.ts
   JWT_ACCESS_EXPIRES_IN: z.string().default('15m'),
   // Refresh token TTL in days

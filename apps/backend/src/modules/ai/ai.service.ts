@@ -56,7 +56,7 @@ export const aiService = {
       result = await callProvider(design, interviewContext);
     } catch (err: any) {
       logger.error({ err: err.message, provider: PREFERRED_PROVIDER }, 'AI interview analysis failed, using fallback');
-      result = await fallback.analyze(design);
+      result = await fallback.analyze(design, interviewContext);
     }
 
     const duration = Date.now() - startTime;

@@ -5,10 +5,13 @@ export const reportsRepo = {
     return db.report.create({ data });
   },
 
-  async listPending() {
+  async listPending(page = 1, limit = 50) {
+    const skip = (page - 1) * limit;
     return db.report.findMany({
       where: { status: 'pending' },
       orderBy: { createdAt: 'desc' },
+      skip,
+      take: limit,
       include: {
         blueprint: { select: { id: true, title: true } },
         reporter: { select: { id: true, name: true, email: true } },

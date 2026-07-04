@@ -336,9 +336,12 @@ export const adminService = {
     }
     if (role) where.role = role;
     if (status === 'suspended') {
-      where.lockedUntil = { not: null };
+      where.lockedUntil = { gte: new Date() };
     } else if (status === 'active') {
-      where.lockedUntil = null;
+      where.OR = [
+        { lockedUntil: null },
+        { lockedUntil: { lt: new Date() } },
+      ];
       where.deletedAt = null;
     } else if (status === 'deleted') {
       where.deletedAt = { not: null };
@@ -404,8 +407,7 @@ export const adminService = {
     if (!user) throw new AppError('NOT_FOUND', 'User not found', 404);
 
     const lockedUntil = new Date(Date.now() + durationMin * 60 * 1000);
-    await db.user.update({ where: { id }, data: { lockedUntil } });
-    await db.user.update({ where: { id }, data: { loginAttempts: 5 } });
+    await db.user.update({ where: { id }, data: { lockedUntil, loginAttempts: 5 } });
 
     analyticsService.track('admin', 'admin:user:suspended', {
       targetUserId: id, durationMin,
@@ -428,9 +430,11 @@ export const adminService = {
     const user = await db.user.findUnique({ where: { id } });
     if (!user) throw new AppError('NOT_FOUND', 'User not found', 404);
 
-    await db.user.update({ where: { id }, data: { deletedAt: new Date() } });
-    await db.user.update({ where: { id }, data: { email: `deleted-${id}@sdos.academy` } });
-    await db.user.update({ where: { id }, data: { name: 'Deleted User' } });
+    await db.user.update({ where: { id }, data: {
+      deletedAt: new Date(),
+      email: `deleted-${id}@sdos.academy`,
+      name: 'Deleted User',
+    } });
 
     analyticsService.track('admin', 'admin:user:deleted', { targetUserId: id });
     return { deleted: true };

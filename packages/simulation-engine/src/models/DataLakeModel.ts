@@ -13,7 +13,7 @@ export class DataLakeModel extends NodeModel {
     const isOverloaded = incomingQps > capacity;
 
     return {
-      outgoingQps: incomingQps,
+      outgoingQps: Math.min(incomingQps, capacity),
       passthrough: 0,
       latency: isOverloaded
         ? 2000 + ((incomingQps - capacity) / capacity) * 5000

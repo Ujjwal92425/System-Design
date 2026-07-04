@@ -15,8 +15,29 @@ if (queuesEnabled) {
     secure: false,
   });
 
+  function buildEmailContent(data: { type?: string; token?: string; name?: string; text?: string; html?: string }): { text: string; html: string } {
+    if (data.text && data.html) return { text: data.text, html: data.html };
+
+    const baseUrl = env.FRONTEND_URL;
+    switch (data.type) {
+      case 'verification':
+        return {
+          text: `Hi ${data.name || 'there'},\n\nPlease verify your email by visiting: ${baseUrl}/verify-email?token=${data.token}\n\nThis link expires in 24 hours.`,
+          html: `<p>Hi ${data.name || 'there'},</p><p>Please verify your email by <a href="${baseUrl}/verify-email?token=${data.token}">clicking here</a>.</p><p>This link expires in 24 hours.</p>`,
+        };
+      case 'reset-password':
+        return {
+          text: `Hi ${data.name || 'there'},\n\nReset your password by visiting: ${baseUrl}/reset-password?token=${data.token}\n\nThis link expires in 1 hour.`,
+          html: `<p>Hi ${data.name || 'there'},</p><p>Reset your password by <a href="${baseUrl}/reset-password?token=${data.token}">clicking here</a>.</p><p>This link expires in 1 hour.</p>`,
+        };
+      default:
+        return { text: 'No content', html: '<p>No content</p>' };
+    }
+  }
+
   const worker = new Worker('emails', async (job: Job) => {
-    const { to, subject, text, html } = job.data;
+    const { to, subject } = job.data;
+    const { text, html } = buildEmailContent(job.data);
     logger.info({ jobId: job.id, to, subject }, 'Processing email job');
 
     try {

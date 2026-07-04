@@ -7,11 +7,11 @@ export class MicroserviceModel extends NodeModel {
   process(incomingQps: number, config: any): NodeResult {
     const threadPoolSize = config?.threadPoolSize || 50;
     const cpuBoundRatio = config?.cpuBoundRatio ?? 0.6;
-    const circuitBreakerThreshold = config?.circuitBreakerThreshold || 100;
+    const circuitBreakerThreshold = config?.circuitBreakerThreshold ?? 5;
     const perThreadQps = cpuBoundRatio > 0.7 ? 8 : 20;
     const totalCapacity = threadPoolSize * perThreadQps;
     const isOverloaded = incomingQps > totalCapacity;
-    const isCircuitOpen = incomingQps > circuitBreakerThreshold * perThreadQps;
+    const isCircuitOpen = config?.circuitOpen ?? false;
 
     let qps: number;
     let latency: number;

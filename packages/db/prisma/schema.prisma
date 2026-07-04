@@ -305,7 +305,7 @@ model LessonState {
   userId      String
   user        User         @relation(fields: [userId], references: [id], onDelete: Cascade)
   lessonId    String
-  lesson      Lesson       @relation(fields: [lessonId], references: [id])
+  lesson      Lesson       @relation(fields: [lessonId], references: [id], onDelete: Cascade)
   status      LessonStatus @default(NOT_STARTED)
   resumeState Json?        // { scrollPercent: 0.45 } — LEARN-19
   completedAt DateTime?
@@ -322,7 +322,7 @@ model QuizAttempt {
   userId      String
   user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   quizId      String
-  quiz        Quiz     @relation(fields: [quizId], references: [id])
+  quiz        Quiz     @relation(fields: [quizId], references: [id], onDelete: Cascade)
   score       Float                        // percentage
   answers     Json                         // { [questionId]: selectedAnswer }
   passed      Boolean
@@ -469,7 +469,7 @@ model InterviewSession {
   userId     String
   user       User            @relation(fields: [userId], references: [id], onDelete: Cascade)
   promptId   String
-  prompt     InterviewPrompt @relation(fields: [promptId], references: [id])
+  prompt     InterviewPrompt @relation(fields: [promptId], references: [id], onDelete: Cascade)
   designId   String?
   design     Design?         @relation(fields: [designId], references: [id])
   startedAt  DateTime        @default(now())
@@ -506,7 +506,7 @@ model AIAnalysis {
   userId      String
   user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   designId    String?
-  design      Design?  @relation(fields: [designId], references: [id])
+  design      Design?  @relation(fields: [designId], references: [id], onDelete: SetNull)
   sessionId   String?
   type        String   // "design_review" | "interview_feedback" | "explain_tradeoff"
   designHash  String?  // SHA256 of canonical design JSON — used for AI-12 cache

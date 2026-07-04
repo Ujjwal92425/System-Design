@@ -10,13 +10,14 @@ export class ServiceMeshModel extends NodeModel {
     const enableMtls = config?.enableMtls ?? true;
     const enableTraces = config?.enableTraces ?? true;
     const enableRetries = config?.enableRetries ?? true;
+    const maxQps = config?.maxQps || 10000;
 
     const mtlsOverhead = enableMtls ? 0.02 : 0;
     const traceOverhead = enableTraces ? 0.01 : 0;
     const retryOverhead = enableRetries ? 0.03 : 0;
 
     const totalOverhead = sidecarCpuOverhead + mtlsOverhead + traceOverhead + retryOverhead;
-    const effectiveProcessingRate = Math.max(100, incomingQps * (1 - totalOverhead));
+    const effectiveProcessingRate = maxQps * (1 - totalOverhead);
 
     let qps: number;
     let latency: number;

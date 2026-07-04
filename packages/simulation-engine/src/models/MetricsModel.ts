@@ -14,7 +14,7 @@ export class MetricsModel extends NodeModel {
 
     return {
       outgoingQps: Math.min(incomingQps, capacity),
-      passthrough: Math.min(incomingQps, capacity),
+      passthrough: 0,
       latency: isOverloaded
         ? 50 + ((incomingQps - capacity) / capacity) * 100
         : isWrite

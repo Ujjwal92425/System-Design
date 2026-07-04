@@ -10,7 +10,19 @@ const PRO_LOCKED_MESSAGE =
  * Returns true if the user is ADMIN, PRO role, or has an active PRO/TEAM subscription.
  */
 async function hasPremiumAccess(userId: string, role: string): Promise<boolean> {
-  return true;
+  if (role === 'ADMIN' || role === 'PRO') return true;
+
+  const subscription = await db.userProgress.findFirst({
+    where: { userId },
+    select: { id: true }
+  });
+
+  const sub = await db.subscription.findFirst({
+    where: { userId, status: 'ACTIVE', plan: { in: ['PRO', 'TEAM'] } },
+    select: { id: true }
+  });
+
+  return !!sub;
 }
 
 /**

@@ -1,4 +1,4 @@
-import { NodeModel, NodeResult, erlangC } from './NodeModel';
+import { NodeModel, NodeResult } from './NodeModel';
 import { NodeType } from '@sd-os/shared';
 
 export class MonitoringModel extends NodeModel {
@@ -12,7 +12,7 @@ export class MonitoringModel extends NodeModel {
 
     return {
       outgoingQps: Math.min(incomingQps, metricIngestionRate),
-      passthrough: Math.min(incomingQps, metricIngestionRate),
+      passthrough: 0,
       latency: isOverloaded
         ? 100 + ((incomingQps - metricIngestionRate) / metricIngestionRate) * 200
         : 20 + (incomingQps / metricIngestionRate) * 30,

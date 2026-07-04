@@ -129,6 +129,8 @@ export const communityService = {
   },
 
   async getUploadUrl(userId: string, contentType: string, fileSize: number) {
+    const MAX_SIZE = 5 * 1024 * 1024;
+    if (fileSize > MAX_SIZE) throw new AppError('BAD_REQUEST', 'File size exceeds 5MB limit', 400);
     const ext = contentType.split('/')[1] || 'png';
     const filename = `${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
     return storage.getPresignedUploadUrl(userId, filename, contentType);
@@ -141,7 +143,11 @@ export const communityService = {
 
   async getCollection(id: string, userId: string) {
     const col = await collectionsRepo.findById(id, userId);
-    if (!col) throw new AppError('NOT_FOUND', 'Collection not found', 404);
+    if (!col) {
+      const publicCol = await collectionsRepo.findPublic(id);
+      if (!publicCol) throw new AppError('NOT_FOUND', 'Collection not found', 404);
+      return publicCol;
+    }
     return col;
   },
 

@@ -5,7 +5,6 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useAuth } from '../../features/auth/useAuth';
 import {
-  LayoutDashboard,
   BookOpen,
   PenTool,
   HelpCircle,
@@ -51,8 +50,7 @@ export function AppSidebar({ collapsed, onToggleCollapse }: AppSidebarProps) {
   }, [mobileOpen]);
 
   const navigation = [
-    { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
-    { name: 'Learn Curriculum', href: '/learn', icon: BookOpen },
+    { name: 'Learn', href: '/learn', icon: BookOpen },
     { name: 'Build Canvas', href: '/build', icon: PenTool },
     { name: 'Practice Interviews', href: '/interview', icon: HelpCircle },
     { name: 'Community', href: '/community', icon: Users },
@@ -63,7 +61,7 @@ export function AppSidebar({ collapsed, onToggleCollapse }: AppSidebarProps) {
     <div className="flex flex-col justify-between flex-1">
       <div className="space-y-6">
         {/* Logo */}
-        <Link href="/dashboard" className={`flex items-center ${collapsed ? 'justify-center' : 'space-x-2'} transition-all`}>
+        <Link href="/learn" className={`flex items-center ${collapsed ? 'justify-center' : 'space-x-2'} transition-all`}>
           <div className="w-8 h-8 rounded-lg bg-yc-accent flex items-center justify-center font-bold text-white flex-shrink-0 text-sm">
             Ω
           </div>
@@ -204,7 +202,7 @@ export function AppSidebar({ collapsed, onToggleCollapse }: AppSidebarProps) {
         <div className="px-5 pb-6 overflow-y-auto h-[calc(100%-60px)]">
           <div className="flex flex-col justify-between h-full">
             <div className="space-y-6">
-              <Link href="/dashboard" className="flex items-center space-x-2" onClick={() => setMobileOpen(false)}>
+              <Link href="/learn" className="flex items-center space-x-2" onClick={() => setMobileOpen(false)}>
                 <div className="w-8 h-8 rounded-lg bg-yc-accent flex items-center justify-center font-bold text-white flex-shrink-0 text-sm">
                   Ω
                 </div>

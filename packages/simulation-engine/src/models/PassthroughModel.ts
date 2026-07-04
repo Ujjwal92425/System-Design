@@ -2,7 +2,7 @@ import { NodeModel, NodeResult } from './NodeModel';
 import { NodeType } from '@sd-os/shared';
 
 export class PassthroughModel extends NodeModel {
-  type = NodeType.CLIENT;
+  type = NodeType.NOTE;
 
   process(incomingQps: number, config: any): NodeResult {
     return {

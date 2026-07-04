@@ -69,11 +69,8 @@ function createLimiter(options: RateLimitOptions) {
   // Allow Node to exit even if interval is pending
   sweepInterval.unref?.();
 
-  return function rateLimitMiddleware(req: Request, res: Response, next: NextFunction) {
-    // Use X-Forwarded-For if behind a trusted proxy (Render/Vercel set this)
-    const ip  = (req.headers['x-forwarded-for'] as string)?.split(',')[0]?.trim()
-              || req.ip
-              || 'unknown';
+return function rateLimitMiddleware(req: Request, res: Response, next: NextFunction) {
+    const ip  = req.ip || 'unknown';
     const now = Date.now();
 
     let bucket = store.get(ip);

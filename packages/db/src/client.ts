@@ -22,6 +22,11 @@ function createPrismaClient() {
   return new PrismaClient({
     log: logConfig,
     errorFormat: process.env.NODE_ENV === 'production' ? 'minimal' : 'colorless',
+    datasources: {
+      db: {
+        url: process.env.DATABASE_URL,
+      },
+    },
   });
 }
 

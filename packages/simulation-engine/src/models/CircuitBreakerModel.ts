@@ -1,43 +1,63 @@
 import { NodeModel, NodeResult } from './NodeModel';
 import { NodeType } from '@sd-os/shared';
 
+type State = 'CLOSED' | 'OPEN' | 'HALF_OPEN';
+
 export class CircuitBreakerModel extends NodeModel {
   type = NodeType.CIRCUIT_BREAKER;
 
   private failureCount: number = 0;
-  private state: 'CLOSED' | 'OPEN' | 'HALF_OPEN' = 'CLOSED';
+  private state: State = 'CLOSED';
+  private openSinceTick: number = -1;
 
-  process(incomingQps: number, config: any): NodeResult {
+  process(incomingQps: number, config: any, tick?: number): NodeResult {
     const threshold = config?.failureThreshold || 5;
     const halfOpenMaxQps = config?.halfOpenMaxQps || 100;
     const recoveryTimeoutMs = config?.recoveryTimeoutMs || 30000;
+    const tickIntervalMs = config?.tickIntervalMs || 1000;
+    const recoveryTicks = Math.ceil(recoveryTimeoutMs / tickIntervalMs);
 
-    let qps: number;
-    let errorRate: number;
-    let latency: number;
-    let rejectRate: number;
+    let qps = 0;
+    let errorRate = 0;
+    let latency = 0;
+    let rejectRate = 0;
 
     if (this.state === 'OPEN') {
-      const rejectedQps = Math.max(0, incomingQps - halfOpenMaxQps);
-      qps = Math.min(incomingQps, halfOpenMaxQps);
-      errorRate = 0;
-      latency = 1;
-      rejectRate = incomingQps > 0 ? (rejectedQps / incomingQps) * 100 : 0;
+      if (this.openSinceTick < 0) this.openSinceTick = tick ?? 0;
+      const elapsed = (tick ?? 0) - this.openSinceTick;
 
-      if (incomingQps <= halfOpenMaxQps) {
+      if (elapsed >= recoveryTicks) {
         this.state = 'HALF_OPEN';
+      } else {
+        qps = 0;
+        errorRate = 0;
+        latency = 1;
+        rejectRate = 100;
+        return this.buildResult(qps, latency, errorRate, rejectRate, threshold);
       }
-    } else if (this.state === 'HALF_OPEN') {
-      const probeRate = Math.min(incomingQps, halfOpenMaxQps * 0.1);
+    }
+
+    if (this.state === 'HALF_OPEN') {
+      const probeRate = Math.min(incomingQps, halfOpenMaxQps);
       const rejectedQps = Math.max(0, incomingQps - probeRate);
       qps = probeRate;
       errorRate = 0;
       latency = 5;
-      rejectRate = (rejectedQps / Math.max(1, incomingQps)) * 100;
+      rejectRate = incomingQps > 0 ? (rejectedQps / incomingQps) * 100 : 0;
 
-      this.state = 'CLOSED';
-      this.failureCount = 0;
-    } else {
+      const upstreamErrorRate = config?.upstreamErrorRate || 0;
+      if (upstreamErrorRate > 0 && Math.random() < upstreamErrorRate) {
+        this.state = 'OPEN';
+        this.openSinceTick = tick ?? 0;
+      } else {
+        this.state = 'CLOSED';
+        this.failureCount = 0;
+      }
+      return this.buildResult(qps, latency, errorRate, rejectRate, threshold);
+    }
+
+    // CLOSED state
+    {
       const errorProb = config?.upstreamErrorRate || 0;
       if (errorProb > 0 && Math.random() < errorProb) {
         this.failureCount++;
@@ -45,6 +65,7 @@ export class CircuitBreakerModel extends NodeModel {
 
       if (this.failureCount >= threshold) {
         this.state = 'OPEN';
+        this.openSinceTick = tick ?? 0;
       }
 
       qps = incomingQps;
@@ -53,13 +74,14 @@ export class CircuitBreakerModel extends NodeModel {
       rejectRate = 0;
     }
 
-    const statusIcon = this.state === 'OPEN' ? '!' :
-      this.state === 'HALF_OPEN' ? '?' : '+';
+    return this.buildResult(qps, latency, errorRate, rejectRate, threshold);
+  }
 
+  private buildResult(qps: number, latency: number, errorRate: number, rejectRate: number, threshold: number): NodeResult {
     return {
       outgoingQps: qps,
       passthrough: 0,
-      latency: latency + (rejectRate > 0 ? 50 : 0),
+      latency: rejectRate > 0 ? 1 : latency,
       errorRate: rejectRate > 50 ? Math.min(80, rejectRate) : 0,
       queueDepth: 0,
       cacheHitRate: 0,
@@ -69,7 +91,7 @@ export class CircuitBreakerModel extends NodeModel {
         failureCount: this.failureCount,
         rejectRate: Math.round(rejectRate * 10) / 10,
         threshold,
-        statusIcon
+        statusIcon: this.state === 'OPEN' ? '!' : this.state === 'HALF_OPEN' ? '?' : '+',
       },
     };
   }

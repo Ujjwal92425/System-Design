@@ -8,9 +8,21 @@ interface ActiveSimulation {
   userId: string;
   designId: string;
   onTick?: (tick: TickSnapshot) => void;
+  startedAt: number;
 }
 
 const activeSimulations = new Map<string, ActiveSimulation>();
+
+// Cleanup stale simulations every 5 minutes
+setInterval(() => {
+  const now = Date.now();
+  activeSimulations.forEach((sim, key) => {
+    if (now - sim.startedAt > 10 * 60 * 1000) {
+      try { sim.engine.stop(); } catch (_) {}
+      activeSimulations.delete(key);
+    }
+  });
+}, 5 * 60 * 1000).unref?.();
 
 export const simulationService = {
   async listConfigs(designId: string, userId: string) {
@@ -92,7 +104,7 @@ export const simulationService = {
       },
     );
 
-    activeSimulations.set(run.id, { engine, runId: run.id, userId, designId: sim.designId, onTick });
+    activeSimulations.set(run.id, { engine, runId: run.id, userId, designId: sim.designId, onTick, startedAt: Date.now() });
 
     return { run, ticks };
   },

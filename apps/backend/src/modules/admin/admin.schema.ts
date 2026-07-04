@@ -116,3 +116,7 @@ export const FeatureBlueprintBody = z.object({
 export const ReviewReportBody = z.object({
   status: z.enum(['reviewed', 'dismissed']),
 });
+
+export const SuspendUserBody = z.object({
+  durationMin: z.number().int().min(1).max(10080).default(1440), // max 7 days
+});

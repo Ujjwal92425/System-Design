@@ -7,11 +7,11 @@ const queuesEnabled = !env.DISABLE_QUEUES;
 
 if (queuesEnabled) {
   const worker = new Worker('ai-analysis', async (job: Job) => {
-    const { designId, userId } = job.data;
+    const { designId, userId, design } = job.data;
     logger.info({ jobId: job.id, designId, userId }, 'Processing AI Analysis job');
 
     try {
-      const result = await aiService.analyze({ designId, userId });
+      const result = await aiService.analyze({ designId, userId, nodes: design?.nodes, edges: design?.edges });
       logger.info({ jobId: job.id, result }, 'AI Analysis job completed successfully');
       return result;
     } catch (err: any) {

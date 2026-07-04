@@ -254,12 +254,15 @@ const workerCode = `
     }
     currentInputQps = safeNum(currentInputQps, 0);
 
-    // --- Build adjacency list ---
-    var adj = {}, incomingCount = {};
+    // --- Build adjacency list (protocol-aware) ---
+    var adj = {}, incomingCount = {}, edgeLabels = {};
+    var protocolLatency = { 'HTTP': 5, 'HTTPS': 5, 'gRPC': 2, 'TCP': 1, 'UDP': 0.5, 'Kafka': 3, 'Redis': 0.5, 'WebSocket': 3 };
     graphNodes.forEach(function(n) { adj[n.id] = []; incomingCount[n.id] = 0; });
     graphEdges.forEach(function(e) {
-      // FIX: Guard against orphan edges (source or target not in graph)
-      if (adj[e.source]) adj[e.source].push(e.target);
+      if (adj[e.source]) {
+        adj[e.source].push(e.target);
+        edgeLabels[e.source + '->' + e.target] = e.label || 'HTTP';
+      }
       if (incomingCount[e.target] !== undefined) incomingCount[e.target]++;
     });
 
@@ -299,6 +302,7 @@ const workerCode = `
       if (!node) continue;
 
       nodeMetrics[id].qps = safeNum(nodeMetrics[id].qps + load, 0);
+      var cascadingFailure = item.cascadingFailure || false; // CANVAS-M01: cross-node failure propagation
 
       // If already visited, just propagate load downstream (fan-in)
       if (visited[id]) {
@@ -339,6 +343,11 @@ const workerCode = `
       var isPartitioned = false;
       var oomCrashed = false;
       var gcPauseMs = 0;
+
+      if (cascadingFailure) {
+        nodeErrorRate = Math.min(nodeErrorRate + 30, 80);
+        nodeLatency += 200;
+      }
 
       // ======================================================================
       // CIRCUIT BREAKER model
@@ -540,9 +549,6 @@ const workerCode = `
         }
 
         // --- FIX: Retry storm / error backoff ---
-        // OLD formula: nodeQps *= (1 + errRatio + errRatio² + errRatio³ + errRatio⁴)
-        //   This is an unbounded geometric series that can blow up to Infinity
-        // NEW: capped exponential backoff — max 3 retry amplifications, 2x multiplier, capped at 2x original
         if (nodeErrorRate > 0 && !oomCrashed && nodeSpecType !== 'CIRCUIT_BREAKER') {
           var errRatio = safeNum(nodeErrorRate / 100, 0);
           // Cap amplification: at most 3 effective "retries"
@@ -797,14 +803,27 @@ const workerCode = `
                         nodeSpecType === 'QUEUE');
       if (!isTerminal) {
         var targets = adj[id] || [];
-        if (targets.length > 0 && !oomCrashed && !isFailed && !isPartitioned) {
+        var isFailing = oomCrashed || isFailed || isPartitioned;
+
+        if (isFailing) {
+          targets.forEach(function(tgt) {
+            var edgeKey = id + '->' + tgt;
+            var proto = edgeLabels[edgeKey] || 'HTTP';
+            var hopMs = (protocolLatency[proto] || 5) + netLatencyPerHop;
+            queue.push({ id: tgt, load: 0, hopLatency: cumulativeHopLatency + hopMs, cascadingFailure: true });
+          });
+          events.push({ tick: tickCount, type: 'CASCADE', message: nodeLabel + ' failure cascading to ' + targets.length + ' downstream nodes', severity: 'HIGH' });
+        } else if (targets.length > 0) {
           var writeQps = nodeQps * writeRatio;
           var readQps = nodeQps * (1 - writeRatio);
           // FIX: Use total QPS, not writeRatio * 2
           var outgoingLoad = readQps + writeQps; // = nodeQps
           var perTarget = safeNum(outgoingLoad / targets.length, 0);
           targets.forEach(function(tgt) {
-            queue.push({ id: tgt, load: perTarget, hopLatency: cumulativeHopLatency + netLatencyPerHop });
+            var edgeKey = id + '->' + tgt;
+            var proto = edgeLabels[edgeKey] || 'HTTP';
+            var hopMs = (protocolLatency[proto] || 5) + netLatencyPerHop;
+            queue.push({ id: tgt, load: perTarget, hopLatency: cumulativeHopLatency + hopMs });
           });
         }
       }

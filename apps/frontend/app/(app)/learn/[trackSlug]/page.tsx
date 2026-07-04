@@ -71,7 +71,7 @@ export default function TrackPage() {
           {error || 'The track you are looking for does not exist.'}
         </p>
         <Link href="/learn" style={{ color: BRAND, fontWeight: 600 }}>
-          ← Back to Curriculum
+          ← Back to Learn Hub
         </Link>
       </div>
     );
@@ -83,7 +83,7 @@ export default function TrackPage() {
     <div style={{ maxWidth: '860px', margin: '0 auto', padding: '36px 24px', display: 'flex', flexDirection: 'column', gap: '28px' }}>
       <JsonLd data={breadcrumbSchemaJsonLd([
         { name: 'Home', path: '/' },
-        { name: 'Curriculum', path: '/learn' },
+        { name: 'Learn', path: '/learn' },
         { name: track.name, path: `/learn/${trackSlug}` },
       ])} />
       <JsonLd data={collectionPageSchemaJsonLd({
@@ -93,7 +93,7 @@ export default function TrackPage() {
       })} />
 
       <Link href="/learn" style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: '13px', color: BRAND, fontWeight: 600, textDecoration: 'none', width: 'fit-content' }}>
-        <ArrowLeft style={{ width: '14px', height: '14px' }} /> Curriculum
+        <ArrowLeft style={{ width: '14px', height: '14px' }} /> Learn Hub
       </Link>
 
       <div style={{ display: 'flex', alignItems: 'flex-start', gap: '16px' }}>

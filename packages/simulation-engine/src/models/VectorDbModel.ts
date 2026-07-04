@@ -13,9 +13,9 @@ export class VectorDbModel extends NodeModel {
     const isOverloaded = incomingQps > searchQps;
 
     const searchLatency = indexType === 'hnsw'
-      ? 5 + Math.log10(indexSize / 10000) * 10
+      ? 5 + Math.max(0, Math.log10(indexSize / 10000)) * 10
       : indexType === 'ivf'
-        ? 3 + Math.log10(indexSize / 10000) * 8
+        ? 3 + Math.max(0, Math.log10(indexSize / 10000)) * 8
         : 20;
 
     return {

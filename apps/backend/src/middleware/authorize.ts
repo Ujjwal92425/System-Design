@@ -68,12 +68,19 @@ export function authorize(allowedRoles: AllowedRole[]) {
  * This is a lightweight guard that just ensures the user is authenticated
  * and not trying to modify a resource as a total stranger.
  */
-export function authorizeOwner() {
+export function authorizeOwner(resourceType: string) {
   return (req: AuthRequest, _res: Response, next: NextFunction) => {
     if (!req.user) {
       return next(new AppError('UNAUTHORIZED', 'Not authenticated', 401));
     }
-    // Actual ownership check must happen in the service layer
+    const resourceUserId = (req as any)._ownerUserId;
+    if (resourceUserId && resourceUserId !== req.user.id && req.user.role !== 'ADMIN') {
+      return next(new AppError(
+        'FORBIDDEN',
+        `You do not own this ${resourceType}`,
+        403
+      ));
+    }
     return next();
   };
 }

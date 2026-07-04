@@ -1,10 +1,13 @@
 import { db } from '../client';
 
 export const collectionsRepo = {
-  async listByUser(userId: string) {
+  async listByUser(userId: string, page = 1, limit = 20) {
+    const skip = (page - 1) * limit;
     return db.collection.findMany({
       where: { userId },
       orderBy: { updatedAt: 'desc' },
+      skip,
+      take: limit,
       include: { _count: { select: { items: true } } },
     });
   },
@@ -12,6 +15,22 @@ export const collectionsRepo = {
   async findById(id: string, userId: string) {
     return db.collection.findFirst({
       where: { id, userId },
+      include: {
+        items: {
+          orderBy: { order: 'asc' },
+          include: {
+            blueprint: {
+              select: { id: true, title: true, description: true, tags: true, voteCount: true, publishedAt: true, author: { select: { id: true, name: true, avatarUrl: true } } },
+            },
+          },
+        },
+      },
+    });
+  },
+
+  async findPublic(id: string) {
+    return db.collection.findFirst({
+      where: { id, isPublic: true },
       include: {
         items: {
           orderBy: { order: 'asc' },

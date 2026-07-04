@@ -8,9 +8,12 @@ export const progressRepo = {
     });
   },
 
-  async listProgress(userId: string) {
+  async listProgress(userId: string, page = 1, limit = 100) {
+    const skip = (page - 1) * limit;
     return db.lessonState.findMany({
-      where: { userId }
+      where: { userId },
+      skip,
+      take: limit,
     });
   },
 
@@ -64,9 +67,12 @@ export const progressRepo = {
     });
   },
 
-  async getBookmarks(userId: string) {
+  async getBookmarks(userId: string, page = 1, limit = 50) {
+    const skip = (page - 1) * limit;
     return db.lessonState.findMany({
       where: { userId, bookmarked: true },
+      skip,
+      take: limit,
       include: { lesson: true }
     });
   },
@@ -135,53 +141,34 @@ export const progressRepo = {
     });
   },
 
-  // Helper to update UserProgress complete percentage
+  // Helper to update UserProgress complete percentage (optimized N+1 → 3 queries total)
   async recalculateTrackProgress(userId: string, moduleId: string) {
     const mod = await db.module.findUnique({
       where: { id: moduleId },
       select: { trackId: true }
     });
-
     if (!mod) return;
 
     const trackId = mod.trackId;
 
-    // Get total published lessons in this track
-    const totalLessons = await db.lesson.count({
-      where: {
-        isPublished: true,
-        module: { trackId }
-      }
-    });
+    const [totalLessons, completedLessons] = await Promise.all([
+      db.lesson.count({ where: { isPublished: true, module: { trackId } } }),
+      db.lessonState.count({
+        where: {
+          userId,
+          status: 'COMPLETE',
+          lesson: { isPublished: true, module: { trackId } }
+        }
+      }),
+    ]);
 
     if (totalLessons === 0) return;
-
-    // Get completed lessons by this user in this track
-    const completedLessons = await db.lessonState.count({
-      where: {
-        userId,
-        status: 'COMPLETE',
-        lesson: {
-          isPublished: true,
-          module: { trackId }
-        }
-      }
-    });
-
-    const completedPct = completedLessons / totalLessons;
+    const completedPct = Math.round((completedLessons / totalLessons) * 100) / 100;
 
     await db.userProgress.upsert({
       where: { userId_trackId: { userId, trackId } },
-      update: {
-        completedPct,
-        lastActiveAt: new Date()
-      },
-      create: {
-        userId,
-        trackId,
-        completedPct,
-        lastActiveAt: new Date()
-      }
+      update: { completedPct, lastActiveAt: new Date() },
+      create: { userId, trackId, completedPct, lastActiveAt: new Date() },
     });
   }
 };

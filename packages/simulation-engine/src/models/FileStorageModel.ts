@@ -13,7 +13,7 @@ export class FileStorageModel extends NodeModel {
     const isOverloaded = incomingQps > effectiveCapacity;
 
     return {
-      outgoingQps: incomingQps,
+      outgoingQps: Math.min(incomingQps, effectiveCapacity),
       passthrough: 0,
       latency: isOverloaded
         ? 50 + ((incomingQps - effectiveCapacity) / effectiveCapacity) * 200

@@ -4,38 +4,48 @@ import { env } from '../config/env';
 import { simulationService } from '../modules/simulation/simulation.service';
 import { TickSnapshot } from '@sd-os/simulation-engine';
 
-const worker = new Worker('simulation-run', async (job: Job) => {
-  const { simulationId, userId } = job.data;
-  logger.info({ jobId: job.id, simulationId, userId }, 'Starting background simulation run');
+const queuesEnabled = !env.DISABLE_QUEUES;
 
-  try {
-    const allTicks: TickSnapshot[] = [];
+let simulationRunWorker: Worker | undefined;
 
-    const result = await simulationService.startRun(simulationId, userId, (tick: TickSnapshot) => {
-      allTicks.push(tick);
-      job.updateProgress({ tick: tick.tick, totalNodes: tick.nodes.length, health: tick.systemHealth });
-    });
+if (queuesEnabled) {
+  simulationRunWorker = new Worker('simulation-run', async (job: Job) => {
+    const { simulationId, userId } = job.data;
+    logger.info({ jobId: job.id, simulationId, userId }, 'Starting background simulation run');
 
-    await job.updateProgress({ ticks: allTicks.length, status: 'completed' });
-    logger.info({ jobId: job.id, simulationId, ticks: allTicks.length }, 'Background simulation completed');
+    try {
+      const allTicks: TickSnapshot[] = [];
 
-    return { ticksCount: allTicks.length, runId: result.run.id };
+      const result = await simulationService.startRun(simulationId, userId, (tick: TickSnapshot) => {
+        allTicks.push(tick);
+        job.updateProgress({ tick: tick.tick, totalNodes: tick.nodes.length, health: tick.systemHealth });
+      });
 
-  } catch (err: any) {
-    logger.error({ jobId: job.id, simulationId, err }, 'Background simulation failed');
-    throw err;
-  }
-}, {
-  connection: { url: env.REDIS_URL },
-  concurrency: 2,
-});
+      await job.updateProgress({ ticks: allTicks.length, status: 'completed' });
+      logger.info({ jobId: job.id, simulationId, ticks: allTicks.length }, 'Background simulation completed');
 
-worker.on('completed', (job) => {
-  logger.info({ jobId: job.id }, 'Simulation job completed');
-});
+      return { ticksCount: allTicks.length, runId: result.run.id };
 
-worker.on('failed', (job, err) => {
-  logger.error({ jobId: job?.id, err }, 'Simulation job failed');
-});
+    } catch (err: any) {
+      logger.error({ jobId: job.id, simulationId, err }, 'Background simulation failed');
+      throw err;
+    }
+  }, {
+    connection: { url: env.REDIS_URL },
+    concurrency: 2,
+  });
 
-export { worker as simulationRunWorker };
+  simulationRunWorker.on('completed', (job) => {
+    logger.info({ jobId: job.id }, 'Simulation job completed');
+  });
+
+  simulationRunWorker.on('failed', (job, err) => {
+    logger.error({ jobId: job?.id, err }, 'Simulation job failed');
+  });
+
+  logger.info('Simulation run worker registered');
+} else {
+  logger.info('Simulation run worker skipped (DISABLE_QUEUES=true)');
+}
+
+export { simulationRunWorker };

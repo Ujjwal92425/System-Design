@@ -83,20 +83,20 @@ export const usersRepo = {
   },
 
   // Verification Tokens (AUTH-01)
-  async createVerificationToken(userId: string, token: string, expiresAt: Date) {
+  async createVerificationToken(userId: string, tokenHash: string, expiresAt: Date) {
     return db.emailVerification.create({
       data: {
         userId,
-        token,
+        token: tokenHash,
         expiresAt
       }
     });
   },
 
-  async findVerificationToken(token: string) {
+  async findVerificationToken(tokenHash: string) {
     return db.emailVerification.findFirst({
       where: {
-        token,
+        token: tokenHash,
         usedAt: null,
         expiresAt: { gte: new Date() }
       }
@@ -104,6 +104,11 @@ export const usersRepo = {
   },
 
   async markVerificationTokenUsed(id: string) {
+    const token = await db.emailVerification.findUnique({ where: { id } });
+    if (!token) throw new Error('Token not found');
+    if (token.usedAt) throw new Error('Token already used');
+    if (token.expiresAt < new Date()) throw new Error('Token has expired');
+
     return db.emailVerification.update({
       where: { id },
       data: { usedAt: new Date() }
@@ -111,7 +116,7 @@ export const usersRepo = {
   },
 
   // Password Resets (AUTH-03)
-  async createPasswordResetToken(userId: string, token: string, expiresAt: Date) {
+  async createPasswordResetToken(userId: string, tokenHash: string, expiresAt: Date) {
     // Invalidate existing active tokens
     await db.passwordReset.updateMany({
       where: { userId, usedAt: null },
@@ -121,16 +126,16 @@ export const usersRepo = {
     return db.passwordReset.create({
       data: {
         userId,
-        token,
+        token: tokenHash,
         expiresAt
       }
     });
   },
 
-  async findPasswordResetToken(token: string) {
+  async findPasswordResetToken(tokenHash: string) {
     return db.passwordReset.findFirst({
       where: {
-        token,
+        token: tokenHash,
         usedAt: null,
         expiresAt: { gte: new Date() }
       }
@@ -138,6 +143,11 @@ export const usersRepo = {
   },
 
   async markPasswordResetTokenUsed(id: string) {
+    const token = await db.passwordReset.findUnique({ where: { id } });
+    if (!token) throw new Error('Token not found');
+    if (token.usedAt) throw new Error('Token already used');
+    if (token.expiresAt < new Date()) throw new Error('Token has expired');
+
     return db.passwordReset.update({
       where: { id },
       data: { usedAt: new Date() }

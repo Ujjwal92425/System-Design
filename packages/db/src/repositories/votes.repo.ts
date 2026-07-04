@@ -2,19 +2,21 @@ import { db } from '../client';
 
 export const votesRepo = {
   async upsert(blueprintId: string, userId: string, value: number) {
-    const existing = await db.vote.findUnique({
-      where: { blueprintId_userId: { blueprintId, userId } },
-    });
-    if (existing) {
-      if (existing.value === value) {
-        await db.vote.delete({ where: { id: existing.id } });
-        return { action: 'removed' as const };
+    return db.$transaction(async (tx) => {
+      const existing = await tx.vote.findUnique({
+        where: { blueprintId_userId: { blueprintId, userId } },
+      });
+      if (existing) {
+        if (existing.value === value) {
+          await tx.vote.delete({ where: { id: existing.id } });
+          return { action: 'removed' as const };
+        }
+        await tx.vote.update({ where: { id: existing.id }, data: { value } });
+        return { action: 'updated' as const };
       }
-      await db.vote.update({ where: { id: existing.id }, data: { value } });
-      return { action: 'updated' as const };
-    }
-    await db.vote.create({ data: { blueprintId, userId, value } });
-    return { action: 'created' as const };
+      await tx.vote.create({ data: { blueprintId, userId, value } });
+      return { action: 'created' as const };
+    });
   },
 
   async getUserVote(blueprintId: string, userId: string) {
@@ -23,8 +25,9 @@ export const votesRepo = {
     });
   },
 
-  async getBlueprintVotes(blueprintId: string) {
-    return db.vote.findMany({ where: { blueprintId } });
+  async getBlueprintVotes(blueprintId: string, page = 1, limit = 100) {
+    const skip = (page - 1) * limit;
+    return db.vote.findMany({ where: { blueprintId }, skip, take: limit });
   },
 
   async getNetVotes(blueprintId: string) {

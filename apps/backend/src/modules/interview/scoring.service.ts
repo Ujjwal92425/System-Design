@@ -319,11 +319,14 @@ export function mergeAiIntoScores(
     else aiFeedback = 'Architecture needs significant enhancement. Focus on core components like load balancing, caching, and database replication.';
   }
 
+  const finalGrade = calculateGrade(finalPercentage);
+  const finalScore = Math.round((finalPercentage / 100) * rulesResult.maxScore);
+
   return {
     ...rulesResult,
-    totalScore: Math.round((finalPercentage / 100) * rulesResult.maxScore),
+    totalScore: finalScore,
     percentage: finalPercentage,
-    grade: rulesResult.grade,
+    grade: finalGrade,
     issues: mergedIssues,
     aiFeedback,
     aiScores: aiResult.scores || {}

@@ -25,11 +25,14 @@ export class CacheModel extends NodeModel {
 
     const hits = incomingQps * hitRate;
     const misses = incomingQps - hits;
+    const missRatio = misses / Math.max(1, incomingQps);
+    const backendLatency = 2; // baseline backend latency
+    const missLatency = missRatio * backendLatency * 10;
 
     return {
       outgoingQps: incomingQps,
       passthrough: misses,
-      latency: 1 + (misses > 0 ? 5 : 0),
+      latency: 1 + missLatency,
       errorRate: 0,
       queueDepth: 0,
       cacheHitRate: hitRate,
