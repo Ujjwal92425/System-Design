@@ -20,7 +20,8 @@ import { analytics } from '../../../lib/analytics';
 
 export default function LoginPage() {
   const router = useRouter();
-  const { login, loading, error } = useAuth();
+  const { login, loading, error, errorDetails } = useAuth();
+  const [showDetails, setShowDetails] = useState(false);
 
   const [email, setEmail]       = useState('');
   const [password, setPassword] = useState('');
@@ -59,8 +60,56 @@ export default function LoginPage() {
 
       {/* Server error banner */}
       {error && (
-        <div className="auth-error-banner" role="alert">
-          {error}
+        <div
+          className="auth-error-banner"
+          role="alert"
+          style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}
+        >
+          <div style={{ display: 'flex', alignItems: 'flex-start', gap: '8px' }}>
+            <span style={{ fontSize: '14px', lineHeight: '1.2' }}>⚠️</span>
+            <div style={{ flex: 1 }}>
+              <p style={{ fontWeight: 600, margin: 0, fontSize: '13px' }}>Authentication Error</p>
+              <p style={{ margin: '2px 0 0', fontSize: '12px', lineHeight: '1.4' }}>{error}</p>
+            </div>
+          </div>
+
+          {errorDetails && (
+            <div style={{ borderTop: '1px solid rgba(185, 28, 28, 0.2)', paddingTop: '6px', marginTop: '2px' }}>
+              <button
+                type="button"
+                onClick={() => setShowDetails(!showDetails)}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  padding: 0,
+                  fontSize: '11px',
+                  color: '#b91c1c',
+                  textDecoration: 'underline',
+                  cursor: 'pointer',
+                  fontFamily: 'monospace'
+                }}
+              >
+                {showDetails ? 'Hide technical details' : 'Show technical details (dev)'}
+              </button>
+              {showDetails && (
+                <pre
+                  style={{
+                    margin: '6px 0 0',
+                    padding: '8px',
+                    background: '#fff',
+                    borderRadius: '4px',
+                    fontSize: '10px',
+                    fontFamily: 'monospace',
+                    overflowX: 'auto',
+                    whiteSpace: 'pre-wrap',
+                    maxHeight: '120px'
+                  }}
+                >
+                  {typeof errorDetails === 'string' ? errorDetails : JSON.stringify(errorDetails, null, 2)}
+                </pre>
+              )}
+            </div>
+          )}
         </div>
       )}
 

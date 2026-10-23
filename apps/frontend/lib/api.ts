@@ -74,21 +74,27 @@ api.interceptors.response.use(
       isRefreshing = true;
 
       try {
-        // Trigger silent refresh rotation via cookies
+        const currentRefresh = useAuthStore.getState().refreshToken;
+
+        // CHANGE: Send refreshToken in body as fallback for cross-origin local dev while keeping withCredentials
         const res = await axios.post(
           `${API_URL}/api/auth/refresh`,
-          {},
+          { refreshToken: currentRefresh },
           { withCredentials: true }
         );
 
         const newAccessToken = res.data?.data?.token;
+        const newRefreshToken = res.data?.data?.refreshToken;
 
         if (!newAccessToken) {
           throw new Error('No access token returned from rotation');
         }
 
-        // Store new token in Zustand
+        // Store new tokens in Zustand
         useAuthStore.getState().setAccessToken(newAccessToken);
+        if (newRefreshToken) {
+          useAuthStore.getState().setRefreshToken(newRefreshToken);
+        }
 
         // Resume queued requests
         processQueue(null, newAccessToken);
