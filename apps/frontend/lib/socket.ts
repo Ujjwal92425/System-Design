@@ -23,7 +23,7 @@ const MAX_RETRIES = 3;
 export function getSocket(token?: string): Socket | null {
   if (socket?.connected) return socket;
 
-  const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
+  const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4007';
   const authToken = token || (typeof window !== 'undefined' && localStorage.getItem('accessToken'));
 
   if (!authToken) {

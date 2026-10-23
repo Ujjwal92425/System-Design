@@ -13,7 +13,7 @@ const nextConfig: NextConfig = {
   },
   async headers() {
     const cspValue = isDev
-      ? "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://posthog.sdos.academy; worker-src 'self' blob:; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' data:; connect-src 'self' ws: http://localhost:4000 http://localhost:3000 https://posthog.sdos.academy; frame-src 'none'; object-src 'none'"
+      ? "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://posthog.sdos.academy; worker-src 'self' blob:; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' data:; connect-src 'self' ws: http://localhost:4007 http://localhost:3007 https://posthog.sdos.academy; frame-src 'none'; object-src 'none'"
       : "default-src 'self'; script-src 'self' https://posthog.sdos.academy; worker-src 'self' blob:; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' data:; connect-src 'self' https://posthog.sdos.academy; frame-src 'none'; object-src 'none'";
 
     return [
