@@ -12,6 +12,30 @@ export const api = axios.create({
   },
 });
 
+// CHANGE: Deduplicate simultaneous in-flight GET requests (prevents duplicate React StrictMode / multi-component calls)
+const inFlightGetRequests = new Map<string, Promise<any>>();
+const originalGet = api.get.bind(api);
+
+api.get = function <T = any, R = axios.AxiosResponse<T>, D = any>(
+  url: string,
+  config?: axios.AxiosRequestConfig<D>
+): Promise<R> {
+  const paramsKey = config?.params ? JSON.stringify(config.params) : '';
+  const key = `${url}?${paramsKey}`;
+
+  if (inFlightGetRequests.has(key)) {
+    return inFlightGetRequests.get(key)!;
+  }
+
+  const promise = originalGet<T, R, D>(url, config)
+    .finally(() => {
+      inFlightGetRequests.delete(key);
+    });
+
+  inFlightGetRequests.set(key, promise);
+  return promise;
+};
+
 // Request Interceptor: Attach memory JWT access token
 api.interceptors.request.use(
   (config) => {
