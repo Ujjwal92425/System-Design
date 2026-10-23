@@ -17,9 +17,11 @@ export function SimulationControls({
 }: SimulationControlsProps) {
   return (
     <div className="flex items-center gap-2">
+      {/* CHANGE: Added PostHog data-track attributes for simulation events */}
       {!isRunning ? (
         <button
           onClick={onStart}
+          data-track="simulation:start"
           className="flex-1 px-4 py-2.5 bg-yc-accent text-white border-none rounded-lg text-[11px] font-bold cursor-pointer flex items-center justify-center gap-1.5 hover:bg-yc-accent-hover transition-colors"
         >
           <Play className="w-3.5 h-3.5 fill-current" />
@@ -28,6 +30,7 @@ export function SimulationControls({
       ) : (
         <button
           onClick={onStop}
+          data-track="simulation:stop"
           className="flex-1 px-4 py-2.5 bg-red-500 text-white border-none rounded-lg text-[11px] font-bold cursor-pointer flex items-center justify-center gap-1.5 hover:bg-red-600 transition-colors"
         >
           <Square className="w-3.5 h-3.5 fill-current" />
@@ -36,6 +39,7 @@ export function SimulationControls({
       )}
       <button
         onClick={onReset}
+        data-track="simulation:reset"
         className="px-3 py-2.5 bg-transparent border border-yc-border text-yc-text-secondary rounded-lg text-[11px] font-bold cursor-pointer flex items-center gap-1.5 hover:bg-yc-bg-card transition-colors"
         title="Reset metrics and chaos"
       >

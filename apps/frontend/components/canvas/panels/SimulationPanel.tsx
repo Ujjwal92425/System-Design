@@ -129,9 +129,11 @@ export function SimulationPanel({
   const showErrorBanner = simulation.workerError && simulation.isPaused;
 
   if (!isOpen) {
+    // CHANGE: Added PostHog data-track for opening simulation console
     return (
       <div
         onClick={() => setIsOpen(true)}
+        data-track="simulation:open_console"
         className="absolute bottom-6 left-1/2 -translate-x-1/2 z-20 bg-white/95 backdrop-blur-md border border-yc-border shadow-xl hover:shadow-2xl rounded-full px-5 py-2.5 hover:border-yc-accent hover:scale-[1.02] active:scale-[0.98] transition flex items-center gap-3 cursor-pointer select-none text-[11px] font-bold font-mono tracking-wider text-yc-text"
       >
         <Radio
@@ -189,9 +191,11 @@ export function SimulationPanel({
             )}
           </div>
 
-          <div className="flex items-center gap-3 flex-shrink-0">
+            {/* CHANGE: Added PostHog data-track for view toggle and close */}
             <button
               onClick={() => setDashboardView((v) => !v)}
+              data-track="simulation:toggle_view"
+              data-track-view={dashboardView ? 'compact' : 'dashboard'}
               className={`flex items-center gap-1.5 text-[10px] font-bold font-mono px-3 py-1.5 rounded-md border transition-colors ${
                 dashboardView
                   ? 'bg-orange-500 text-white border-orange-500 hover:bg-orange-600'
@@ -208,6 +212,7 @@ export function SimulationPanel({
 
             <button
               onClick={() => setIsOpen(false)}
+              data-track="simulation:close_console"
               className="p-1.5 rounded-lg text-yc-text-muted hover:text-yc-text hover:bg-gray-100 transition border border-transparent hover:border-yc-border"
               title="Close panel"
               aria-label="Close panel"
@@ -248,9 +253,12 @@ export function SimulationPanel({
                       ? simulation.eventsLog.length
                       : 0;
                   return (
+                    {/* CHANGE: Added PostHog data-track for simulation tab change */}
                     <button
                       key={tab.id}
                       onClick={() => setActiveTab(tab.id)}
+                      data-track="simulation:tab_change"
+                      data-track-tab={tab.id}
                       className={`flex items-center gap-1.5 px-4 py-2.5 rounded-t-lg text-[10px] font-bold font-mono transition-colors ${
                         active
                           ? 'bg-white text-yc-accent border border-yc-border border-b-transparent -mb-px'
@@ -293,8 +301,10 @@ export function SimulationPanel({
                           <div className="flex items-center justify-between mb-2">
                             <span className="font-mono text-[9px] text-yc-text-muted font-bold">OUTLOOK</span>
                             {simulation.metricsHistory.length > 0 && (
+                              {/* CHANGE: Added PostHog data-track for simulation report export */}
                               <button
                                 onClick={(e) => { e.stopPropagation(); exportReport(simulation); }}
+                                data-track="simulation:export_report"
                                 className="flex items-center gap-1 text-[9px] font-bold font-mono px-2 py-1 bg-yc-accent text-white rounded hover:bg-yc-accent-hover transition"
                               >
                                 <Download className="w-3 h-3" />
