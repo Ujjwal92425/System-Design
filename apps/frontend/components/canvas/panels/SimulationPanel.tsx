@@ -252,8 +252,9 @@ export function SimulationPanel({
                     : tab.id === 'events'
                       ? simulation.eventsLog.length
                       : 0;
+
+                  // CHANGE: Added PostHog data-track for simulation tab change
                   return (
-                    {/* CHANGE: Added PostHog data-track for simulation tab change */}
                     <button
                       key={tab.id}
                       onClick={() => setActiveTab(tab.id)}

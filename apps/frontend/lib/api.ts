@@ -1,4 +1,4 @@
-import axios from 'axios';
+import axios, { type AxiosRequestConfig, type AxiosResponse } from 'axios';
 import { useAuthStore } from '../features/auth/authStore';
 
 // Retrieve public API URL from environment variables
@@ -16,9 +16,9 @@ export const api = axios.create({
 const inFlightGetRequests = new Map<string, Promise<any>>();
 const originalGet = api.get.bind(api);
 
-api.get = function <T = any, R = axios.AxiosResponse<T>, D = any>(
+api.get = function <T = any, R = AxiosResponse<T>, D = any>(
   url: string,
-  config?: axios.AxiosRequestConfig<D>
+  config?: AxiosRequestConfig<D>
 ): Promise<R> {
   const paramsKey = config?.params ? JSON.stringify(config.params) : '';
   const key = `${url}?${paramsKey}`;
@@ -27,7 +27,7 @@ api.get = function <T = any, R = axios.AxiosResponse<T>, D = any>(
     return inFlightGetRequests.get(key)!;
   }
 
-  const promise = originalGet<T, R, D>(url, config)
+  const promise = (originalGet(url, config) as Promise<R>)
     .finally(() => {
       inFlightGetRequests.delete(key);
     });
