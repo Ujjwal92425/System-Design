@@ -49,7 +49,7 @@ export const ReportBlueprintBody = z.object({
 });
 
 export const AddToCollectionBody = z.object({
-  collectionId: z.string().cuid(),
+  blueprintId: z.string().cuid(),
 });
 
 export const BlueprintQuerySchema = z.object({

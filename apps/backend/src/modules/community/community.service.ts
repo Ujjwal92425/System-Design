@@ -1,5 +1,5 @@
 import sanitizeHtml from 'sanitize-html';
-import { blueprintsRepo, commentsRepo, votesRepo, collectionsRepo, reportsRepo, designsRepo } from '@sd-os/db';
+import { blueprintsRepo, commentsRepo, votesRepo, collectionsRepo, reportsRepo, designsRepo, db } from '@sd-os/db';
 import { AppError } from '../../utils/errors';
 import { analyticsService } from '../analytics/analytics.service';
 import { storage } from '../../utils/storage';
@@ -25,6 +25,12 @@ export const communityService = {
   },
 
   async createBlueprint(userId: string, data: { designId: string; title: string; description: string; tags: string[]; mediaUrls?: string[] }) {
+    const design = await db.design.findFirst({
+      where: { id: data.designId, userId, deletedAt: null },
+      select: { id: true },
+    });
+    if (!design) throw new AppError('NOT_FOUND', 'Design not found', 404);
+
     const bp = await blueprintsRepo.create({
       designId: data.designId,
       authorId: userId,
@@ -55,7 +61,7 @@ export const communityService = {
 
   async forkBlueprint(id: string, userId: string) {
     const bp = await blueprintsRepo.findById(id);
-    if (!bp) throw new AppError('NOT_FOUND', 'Blueprint not found', 404);
+    if (!bp || !bp.isPublished) throw new AppError('NOT_FOUND', 'Blueprint not found', 404);
     const design = bp.design;
     const latestVersion = design.versions[0];
     if (!latestVersion) throw new AppError('BAD_REQUEST', 'Blueprint design has no content', 400);
@@ -81,6 +87,18 @@ export const communityService = {
   },
 
   async createComment(blueprintId: string, userId: string, data: { content: string; parentId?: string }) {
+    const blueprint = await blueprintsRepo.findById(blueprintId);
+    if (!blueprint || !blueprint.isPublished) {
+      throw new AppError('NOT_FOUND', 'Blueprint not found', 404);
+    }
+    if (data.parentId) {
+      const parent = await db.comment.findFirst({
+        where: { id: data.parentId, blueprintId, deletedAt: null },
+        select: { id: true },
+      });
+      if (!parent) throw new AppError('BAD_REQUEST', 'Parent comment does not belong to this blueprint', 400);
+    }
+
     const comment = await commentsRepo.create({
       blueprintId,
       userId,
@@ -103,11 +121,10 @@ export const communityService = {
 
   async vote(blueprintId: string, userId: string, value: number) {
     if (value !== 1 && value !== -1) throw new AppError('BAD_REQUEST', 'Vote must be 1 or -1', 400);
-    const result = await votesRepo.upsert(blueprintId, userId, value);
-    const netVotes = await votesRepo.getNetVotes(blueprintId);
-    await blueprintsRepo.updateVoteCount(blueprintId);
+    const result = await votesRepo.cast(blueprintId, userId, value);
+    if (!result) throw new AppError('NOT_FOUND', 'Blueprint not found', 404);
     analyticsService.track(userId, 'blueprint:voted', { blueprintId, value, action: result.action });
-    return { netVotes, action: result.action };
+    return result;
   },
 
   async getUserVote(blueprintId: string, userId: string) {

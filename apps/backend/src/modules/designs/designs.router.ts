@@ -25,6 +25,15 @@ import {
 } from './designs.schema';
 
 export const designsRouter = Router();
+export const publicDesignsRouter = Router();
+
+// Mounted before the authenticated design API so guests can open share links.
+publicDesignsRouter.get('/:id', optionalAuthenticate, async (req: AuthRequest, res, next) => {
+  try {
+    const design = await designsService.getPublicDesign(req.params.id);
+    success(res, design);
+  } catch (err) { next(err); }
+});
 
 // ── List user's designs ───────────────────────────────────────────────────────
 designsRouter.get('/', async (req: AuthRequest, res, next) => {
@@ -60,13 +69,6 @@ designsRouter.post('/', validate(CreateDesignBody), async (req: AuthRequest, res
 
 // ── Public shareable link (NO auth required) ──────────────────────────────────
 // Must be before /:id to avoid being swallowed by the dynamic segment
-designsRouter.get('/public/:id', optionalAuthenticate, async (req: AuthRequest, res, next) => {
-  try {
-    const design = await designsService.getPublicDesign(req.params.id);
-    success(res, design);
-  } catch (err) { next(err); }
-});
-
 // ── Get a single design for the canvas editor ─────────────────────────────────
 designsRouter.get('/:id', async (req: AuthRequest, res, next) => {
   try {
