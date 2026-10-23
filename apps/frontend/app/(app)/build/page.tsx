@@ -10,7 +10,7 @@ import {
   Sparkles, Link as LinkIcon, MessageCircle, Video, Navigation, MessageSquare, CreditCard,
   AlertTriangle,
 } from 'lucide-react';
-import { SCENARIO_TEMPLATES } from '@/data/scenarios';
+import { SCENARIO_TEMPLATES } from '@/content/scenarios';
 import { useUsage, incrementCanvas } from '@/features/usage/useUsage';
 import { analytics } from '@/lib/analytics';
 

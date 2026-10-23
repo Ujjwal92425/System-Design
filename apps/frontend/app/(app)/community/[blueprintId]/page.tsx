@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { CommentThread } from '@/components/community/CommentThread';
 import { ForkButton } from '@/components/community/ForkButton';
 import { VoteButton } from '@/components/community/VoteButton';
-import { communityService } from '@/services/community';
+import { communityService } from '@/api-clients/community';
 import {
   Loader2, ArrowLeft, User, Calendar, Tag, Heart, Share2, Bookmark,
   Eye, GitFork, MessageSquare, Monitor, Server, Database, Zap, Globe, Shield
