@@ -1,5 +1,5 @@
 import type { Metadata } from 'next';
-import { getTrackBySlug } from '../../../../data/curriculum/index';
+import { getTrackBySlug } from '../../../../content/curriculum/index';
 import {
   generatePageMetadata,
   courseSchemaJsonLd,

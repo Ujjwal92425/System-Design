@@ -1,5 +1,5 @@
 import type { Metadata } from 'next';
-import { getTrackBySlug } from '../../../../../data/curriculum/index';
+import { getTrackBySlug } from '../../../../../content/curriculum/index';
 import {
   generatePageMetadata,
   lessonSchemaJsonLd,
@@ -12,7 +12,7 @@ import {
 
 // ── Lesson layout: public metadata + full JSON-LD stack for SEO/AEO ────────
 // Lesson metadata is fetched from the API (content lives in PostgreSQL).
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
+const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4007';
 
 export async function generateMetadata({
   params,

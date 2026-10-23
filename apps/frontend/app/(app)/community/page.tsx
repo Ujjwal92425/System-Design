@@ -3,7 +3,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import { BlueprintCard } from '@/components/community/BlueprintCard';
 import { BlueprintFilter } from '@/components/community/BlueprintFilter';
-import { communityService } from '@/services/community';
+import { communityService } from '@/api-clients/community';
 import { Loader2, Compass } from 'lucide-react';
 
 interface Blueprint {
