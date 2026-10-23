@@ -38,7 +38,7 @@ import { errorHandler } from './middleware/errorHandler';
 import { authRouter }      from './modules/auth/auth.router';
 import { usersRouter }     from './modules/users/users.router';
 import { learnRouter }     from './modules/learn/tracks.router';
-import { designsRouter }   from './modules/designs/designs.router';
+import { designsRouter, publicDesignsRouter } from './modules/designs/designs.router';
 import { simulationRouter } from './modules/simulation/simulation.router';
 import { interviewRouter } from './modules/interview/interview.router';
 import { communityRouter } from './modules/community/blueprints.router';
@@ -126,6 +126,7 @@ app.use('/api/auth', authRouter);
 // All routes below require a valid JWT access token.
 // authenticate middleware throws 401 if the token is missing or expired.
 // The frontend then silently refreshes via POST /api/auth/refresh.
+app.use('/api/designs/public', publicDesignsRouter);
 app.use('/api/users',     authenticate, usersRouter);
 app.use('/api/learn',     authenticate, learnRouter);
 app.use('/api/designs',    authenticate, designsRouter);
