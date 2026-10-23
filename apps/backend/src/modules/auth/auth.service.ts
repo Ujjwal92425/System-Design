@@ -1,6 +1,7 @@
 import bcrypt from 'bcrypt';
-import jwt from 'jsonwebtoken';
+import jwt, { SignOptions } from 'jsonwebtoken';
 import crypto from 'crypto';
+import { Prisma } from '@prisma/client';
 import { env } from '../../config/env';
 import { usersRepo } from '@sd-os/db';
 import { AppError } from '../../utils/errors';
@@ -25,11 +26,20 @@ export const authService = {
       hash = await bcrypt.hash(data.password, 10);
     }
 
-    const user = await usersRepo.create({
-      email: data.email,
-      passwordHash: hash,
-      name: data.name
-    });
+    let user: Awaited<ReturnType<typeof usersRepo.create>>;
+    try {
+      user = await usersRepo.create({
+        email: data.email,
+        passwordHash: hash,
+        name: data.name
+      });
+    } catch (err) {
+      // The database unique index is the authority under concurrent signups.
+      if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === 'P2002') {
+        throw new AppError('EMAIL_ALREADY_EXISTS', 'A user with this email is already registered', 400);
+      }
+      throw err;
+    }
 
     // Generate Verification Token (AUTH-01)
     const verificationToken = crypto.randomBytes(32).toString('hex');
@@ -65,7 +75,10 @@ export const authService = {
       throw new AppError('INVALID_VERIFICATION_TOKEN', 'Verification token is invalid, used, or expired', 400);
     }
 
-    await usersRepo.markVerificationTokenUsed(record.id);
+    const consumed = await usersRepo.consumeVerificationToken(record.id);
+    if (consumed.count !== 1) {
+      throw new AppError('INVALID_VERIFICATION_TOKEN', 'Verification token is invalid, used, or expired', 400);
+    }
     await usersRepo.update(record.userId, { emailVerified: true });
 
     logger.info({ userId: record.userId }, 'User email successfully verified.');
@@ -106,7 +119,7 @@ export const authService = {
     const accessToken = jwt.sign(
       { sub: user.id, role: user.role },
       env.JWT_SECRET,
-      { expiresIn: '15m' }
+      { expiresIn: env.JWT_ACCESS_EXPIRES_IN as SignOptions['expiresIn'] }
     );
     const rawRefreshToken = crypto.randomBytes(40).toString('hex');
     const refreshTokenHash = hashToken(rawRefreshToken);
@@ -134,9 +147,6 @@ export const authService = {
       throw new AppError('INVALID_REFRESH_TOKEN', 'Refresh token is invalid or expired', 401);
     }
 
-    // Revoke old refresh token (Token rotation SEC-03)
-    await usersRepo.revokeRefreshToken(tokenHash);
-
     // Check if token user is active
     if (record.user.deletedAt) {
       throw new AppError('UNAUTHORIZED', 'User account has been deleted', 401);
@@ -146,13 +156,24 @@ export const authService = {
     const newAccessToken = jwt.sign(
       { sub: record.userId, role: record.user.role },
       env.JWT_SECRET,
-      { expiresIn: '15m' }
+      { expiresIn: env.JWT_ACCESS_EXPIRES_IN as SignOptions['expiresIn'] }
     );
     const newRawRefreshToken = crypto.randomBytes(40).toString('hex');
     const newRefreshTokenHash = hashToken(newRawRefreshToken);
     const newExpiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000); // 7 days
 
-    await usersRepo.saveRefreshToken(record.userId, newRefreshTokenHash, newExpiresAt, userAgent, ipAddress);
+    // Consuming the old token and storing its replacement must be one atomic
+    // operation: duplicate refresh requests may produce only one new session.
+    const rotated = await usersRepo.rotateRefreshToken(tokenHash, {
+      userId: record.userId,
+      tokenHash: newRefreshTokenHash,
+      expiresAt: newExpiresAt,
+      userAgent,
+      ipAddress,
+    });
+    if (!rotated) {
+      throw new AppError('INVALID_REFRESH_TOKEN', 'Refresh token is invalid or already used', 401);
+    }
 
     logger.debug({ userId: record.userId }, 'Access token refreshed and refresh token rotated.');
 
@@ -207,7 +228,10 @@ export const authService = {
     }
 
     const hash = await bcrypt.hash(newPassword, 10);
-    await usersRepo.markPasswordResetTokenUsed(record.id);
+    const consumed = await usersRepo.consumePasswordResetToken(record.id);
+    if (consumed.count !== 1) {
+      throw new AppError('INVALID_RESET_TOKEN', 'Password reset token is invalid, used, or expired', 400);
+    }
     await usersRepo.update(record.userId, { passwordHash: hash });
     
     // Revoke all existing sessions for security

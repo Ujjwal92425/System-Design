@@ -27,7 +27,7 @@ dotenv.config({ path: path.resolve(__dirname, '../../../../.env') });
 const EnvSchema = z.object({
   // ── Server ──────────────────────────────────────────────────────────────────
   NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
-  PORT: z.coerce.number().min(1).max(65535).default(4000),
+  PORT: z.coerce.number().min(1).max(65535).default(4007),
   LOG_LEVEL: z.enum(['trace', 'debug', 'info', 'warn', 'error', 'fatal']).default('info'),
 
   // ── Database ─────────────────────────────────────────────────────────────────
@@ -45,7 +45,7 @@ const EnvSchema = z.object({
   JWT_REFRESH_EXPIRES_DAYS: z.coerce.number().default(7),
 
   // ── Frontend ──────────────────────────────────────────────────────────────────
-  FRONTEND_URL: z.string().url().default('http://localhost:3000'),
+  FRONTEND_URL: z.string().url().default('http://localhost:3007'),
 
   // ── AI Providers ─────────────────────────────────────────────────────────────
   ANTHROPIC_API_KEY: z.string().optional(),

@@ -169,7 +169,7 @@ communityRouter.delete('/collections/:id', async (req: AuthRequest, res, next) =
 
 communityRouter.post('/collections/:id/items', validate(AddToCollectionBody), async (req: AuthRequest, res, next) => {
   try {
-    const result = await communityService.addToCollection(req.params.id, req.user!.id, req.body.collectionId);
+    const result = await communityService.addToCollection(req.params.id, req.user!.id, req.body.blueprintId);
     res.status(201).json({ success: true, data: result });
   } catch (err) { next(err); }
 });
