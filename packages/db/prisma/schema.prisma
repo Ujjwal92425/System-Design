@@ -15,8 +15,10 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  // CHANGE: directUrl used by Prisma CLI for migrations and schema sync via session pooler
+  directUrl = env("DIRECT_URL")
 }
 
 // =============================================================================

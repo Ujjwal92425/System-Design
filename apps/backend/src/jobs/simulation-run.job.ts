@@ -34,6 +34,11 @@ worker.on('completed', (job) => {
   logger.info({ jobId: job.id }, 'Simulation job completed');
 });
 
+  // CHANGE: Suppress unhandled Redis connection error crash
+  worker.on('error', (err: Error) => {
+    logger.warn({ err: err.message }, 'Simulation worker Redis connection warning');
+  });
+
 worker.on('failed', (job, err) => {
   logger.error({ jobId: job?.id, err }, 'Simulation job failed');
 });

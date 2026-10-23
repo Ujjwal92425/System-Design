@@ -20,8 +20,9 @@ import { z } from 'zod';
 import dotenv from 'dotenv';
 import path from 'path';
 
-// Load .env from the monorepo root (two levels up from apps/backend/src)
+// CHANGE: Load .env from workspace root or apps/backend directory
 dotenv.config({ path: path.resolve(__dirname, '../../../../.env') });
+dotenv.config({ path: path.resolve(__dirname, '../../.env') });
 
 // ─── Schema ───────────────────────────────────────────────────────────────────
 const EnvSchema = z.object({
@@ -32,6 +33,8 @@ const EnvSchema = z.object({
 
   // ── Database ─────────────────────────────────────────────────────────────────
   DATABASE_URL: z.string().min(1, 'DATABASE_URL is required'),
+  // CHANGE: Optional DIRECT_URL for Prisma migrations when using connection pooler
+  DIRECT_URL: z.string().optional(),
 
   // ── Redis / Cache ────────────────────────────────────────────────────────────
   REDIS_URL: z.string().default('redis://localhost:6379'),
@@ -55,6 +58,8 @@ const EnvSchema = z.object({
   // ── PostHog Analytics ────────────────────────────────────────────────────────
   POSTHOG_API_KEY: z.string().optional(),
   POSTHOG_HOST: z.string().url().optional(),
+  // CHANGE: Optional PostHog project ID for API integrations
+  POSTHOG_PROJECT_ID: z.string().optional(),
 
   // ── Background Jobs ──────────────────────────────────────────────────────────
   DISABLE_QUEUES: z
