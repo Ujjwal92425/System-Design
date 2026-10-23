@@ -1,2 +1,2 @@
 // Export all shared UI library components
-export * from './utils';
+export * from './cn';
