@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { adminService } from '@/services/admin';
+import { adminService } from '@/api-clients/admin';
 import { Loader2, Star, Flag, Trash2, CheckCircle, XCircle, Plus, MessageSquare } from 'lucide-react';
 
 interface AdminBlueprint {

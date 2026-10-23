@@ -3,7 +3,7 @@
 import { useParams } from 'next/navigation';
 import { useState, useEffect, useMemo } from 'react';
 import { api } from '../../../../lib/api';
-import { getTrackBySlug } from '../../../../data/curriculum/index';
+import { getTrackBySlug } from '../../../../content/curriculum/index';
 import {
   ArrowLeft, ChevronRight, Clock, BookOpen, CheckCircle, Circle, Loader2, AlertCircle,
 } from 'lucide-react';
