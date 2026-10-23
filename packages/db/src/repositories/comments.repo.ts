@@ -3,7 +3,7 @@ import { db } from '../client';
 export const commentsRepo = {
   async findByBlueprint(blueprintId: string) {
     return db.comment.findMany({
-      where: { blueprintId },
+      where: { blueprintId, deletedAt: null },
       orderBy: { createdAt: 'asc' },
       include: {
         user: { select: { id: true, name: true, avatarUrl: true } },
@@ -12,23 +12,28 @@ export const commentsRepo = {
   },
 
   async create(data: { blueprintId: string; userId: string; content: string; parentId?: string }) {
-    const comment = await db.comment.create({ data });
-    await db.blueprint.update({
-      where: { id: data.blueprintId },
-      data: { commentCount: { increment: 1 } },
+    return db.$transaction(async (tx) => {
+      const comment = await tx.comment.create({ data });
+      await tx.blueprint.update({
+        where: { id: data.blueprintId },
+        data: { commentCount: { increment: 1 } },
+      });
+      return comment;
     });
-    return comment;
   },
 
   async softDelete(id: string, userId: string) {
-    const c = await db.comment.findFirst({ where: { id, userId } });
-    if (!c) throw new Error('Comment not found or access denied');
-    const comment = await db.comment.update({ where: { id }, data: { deletedAt: new Date() } });
-    await db.blueprint.update({
-      where: { id: comment.blueprintId },
-      data: { commentCount: { decrement: 1 } },
+    return db.$transaction(async (tx) => {
+      const c = await tx.comment.findFirst({ where: { id, userId, deletedAt: null } });
+      if (!c) throw new Error('Comment not found or access denied');
+
+      const comment = await tx.comment.update({ where: { id }, data: { deletedAt: new Date() } });
+      await tx.blueprint.update({
+        where: { id: comment.blueprintId },
+        data: { commentCount: { decrement: 1 } },
+      });
+      return comment;
     });
-    return comment;
   },
 
   async update(id: string, userId: string, content: string) {

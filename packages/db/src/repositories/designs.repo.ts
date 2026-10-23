@@ -12,7 +12,10 @@
  *  - `findPublic()` bypasses user auth — used by the public shareable link route.
  */
 
+import { Prisma } from '@prisma/client';
 import { db } from '../client';
+
+type DesignDbClient = Pick<Prisma.TransactionClient, 'design' | 'designVersion' | 'template'>;
 
 export const designsRepo = {
 
@@ -78,14 +81,21 @@ export const designsRepo = {
   },
 
   /** Create a new blank design (optionally pre-populated from a template) */
-  async create(userId: string, title: string, templateId?: string, nodes?: any[], edges?: any[]) {
+  async create(
+    userId: string,
+    title: string,
+    templateId?: string,
+    nodes?: any[],
+    edges?: any[],
+    client: DesignDbClient = db,
+  ) {
     // Directly-provided nodes/edges take priority (e.g. from SCENARIO_TEMPLATES on the frontend)
     let initNodes = nodes ?? [];
     let initEdges = edges ?? [];
 
     if (!initNodes.length && templateId) {
-      const template = await db.template.findUnique({
-        where: { id: templateId },
+      const template = await client.template.findFirst({
+        where: { id: templateId, isPublished: true },
         select: { nodes: true, edges: true },
       });
       if (template) {
@@ -94,7 +104,7 @@ export const designsRepo = {
       }
     }
 
-    return db.design.create({
+    return client.design.create({
       data: {
         userId,
         title,
@@ -122,11 +132,17 @@ export const designsRepo = {
     data: { nodes: any[]; edges: any[]; message?: string }
   ) {
     return db.$transaction(async (tx) => {
-      // Ownership check inside the transaction
-      const design = await tx.design.findFirst({
-        where: { id, userId, deletedAt: null },
-        select: { id: true },
-      });
+      // Lock the parent row before computing the next version. This serializes
+      // concurrent autosaves so the unique (designId, version) constraint is
+      // never hit and no snapshot is lost.
+      const [design] = await tx.$queryRaw<{ id: string }[]>(Prisma.sql`
+        SELECT "id"
+        FROM "Design"
+        WHERE "id" = ${id}
+          AND "userId" = ${userId}
+          AND "deletedAt" IS NULL
+        FOR UPDATE
+      `);
       if (!design) throw new Error('Design not found or access denied');
 
       // Determine next version number
@@ -177,6 +193,18 @@ export const designsRepo = {
    */
   async restore(id: string, userId: string, targetVersion: number) {
     return db.$transaction(async (tx) => {
+      // The same parent-row lock used by save() makes restore safe when an
+      // autosave or another restore is happening at the same time.
+      const [design] = await tx.$queryRaw<{ id: string }[]>(Prisma.sql`
+        SELECT "id"
+        FROM "Design"
+        WHERE "id" = ${id}
+          AND "userId" = ${userId}
+          AND "deletedAt" IS NULL
+        FOR UPDATE
+      `);
+      if (!design) throw new Error('Design not found or access denied');
+
       const old = await tx.designVersion.findUnique({
         where: { designId_version: { designId: id, version: targetVersion } },
       });
@@ -188,7 +216,7 @@ export const designsRepo = {
         select: { version: true },
       });
 
-      return tx.designVersion.create({
+      const version = await tx.designVersion.create({
         data: {
           designId: id,
           version: (latest?.version ?? 0) + 1,
@@ -197,6 +225,13 @@ export const designsRepo = {
           message: `Restored from v${targetVersion}`,
         },
       });
+
+      await tx.design.update({
+        where: { id },
+        data: { updatedAt: new Date() },
+      });
+
+      return version;
     });
   },
 

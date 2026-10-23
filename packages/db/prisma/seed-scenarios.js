@@ -6,7 +6,7 @@ const db = new PrismaClient();
 
 async function main() {
   console.log('🌱 Reading scenario templates from frontend...');
-  const scenariosPath = path.join(__dirname, '../../../apps/frontend/data/scenarios/index.ts');
+  const scenariosPath = path.join(__dirname, '../../../apps/frontend/content/scenarios/index.ts');
   let content = fs.readFileSync(scenariosPath, 'utf8');
 
   // Strip TypeScript interfaces and exports to evaluate as JS
