@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState, useCallback } from 'react';
-import { adminService } from '@/services/admin';
+import { adminService } from '@/api-clients/admin';
 
 interface User {
   id: string; email: string; name: string | null; role: string;

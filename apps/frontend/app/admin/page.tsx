@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { adminService } from '@/services/admin';
+import { adminService } from '@/api-clients/admin';
 
 interface PlatformStats {
   users: number; proUsers: number; tracks: number; lessons: number;

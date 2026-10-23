@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { adminService } from '@/services/admin';
+import { adminService } from '@/api-clients/admin';
 
 interface UserDetail {
   id: string; email: string; name: string | null; role: string;
