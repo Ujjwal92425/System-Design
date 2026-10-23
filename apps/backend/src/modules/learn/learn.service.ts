@@ -10,7 +10,14 @@ const PRO_LOCKED_MESSAGE =
  * Returns true if the user is ADMIN, PRO role, or has an active PRO/TEAM subscription.
  */
 async function hasPremiumAccess(userId: string, role: string): Promise<boolean> {
-  return true;
+  if (role === Role.ADMIN || role === Role.INSTRUCTOR || role === Role.PRO) return true;
+
+  const subscription = await db.subscription.findUnique({
+    where: { userId },
+    select: { plan: true, status: true },
+  });
+  return subscription?.status === 'ACTIVE'
+    && (subscription.plan === 'PRO' || subscription.plan === 'TEAM');
 }
 
 /**
@@ -25,6 +32,14 @@ function maskPremiumLesson(lesson: any) {
     isLocked: true,
     lockedMessage: PRO_LOCKED_MESSAGE,
   };
+}
+
+/** Never send answers to the browser until the attempt has been graded. */
+function withoutQuizAnswers(quizzes: any[]) {
+  return quizzes.map(({ questions, ...quiz }) => ({
+    ...quiz,
+    questions: questions.map(({ correctAnswer, ...question }: any) => question),
+  }));
 }
 
 export const learnService = {
@@ -55,13 +70,6 @@ export const learnService = {
     if (!track) {
       throw new AppError('NOT_FOUND', 'Track not found', 404);
     }
-
-    const user = await db.user.findUnique({
-      where: { id: userId },
-      select: { role: true }
-    });
-
-    const userIsAdmin = user?.role === Role.ADMIN;
 
     // Fetch user progress for this track
     const userProgress = await progressRepo.getTrackProgress(userId, track.id);
@@ -151,6 +159,7 @@ export const learnService = {
 
     return {
       ...lesson,
+      quizzes: withoutQuizAnswers(lesson.quizzes),
       userState: {
         status: lessonState?.status || LessonStatus.NOT_STARTED,
         bookmarked: lessonState?.bookmarked || false,
@@ -167,8 +176,13 @@ export const learnService = {
   /**
    * Search through lessons content and titles using full-text filtering.
    */
-  async searchLessons(query: string, filters?: { difficulty?: string; tags?: string[] }) {
-    return lessonsRepo.search(query, filters);
+  async searchLessons(userId: string, query: string, filters?: { difficulty?: string; tags?: string[] }) {
+    const user = await db.user.findUnique({
+      where: { id: userId },
+      select: { role: true },
+    });
+    const includePremium = await hasPremiumAccess(userId, user?.role ?? 'USER');
+    return lessonsRepo.search(query, filters, includePremium);
   },
 
   /**
@@ -208,6 +222,18 @@ export const learnService = {
 
     if (!quiz) {
       throw new AppError('NOT_FOUND', 'Quiz not found', 404);
+    }
+    if (!quiz.lesson.isPublished) {
+      throw new AppError('NOT_FOUND', 'Quiz not found', 404);
+    }
+    if (quiz.lesson.isPremium) {
+      const user = await db.user.findUnique({
+        where: { id: userId },
+        select: { role: true },
+      });
+      if (!await hasPremiumAccess(userId, user?.role ?? 'USER')) {
+        throw new AppError('FORBIDDEN', PRO_LOCKED_MESSAGE, 403);
+      }
     }
 
     let correctCount = 0;

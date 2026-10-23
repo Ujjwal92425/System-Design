@@ -9,6 +9,7 @@
  * This keeps the router thin and the limit logic testable in isolation.
  */
 
+import { Prisma } from '@prisma/client';
 import { db, designsRepo } from '@sd-os/db';
 import { AppError } from '../../utils/errors';
 
@@ -58,14 +59,23 @@ export const designsService = {
     const limit = PLAN_LIMITS[role as keyof typeof PLAN_LIMITS] ?? PLAN_LIMITS.USER;
 
     if (limit !== Infinity) {
-      const count = await db.design.count({ where: { userId, deletedAt: null } });
-      if (count >= limit) {
-        throw new AppError(
-          'PLAN_LIMIT',
-          `Free accounts can create up to ${limit} designs. Upgrade to Pro for unlimited designs.`,
-          402
-        );
-      }
+      return db.$transaction(async (tx) => {
+        // Serialize quota checks per user. Without this lock, parallel create
+        // requests can both observe an available slot and exceed the plan.
+        await tx.$queryRaw(Prisma.sql`
+          SELECT "id" FROM "User" WHERE "id" = ${userId} FOR UPDATE
+        `);
+        const count = await tx.design.count({ where: { userId, deletedAt: null } });
+        if (count >= limit) {
+          throw new AppError(
+            'PLAN_LIMIT',
+            `Free accounts can create up to ${limit} designs. Upgrade to Pro for unlimited designs.`,
+            402
+          );
+        }
+
+        return designsRepo.create(userId, title, templateId, nodes, edges, tx);
+      });
     }
 
     return designsRepo.create(userId, title, templateId, nodes, edges);

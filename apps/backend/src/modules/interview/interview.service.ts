@@ -1,4 +1,5 @@
 import { db, interviewsRepo } from '@sd-os/db';
+import { Prisma } from '@prisma/client';
 import { aiService } from '../ai/ai.service';
 import { scoreDesign, mergeAiIntoScores } from './scoring.service';
 import { AppError, Errors } from '../../utils/errors';
@@ -28,14 +29,21 @@ export const interviewService = {
 
     const limit = INTERVIEW_LIMITS[role as keyof typeof INTERVIEW_LIMITS] ?? INTERVIEW_LIMITS.USER;
     if (limit !== Infinity) {
-      const count = await db.interviewSession.count({ where: { userId } });
-      if (count >= limit) {
-        throw new AppError(
-          'PLAN_LIMIT',
-          `Free accounts can start up to ${limit} interview sessions. Delete past sessions to start a new one.`,
-          402
-        );
-      }
+      return db.$transaction(async (tx) => {
+        await tx.$queryRaw(Prisma.sql`
+          SELECT "id" FROM "User" WHERE "id" = ${userId} FOR UPDATE
+        `);
+        const count = await tx.interviewSession.count({ where: { userId } });
+        if (count >= limit) {
+          throw new AppError(
+            'PLAN_LIMIT',
+            `Free accounts can start up to ${limit} interview sessions. Delete past sessions to start a new one.`,
+            402
+          );
+        }
+
+        return interviewsRepo.createSession(userId, promptId, prompt.timeLimitMin, tx);
+      });
     }
 
     return interviewsRepo.createSession(userId, promptId, prompt.timeLimitMin);
@@ -58,7 +66,9 @@ export const interviewService = {
     if (session.hintsUsed >= maxHints) {
       throw Errors.conflict('No hints remaining');
     }
-    return interviewsRepo.incrementHintsUsed(id);
+    const updated = await interviewsRepo.incrementHintsUsed(id, maxHints);
+    if (!updated) throw Errors.conflict('No hints remaining or interview is no longer active');
+    return updated;
   },
 
   async linkDesign(id: string, designId: string, userId?: string) {
@@ -66,6 +76,13 @@ export const interviewService = {
     if (!session) {
       throw Errors.notFound('Interview session');
     }
+
+    const design = await db.design.findFirst({
+      where: { id: designId, userId, deletedAt: null },
+      select: { id: true },
+    });
+    if (!design) throw Errors.notFound('Design');
+
     return interviewsRepo.linkDesignToSession(id, designId);
   },
 
