@@ -28,13 +28,13 @@ learnRouter.get('/tracks/:slug', async (req: AuthRequest, res, next) => {
 
 // ─── LESSONS ─────────────────────────────────────────────────────────────────
 // Search lessons (reloaded)
-learnRouter.get('/lessons/search', async (req, res, next) => {
+learnRouter.get('/lessons/search', async (req: AuthRequest, res, next) => {
   try {
     const query = (req.query.q as string) || '';
     const difficulty = req.query.difficulty as string;
     const tags = req.query.tags ? (req.query.tags as string).split(',') : undefined;
 
-    const lessons = await learnService.searchLessons(query, { difficulty, tags });
+    const lessons = await learnService.searchLessons(req.user!.id, query, { difficulty, tags });
     success(res, lessons);
   } catch (err) {
     next(err);

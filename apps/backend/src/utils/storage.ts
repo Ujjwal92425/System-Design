@@ -37,7 +37,7 @@ export const storage = {
     } else {
       // Dev mock fallback using Dicebear seed for visual styling
       logger.info({ userId, filename }, 'R2 credentials not configured. Returning local development mock signed URL.');
-      const mockPresignedUrl = `http://localhost:4000/api/users/profile/mock-upload?key=${encodeURIComponent(key)}`;
+      const mockPresignedUrl = `http://localhost:4007/api/users/profile/mock-upload?key=${encodeURIComponent(key)}`;
       const mockPublicUrl = `https://api.dicebear.com/7.x/bottts/svg?seed=${encodeURIComponent(key)}`;
       return { presignedUrl: mockPresignedUrl, publicUrl: mockPublicUrl };
     }

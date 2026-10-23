@@ -47,10 +47,19 @@ function getCollabUser(socket: Socket): CollabUser {
   return (socket as CollabSocket).collabUser;
 }
 
+function isInDesignRoom(socket: CollabSocket, designId: string): boolean {
+  return socket.rooms.has(`design:${designId}`);
+}
+
+function rejectDesignEvent(socket: CollabSocket, designId: string, event: string) {
+  logger.warn({ userId: socket.collabUser.userId, designId, event }, 'Rejected event for an unjoined design room');
+  socket.emit('collab:error', { message: 'Join the design before sending collaboration events' });
+}
+
 export function initSocketServer(httpServer: HttpServer): Server {
   io = new Server(httpServer, {
     cors: {
-      origin: process.env.FRONTEND_URL || 'http://localhost:3000',
+      origin: process.env.FRONTEND_URL || 'http://localhost:3007',
       methods: ['GET', 'POST'],
       credentials: true,
     },
@@ -125,6 +134,10 @@ export function initSocketServer(httpServer: HttpServer): Server {
 
     socket.on('leave:design', (designId: string) => {
       const room = `design:${designId}`;
+      if (!isInDesignRoom(socket, designId)) {
+        rejectDesignEvent(socket, designId, 'leave:design');
+        return;
+      }
       socket.leave(room);
       socket.to(room).emit('user:left', { userId: user.userId });
       logger.info({ userId: user.userId, designId }, 'User left collab room');
@@ -136,6 +149,10 @@ export function initSocketServer(httpServer: HttpServer): Server {
     });
 
     socket.on('canvas:update', (data: { designId: string; nodes?: any[]; edges?: any[] }) => {
+      if (!isInDesignRoom(socket, data.designId)) {
+        rejectDesignEvent(socket, data.designId, 'canvas:update');
+        return;
+      }
       socket.to(`design:${data.designId}`).emit('canvas:sync', {
         userId: user.userId,
         nodes: data.nodes,
@@ -144,6 +161,10 @@ export function initSocketServer(httpServer: HttpServer): Server {
     });
 
     socket.on('ot:event', (data: { designId: string; event: OTEvent }) => {
+      if (!isInDesignRoom(socket, data.designId)) {
+        rejectDesignEvent(socket, data.designId, 'ot:event');
+        return;
+      }
       const buffer = otBuffers.get(data.designId) || [];
       const updated = applyOT(buffer, { ...data.event, userId: user.userId });
       otBuffers.set(data.designId, updated);
@@ -154,6 +175,10 @@ export function initSocketServer(httpServer: HttpServer): Server {
     });
 
     socket.on('cursor:move', (data: { designId: string; position: { x: number; y: number } }) => {
+      if (!isInDesignRoom(socket, data.designId)) {
+        rejectDesignEvent(socket, data.designId, 'cursor:move');
+        return;
+      }
       socket.to(`design:${data.designId}`).emit('cursor:update', {
         userId: user.userId,
         position: data.position,
@@ -161,6 +186,10 @@ export function initSocketServer(httpServer: HttpServer): Server {
     });
 
     socket.on('selection:change', (data: { designId: string; selectedNodeIds: string[] }) => {
+      if (!isInDesignRoom(socket, data.designId)) {
+        rejectDesignEvent(socket, data.designId, 'selection:change');
+        return;
+      }
       socket.to(`design:${data.designId}`).emit('selection:sync', {
         userId: user.userId,
         selectedNodeIds: data.selectedNodeIds,
