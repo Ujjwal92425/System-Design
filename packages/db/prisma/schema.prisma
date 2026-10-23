@@ -1,0 +1,674 @@
+// =============================================================================
+// packages/db/prisma/schema.prisma
+//
+// Single source of truth for the entire SD-OS relational data model.
+// All models follow these conventions:
+//   - cuid() for primary keys (URL-safe, sortable, no sequential guessing)
+//   - @updatedAt managed by Prisma ORM
+//   - Cascade deletes defined explicitly — never rely on implicit behavior
+//   - Indexes on every FK used in WHERE / ORDER BY clauses
+//   - Soft-delete pattern: deletedAt nullable DateTime (no hard deletes on users)
+// =============================================================================
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// =============================================================================
+// ENUMS
+// =============================================================================
+
+/// Platform roles — determines access level across all routes
+enum Role {
+  USER // Default free account
+  PRO // Paid subscriber
+  INSTRUCTOR // Can create content (Phase 4)
+  ADMIN // Full platform access
+}
+
+/// Billing plan tier — controls feature limits
+enum Plan {
+  FREE
+  PRO
+  TEAM
+}
+
+/// Stripe subscription lifecycle states
+enum SubscriptionStatus {
+  ACTIVE
+  CANCELLED
+  EXPIRED
+  TRIAL
+  PAST_DUE // Grace period on payment failure
+}
+
+/// Per-lesson learning state machine: NOT_STARTED → IN_PROGRESS → COMPLETE
+enum LessonStatus {
+  NOT_STARTED
+  IN_PROGRESS
+  COMPLETE
+}
+
+/// Interview session lifecycle
+enum InterviewStatus {
+  IN_PROGRESS
+  SUBMITTED
+  SCORED
+  ABANDONED
+}
+
+// =============================================================================
+// USER & AUTH MODELS
+// =============================================================================
+
+/// Core user identity — never hard-deleted, use deletedAt for GDPR purge
+model User {
+  id            String    @id @default(cuid())
+  email         String    @unique
+  passwordHash  String? // null for OAuth-only accounts
+  name          String?
+  bio           String?
+  avatarUrl     String?
+  role          Role      @default(USER)
+  emailVerified Boolean   @default(false)
+  loginAttempts Int       @default(0) // brute-force counter
+  lockedUntil   DateTime? // AUTH-10: lockout timestamp
+  lastLoginAt   DateTime?
+  deletedAt     DateTime? // soft-delete for GDPR
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  // Relations
+  subscription       Subscription?
+  oauthAccounts      OAuthAccount[]
+  refreshTokens      RefreshToken[]
+  passwordResets     PasswordReset[]
+  emailVerifications EmailVerification[]
+  designs            Design[]
+  userProgress       UserProgress[]
+  lessonStates       LessonState[]
+  quizAttempts       QuizAttempt[]
+  streak             UserStreak?
+  interviews         InterviewSession[]
+  blueprints         Blueprint[]
+  comments           Comment[]
+  votes              Vote[]
+  collections        Collection[]
+  reports            Report[]
+  aiAnalyses         AIAnalysis[]
+
+  @@index([email])
+  @@index([deletedAt])
+}
+
+/// OAuth provider linkage (Google, GitHub) — one user can have multiple
+model OAuthAccount {
+  id             String    @id @default(cuid())
+  userId         String
+  user           User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  provider       String // "google" | "github"
+  providerUserId String // user's ID on that provider
+  accessToken    String?   @db.Text
+  refreshToken   String?   @db.Text
+  expiresAt      DateTime?
+  createdAt      DateTime  @default(now())
+
+  @@unique([provider, providerUserId])
+  @@index([userId])
+}
+
+/// JWT refresh tokens — stored hashed, rotated on every use (SEC-03)
+model RefreshToken {
+  id        String    @id @default(cuid())
+  userId    String
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tokenHash String    @unique // bcrypt hash of the opaque token
+  expiresAt DateTime // 7 days from issue
+  userAgent String? // fingerprinting
+  ipAddress String?
+  createdAt DateTime  @default(now())
+  revokedAt DateTime? // set on logout/rotation
+
+  @@index([userId])
+  @@index([tokenHash])
+}
+
+/// Email verification tokens (AUTH-01) — single-use, expire in 24h
+model EmailVerification {
+  id        String    @id @default(cuid())
+  userId    String
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  token     String    @unique // random hex, stored plain (short-lived)
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  @@index([token])
+  @@index([userId])
+}
+
+/// Password reset tokens (AUTH-03) — single-use, expire in 1h
+model PasswordReset {
+  id        String    @id @default(cuid())
+  userId    String
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  token     String    @unique
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  @@index([token])
+  @@index([userId])
+}
+
+/// Billing subscription — one-to-one with User
+model Subscription {
+  id                String             @id @default(cuid())
+  userId            String             @unique
+  user              User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  plan              Plan               @default(FREE)
+  status            SubscriptionStatus @default(ACTIVE)
+  stripeCustomerId  String?            @unique
+  stripeSubId       String?            @unique
+  currentPeriodEnd  DateTime?
+  cancelAtPeriodEnd Boolean            @default(false)
+  aiCreditsUsed     Int                @default(0) // resets monthly
+  aiCreditsLimit    Int                @default(10) // FREE=10, PRO=200
+  createdAt         DateTime           @default(now())
+  updatedAt         DateTime           @updatedAt
+}
+
+// =============================================================================
+// LEARNING MODELS
+// =============================================================================
+
+/// Top-level learning path (e.g. "Level 1: Foundations")
+model Track {
+  id             String   @id @default(cuid())
+  slug           String   @unique
+  name           String
+  description    String   @db.Text
+  level          Int // 1–5
+  order          Int // display order
+  iconUrl        String?
+  estimatedHours Int?
+  learningGoals  String[] // bullet list of outcomes
+  isPublished    Boolean  @default(false)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  modules      Module[]
+  userProgress UserProgress[]
+
+  @@index([isPublished, order])
+}
+
+/// Group of related lessons within a Track
+model Module {
+  id           String   @id @default(cuid())
+  trackId      String
+  track        Track    @relation(fields: [trackId], references: [id], onDelete: Cascade)
+  name         String
+  description  String
+  order        Int
+  estimatedMin Int // total reading time
+  isPublished  Boolean  @default(false)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  lessons Lesson[]
+
+  @@index([trackId, order])
+}
+
+/// Individual lesson — MDX content stored as text, rendered client-side
+model Lesson {
+  id           String    @id @default(cuid())
+  moduleId     String
+  module       Module    @relation(fields: [moduleId], references: [id], onDelete: Cascade)
+  slug         String    @unique
+  title        String
+  content      String    @db.Text // MDX source
+  order        Int
+  estimatedMin Int
+  difficulty   String // "beginner" | "intermediate" | "advanced"
+  companies    String[] // ["google", "meta", "amazon"]
+  tags         String[]
+  isPremium    Boolean   @default(false) // requires PRO subscription to unlock
+  isPublished  Boolean   @default(false)
+  publishedAt  DateTime?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  quizzes Quiz[]
+  states  LessonState[]
+  // Full-text search index created manually in migration (see seed.ts note)
+
+  @@index([moduleId, order])
+  @@index([isPublished, isPremium])
+}
+
+/// Quiz associated with a lesson (one quiz per lesson currently)
+model Quiz {
+  id           String   @id @default(cuid())
+  lessonId     String
+  lesson       Lesson   @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+  title        String
+  passingScore Int      @default(70) // percentage 0–100
+  isRequired   Boolean  @default(false) // LEARN-35: gate next lesson
+  createdAt    DateTime @default(now())
+
+  questions Question[]
+  attempts  QuizAttempt[]
+
+  @@index([lessonId])
+}
+
+/// Single quiz question — MCQ or true/false
+model Question {
+  id            String   @id @default(cuid())
+  quizId        String
+  quiz          Quiz     @relation(fields: [quizId], references: [id], onDelete: Cascade)
+  type          String // "multiple_choice" | "true_false"
+  content       String   @db.Text
+  options       Json // string[] — shuffled on client
+  correctAnswer String
+  explanation   String   @db.Text // shown after answer reveal (LEARN-31)
+  order         Int
+  createdAt     DateTime @default(now())
+
+  @@index([quizId, order])
+}
+
+/// Per-user track-level progress aggregate
+model UserProgress {
+  id           String   @id @default(cuid())
+  userId       String
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  trackId      String
+  track        Track    @relation(fields: [trackId], references: [id])
+  completedPct Float    @default(0) // 0.0–1.0
+  lastActiveAt DateTime @default(now())
+  startedAt    DateTime @default(now())
+
+  @@unique([userId, trackId])
+  @@index([userId])
+  @@index([trackId])
+}
+
+/// Per-user per-lesson state — the core progress unit
+model LessonState {
+  id          String       @id @default(cuid())
+  userId      String
+  user        User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  lessonId    String
+  lesson      Lesson       @relation(fields: [lessonId], references: [id])
+  status      LessonStatus @default(NOT_STARTED)
+  resumeState Json? // { scrollPercent: 0.45 } — LEARN-19
+  completedAt DateTime?
+  bookmarked  Boolean      @default(false) // LEARN-24
+  notes       String?      @db.Text // LEARN-25
+
+  @@unique([userId, lessonId])
+  @@index([userId, status])
+  @@index([lessonId])
+}
+
+/// Quiz submission record — history of all attempts (LEARN-33)
+model QuizAttempt {
+  id           String   @id @default(cuid())
+  userId       String
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  quizId       String
+  quiz         Quiz     @relation(fields: [quizId], references: [id])
+  score        Float // percentage
+  answers      Json // { [questionId]: selectedAnswer }
+  passed       Boolean
+  timeTakenSec Int?
+  completedAt  DateTime @default(now())
+
+  @@index([userId, quizId])
+  @@index([quizId])
+}
+
+/// Daily streak tracking — one row per user (LEARN-21)
+model UserStreak {
+  id             String    @id @default(cuid())
+  userId         String    @unique
+  user           User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  currentStreak  Int       @default(0)
+  longestStreak  Int       @default(0)
+  lastActiveDate DateTime? // date only, for daily comparison
+  updatedAt      DateTime  @updatedAt
+}
+
+// =============================================================================
+// DESIGN / BUILD MODELS
+// =============================================================================
+
+/// User's saved architecture diagram — logical container for versions
+model Design {
+  id           String    @id @default(cuid())
+  userId       String
+  user         User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title        String    @default("Untitled Design")
+  description  String?
+  isPublic     Boolean   @default(false) // PRIV-01: private by default
+  forkedFromId String? // track lineage
+  templateId   String?
+  thumbnailUrl String?
+  deletedAt    DateTime? // soft delete
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  versions    DesignVersion[]
+  simulations Simulation[]
+  interviews  InterviewSession[]
+  blueprints  Blueprint[]
+  aiAnalyses  AIAnalysis[]
+
+  @@index([userId, updatedAt(sort: Desc)])
+  @@index([isPublic])
+  @@index([deletedAt])
+}
+
+/// Immutable snapshot of a design at a point in time (BUILD-32)
+model DesignVersion {
+  id        String   @id @default(cuid())
+  designId  String
+  design    Design   @relation(fields: [designId], references: [id], onDelete: Cascade)
+  version   Int // monotonically increasing per design
+  nodes     Json // ReactFlow Node[]
+  edges     Json // ReactFlow Edge[]
+  message   String? // optional commit message
+  createdAt DateTime @default(now())
+
+  @@unique([designId, version])
+  @@index([designId, createdAt(sort: Desc)])
+}
+
+/// Prebuilt templates users can start from (BUILD-23)
+model Template {
+  id           String   @id @default(cuid())
+  name         String
+  description  String
+  category     String // "Messaging" | "Storage" | "Social" | "Infrastructure"
+  difficulty   String
+  thumbnailUrl String?
+  nodes        Json
+  edges        Json
+  tags         String[]
+  isPublished  Boolean  @default(false)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@index([isPublished, category])
+}
+
+// =============================================================================
+// SIMULATION MODELS
+// =============================================================================
+
+/// Simulation configuration saved by user
+model Simulation {
+  id        String   @id @default(cuid())
+  designId  String
+  design    Design   @relation(fields: [designId], references: [id], onDelete: Cascade)
+  config    Json // { baseQps, scenario, chaosEvents[], nodeOverrides }
+  createdAt DateTime @default(now())
+
+  runs SimulationRun[]
+
+  @@index([designId])
+}
+
+/// Individual run of a simulation (each "Start" creates a new run)
+model SimulationRun {
+  id           String     @id @default(cuid())
+  simulationId String
+  simulation   Simulation @relation(fields: [simulationId], references: [id], onDelete: Cascade)
+  startedAt    DateTime   @default(now())
+  endedAt      DateTime?
+  durationSec  Int?
+  metrics      Json? // time-series: { nodeId: { qps: [], latency: [], errors: [] } }
+  events       Json? // chaos events log
+
+  @@index([simulationId])
+}
+
+// =============================================================================
+// INTERVIEW MODELS
+// =============================================================================
+
+/// Admin-created interview prompt with rubric (ADMIN-04)
+model InterviewPrompt {
+  id           String   @id @default(cuid())
+  title        String
+  description  String   @db.Text
+  requirements String[] // structured requirements list
+  difficulty   String // "easy" | "medium" | "hard" | "expert"
+  companies    String[]
+  timeLimitMin Int      @default(45)
+  rubric       Json // RubricCriteria[] — used by scoring engine
+  modelAnswer  Json? // { nodes, edges } of reference solution
+  hints        String[] // up to 5 hints (INT-06)
+  tags         String[]
+  isPublished  Boolean  @default(false)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  sessions InterviewSession[]
+
+  @@index([isPublished, difficulty])
+}
+
+/// A user's interview attempt — ties together prompt, design, timer, and score
+model InterviewSession {
+  id        String          @id @default(cuid())
+  userId    String
+  user      User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  promptId  String
+  prompt    InterviewPrompt @relation(fields: [promptId], references: [id])
+  designId  String?
+  design    Design?         @relation(fields: [designId], references: [id])
+  startedAt DateTime        @default(now())
+  endedAt   DateTime?
+  timeLimit Int // minutes: 30, 45, or 60
+  status    InterviewStatus @default(IN_PROGRESS)
+  hintsUsed Int             @default(0)
+  score     InterviewScore?
+
+  @@index([userId, startedAt(sort: Desc)])
+  @@index([status])
+  @@index([promptId])
+  @@index([designId])
+}
+
+/// Final score record after interview submission (INT-09)
+model InterviewScore {
+  id            String           @id @default(cuid())
+  sessionId     String           @unique
+  session       InterviewSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  totalScore    Float // 0–100
+  rubricResults Json // { criteriaId, passed, score, hint }[]
+  aiFeedback    String?          @db.Text // async — may be null initially
+  missedItems   Json // hint strings for what was missed
+  aiJobId       String? // BullMQ job ID for polling
+  scoredAt      DateTime         @default(now())
+}
+
+// =============================================================================
+// AI MODELS
+// =============================================================================
+
+/// Persistent record of every AI call — used for credit tracking and caching
+model AIAnalysis {
+  id         String   @id @default(cuid())
+  userId     String
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  designId   String?
+  design     Design?  @relation(fields: [designId], references: [id])
+  sessionId  String?
+  type       String // "design_review" | "interview_feedback" | "explain_tradeoff"
+  designHash String? // SHA256 of canonical design JSON — used for AI-12 cache
+  prompt     String   @db.Text
+  response   Json
+  model      String // "claude-sonnet-4-6" | "gpt-4o" | "fallback"
+  tokensUsed Int      @default(0)
+  createdAt  DateTime @default(now())
+
+  @@index([designHash])
+  @@index([userId, createdAt(sort: Desc)])
+  @@index([designId])
+}
+
+// =============================================================================
+// COMMUNITY MODELS
+// =============================================================================
+
+/// Published blueprint in the community gallery (COM-01)
+model Blueprint {
+  id           String    @id @default(cuid())
+  designId     String
+  design       Design    @relation(fields: [designId], references: [id], onDelete: Cascade)
+  authorId     String
+  author       User      @relation(fields: [authorId], references: [id])
+  title        String
+  description  String    @db.Text
+  tags         String[]
+  mediaUrls    String[] // screenshots/images gallery
+  voteCount    Int       @default(0)
+  commentCount Int       @default(0) // cached counter
+  forkCount    Int       @default(0)
+  viewCount    Int       @default(0)
+  isPublished  Boolean   @default(false)
+  publishedAt  DateTime?
+  isFeatured   Boolean   @default(false) // admin-curated COM-10
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  comments    Comment[]
+  votes       Vote[]
+  reports     Report[]
+  collections CollectionItem[]
+
+  @@index([isPublished, publishedAt(sort: Desc)])
+  @@index([voteCount(sort: Desc)])
+  @@index([authorId])
+  @@index([designId])
+}
+
+/// Threaded comment on a blueprint (COM-04)
+model Comment {
+  id          String    @id @default(cuid())
+  blueprintId String
+  blueprint   Blueprint @relation(fields: [blueprintId], references: [id], onDelete: Cascade)
+  userId      String
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  content     String    @db.Text
+  parentId    String? // null = top-level; non-null = reply
+  deletedAt   DateTime? // soft delete
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@index([blueprintId, createdAt])
+  @@index([parentId])
+  @@index([userId])
+}
+
+/// Upvote/downvote — one per user per blueprint (COM-03)
+model Vote {
+  id          String    @id @default(cuid())
+  blueprintId String
+  blueprint   Blueprint @relation(fields: [blueprintId], references: [id], onDelete: Cascade)
+  userId      String
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  value       Int // 1 = upvote, -1 = downvote
+
+  @@unique([blueprintId, userId])
+  @@index([blueprintId])
+  @@index([userId])
+}
+
+/// User's saved blueprint collection (COM-06)
+model Collection {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name        String
+  description String?
+  isPublic    Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  items CollectionItem[]
+
+  @@index([userId])
+}
+
+/// Join table for Collection ↔ Blueprint (COM-06)
+model CollectionItem {
+  id           String     @id @default(cuid())
+  collectionId String
+  collection   Collection @relation(fields: [collectionId], references: [id], onDelete: Cascade)
+  blueprintId  String
+  blueprint    Blueprint  @relation(fields: [blueprintId], references: [id], onDelete: Cascade)
+  order        Int
+  addedAt      DateTime   @default(now())
+
+  @@unique([collectionId, blueprintId])
+  @@index([blueprintId])
+}
+
+/// Moderation report on a blueprint (COM-07, ADMIN-10)
+model Report {
+  id          String    @id @default(cuid())
+  blueprintId String
+  blueprint   Blueprint @relation(fields: [blueprintId], references: [id], onDelete: Cascade)
+  reporterId  String
+  reporter    User      @relation(fields: [reporterId], references: [id], onDelete: Cascade)
+  reason      String
+  status      String    @default("pending") // "pending" | "reviewed" | "dismissed"
+  reviewedAt  DateTime?
+  createdAt   DateTime  @default(now())
+
+  @@index([status, createdAt])
+  @@index([blueprintId])
+  @@index([reporterId])
+}
+
+// =============================================================================
+// PLATFORM ADMIN MODELS
+// =============================================================================
+
+/// Feature flag store for controlled rollouts (ADMIN-07, MAINT-04)
+model FeatureFlag {
+  id           String   @id @default(cuid())
+  key          String   @unique // e.g. "simulation_v2"
+  description  String
+  enabled      Boolean  @default(false)
+  rolloutPct   Int      @default(0) // 0–100 percentage of users
+  allowedRoles Role[] // role-based override
+  updatedAt    DateTime @updatedAt
+  createdAt    DateTime @default(now())
+}
+
+/// Audit log for admin actions — append-only
+model AuditLog {
+  id         String   @id @default(cuid())
+  actorId    String? // null for system events
+  action     String // e.g. "user.suspend", "lesson.publish"
+  targetId   String?
+  targetType String?
+  metadata   Json?
+  ipAddress  String?
+  createdAt  DateTime @default(now())
+
+  @@index([actorId, createdAt(sort: Desc)])
+  @@index([action])
+}

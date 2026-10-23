@@ -1,0 +1,10 @@
+{
+  "extends": "@sd-os/config/typescript/node.json",
+  "compilerOptions": {
+    "rootDir": "src",
+    "outDir": "dist"
+  },
+  "include": [
+    "src/**/*"
+  ]
+}
