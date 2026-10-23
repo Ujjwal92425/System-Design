@@ -191,6 +191,7 @@ export function SimulationPanel({
             )}
           </div>
 
+          <div className="flex items-center gap-3">
             {/* CHANGE: Added PostHog data-track for view toggle and close */}
             <button
               onClick={() => setDashboardView((v) => !v)}
@@ -302,7 +303,6 @@ export function SimulationPanel({
                           <div className="flex items-center justify-between mb-2">
                             <span className="font-mono text-[9px] text-yc-text-muted font-bold">OUTLOOK</span>
                             {simulation.metricsHistory.length > 0 && (
-                              {/* CHANGE: Added PostHog data-track for simulation report export */}
                               <button
                                 onClick={(e) => { e.stopPropagation(); exportReport(simulation); }}
                                 data-track="simulation:export_report"
