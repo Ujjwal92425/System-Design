@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useState } from 'react';
-import { designsService } from '@/services/designs';
+import { designsService } from '@/api-clients/designs';
 import { useCanvasStore, type CanvasNode, type CanvasEdge } from './useCanvasStore';
 
 interface VersionEntry {
