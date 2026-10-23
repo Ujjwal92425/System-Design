@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { ArrowBigUp, ArrowBigDown } from 'lucide-react';
-import { communityService } from '@/services/community';
+import { communityService } from '@/api-clients/community';
 
 interface VoteButtonProps {
   blueprintId: string;
