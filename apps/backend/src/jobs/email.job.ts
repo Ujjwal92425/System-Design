@@ -41,6 +41,11 @@ if (queuesEnabled) {
     logger.info({ jobId: job.id }, 'Email job completed');
   });
 
+  // CHANGE: Suppress unhandled Redis connection error crash
+  worker.on('error', (err: Error) => {
+    logger.warn({ err: err.message }, 'Email worker Redis connection warning');
+  });
+
   worker.on('failed', (job: Job | undefined, err: Error) => {
     logger.error({ jobId: job?.id, err }, 'Email job failed');
   });
