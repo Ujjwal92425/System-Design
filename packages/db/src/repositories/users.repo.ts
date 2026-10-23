@@ -1,5 +1,5 @@
 import { db } from '../client';
-import { Role, Plan, SubscriptionStatus } from '@prisma/client';
+import { Prisma, Role, User } from '@prisma/client';
 
 export const usersRepo = {
   async findById(id: string) {
@@ -50,26 +50,19 @@ export const usersRepo = {
 
   // Lockout management (AUTH-10)
   async incrementLoginAttempts(id: string) {
-    const user = await db.user.findUnique({ where: { id } });
-    if (!user) return null;
-    const newAttempts = user.loginAttempts + 1;
-    
-    // Lock for 15 minutes if attempts >= 5
-    if (newAttempts >= 5) {
-      const lockedUntil = new Date(Date.now() + 15 * 60 * 1000);
-      return db.user.update({
-        where: { id },
-        data: {
-          loginAttempts: newAttempts,
-          lockedUntil
-        }
-      });
-    }
-
-    return db.user.update({
-      where: { id },
-      data: { loginAttempts: newAttempts }
-    });
+    const lockedUntil = new Date(Date.now() + 15 * 60 * 1000);
+    const users = await db.$queryRaw<User[]>(Prisma.sql`
+      UPDATE "User"
+      SET
+        "loginAttempts" = "loginAttempts" + 1,
+        "lockedUntil" = CASE
+          WHEN "loginAttempts" + 1 >= 5 THEN ${lockedUntil}
+          ELSE "lockedUntil"
+        END
+      WHERE "id" = ${id}
+      RETURNING *
+    `);
+    return users[0] ?? null;
   },
 
   async resetLoginAttempts(id: string) {
@@ -103,10 +96,10 @@ export const usersRepo = {
     });
   },
 
-  async markVerificationTokenUsed(id: string) {
-    return db.emailVerification.update({
-      where: { id },
-      data: { usedAt: new Date() }
+  async consumeVerificationToken(id: string) {
+    return db.emailVerification.updateMany({
+      where: { id, usedAt: null, expiresAt: { gte: new Date() } },
+      data: { usedAt: new Date() },
     });
   },
 
@@ -137,10 +130,10 @@ export const usersRepo = {
     });
   },
 
-  async markPasswordResetTokenUsed(id: string) {
-    return db.passwordReset.update({
-      where: { id },
-      data: { usedAt: new Date() }
+  async consumePasswordResetToken(id: string) {
+    return db.passwordReset.updateMany({
+      where: { id, usedAt: null, expiresAt: { gte: new Date() } },
+      data: { usedAt: new Date() },
     });
   },
 
@@ -199,6 +192,26 @@ export const usersRepo = {
     return db.refreshToken.updateMany({
       where: { tokenHash },
       data: { revokedAt: new Date() }
+    });
+  },
+
+  async rotateRefreshToken(
+    tokenHash: string,
+    replacement: { userId: string; tokenHash: string; expiresAt: Date; userAgent?: string; ipAddress?: string }
+  ) {
+    return db.$transaction(async (tx) => {
+      const revoked = await tx.refreshToken.updateMany({
+        where: {
+          tokenHash,
+          revokedAt: null,
+          expiresAt: { gte: new Date() },
+        },
+        data: { revokedAt: new Date() },
+      });
+      if (revoked.count !== 1) return false;
+
+      await tx.refreshToken.create({ data: replacement });
+      return true;
     });
   },
 

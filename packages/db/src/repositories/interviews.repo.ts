@@ -1,5 +1,7 @@
 import { db } from '../client';
-import { InterviewStatus } from '@prisma/client';
+import { InterviewStatus, Prisma } from '@prisma/client';
+
+type InterviewDbClient = Pick<Prisma.TransactionClient, 'interviewSession'>;
 
 export const interviewsRepo = {
   async listPrompts(filters?: { difficulty?: string; tag?: string }) {
@@ -23,8 +25,8 @@ export const interviewsRepo = {
     });
   },
 
-  async createSession(userId: string, promptId: string, timeLimit: number) {
-    return db.interviewSession.create({
+  async createSession(userId: string, promptId: string, timeLimit: number, client: InterviewDbClient = db) {
+    return client.interviewSession.create({
       data: {
         userId,
         promptId,
@@ -57,13 +59,16 @@ export const interviewsRepo = {
     });
   },
 
-  async incrementHintsUsed(id: string) {
-    return db.interviewSession.update({
-      where: { id },
+  async incrementHintsUsed(id: string, maxHints: number) {
+    const result = await db.interviewSession.updateMany({
+      where: { id, status: 'IN_PROGRESS', hintsUsed: { lt: maxHints } },
       data: {
         hintsUsed: { increment: 1 }
       }
     });
+
+    if (result.count === 0) return null;
+    return db.interviewSession.findUnique({ where: { id } });
   },
 
   async saveScore(data: {

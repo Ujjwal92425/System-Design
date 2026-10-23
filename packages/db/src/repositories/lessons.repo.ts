@@ -53,7 +53,7 @@ export const lessonsRepo = {
     });
   },
 
-  async search(query: string, filters?: { difficulty?: string; tags?: string[] }) {
+  async search(query: string, filters?: { difficulty?: string; tags?: string[] }, includePremium = true) {
     const whereClause: any = {
       isPublished: true,
       OR: [
@@ -64,6 +64,10 @@ export const lessonsRepo = {
 
     if (filters?.difficulty) {
       whereClause.difficulty = filters.difficulty;
+    }
+
+    if (!includePremium) {
+      whereClause.isPremium = false;
     }
 
     if (filters?.tags && filters.tags.length > 0) {
