@@ -1,6 +1,6 @@
 import type { MetadataRoute } from 'next';
 import { SITE_URL } from '../lib/seo';
-import { getAllTracks } from '../data/curriculum/index';
+import { getAllTracks } from '../content/curriculum/index';
 
 export default function sitemap(): MetadataRoute.Sitemap {
   const staticPages: MetadataRoute.Sitemap = [

@@ -1,7 +1,7 @@
 'use client';
 
 import { memo } from 'react';
-import { SCENARIO_TEMPLATES, ScenarioTemplate } from '@/data/scenarios';
+import { SCENARIO_TEMPLATES, ScenarioTemplate } from '@/content/scenarios';
 import { cn } from '@sd-os/ui';
 import {
   Link, MessageCircle, Video, Navigation, MessageSquare, CreditCard,

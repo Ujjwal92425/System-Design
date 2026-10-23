@@ -1,5 +1,5 @@
 import { SITE_NAME, SITE_DESCRIPTION, SITE_URL } from '../../lib/seo';
-import { getAllTracks } from '../../data/curriculum/index';
+import { getAllTracks } from '../../content/curriculum/index';
 
 export const runtime = 'edge';
 
