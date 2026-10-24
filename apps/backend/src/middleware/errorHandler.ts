@@ -70,20 +70,54 @@ export function errorHandler(
 
   // ── Unknown / unexpected error ───────────────────────────────────────────────
   const unknownErr = err instanceof Error ? err : new Error(String(err));
+  const errName = unknownErr.name || '';
+  const errMsg = unknownErr.message || '';
+
+  // CHANGE: Detect Prisma and PostgreSQL database connection or pooler reachability issues
+  const isDbError =
+    errName.includes('Prisma') ||
+    errMsg.includes("Can't reach database server") ||
+    errMsg.includes('Connection terminated') ||
+    (unknownErr as any).code === 'P1001' ||
+    (unknownErr as any).code === 'P1002';
+
+  if (isDbError) {
+    logger.error(
+      { err: unknownErr, requestId, method, path, stack: unknownErr.stack },
+      'Database connection failure encountered'
+    );
+
+    return res.status(503).json({
+      success: false,
+      error: {
+        code: 'DATABASE_UNAVAILABLE',
+        message: 'Database service is temporarily unreachable. Please check your connection or try again in a few moments.',
+        ...(!isProd ? { details: { originalError: unknownErr.message } } : {}),
+      },
+      requestId,
+    });
+  }
+
   logger.error(
     { err: unknownErr, requestId, method, path, stack: unknownErr.stack },
     'Unhandled exception — this should not happen in production'
   );
 
+  // CHANGE: In dev mode, strip raw filesystem paths from primary message so UI doesn't leak code paths
+  const userSafeMessage = isProd
+    ? 'An unexpected error occurred. Please try again later.'
+    : (errMsg.includes('C:\\') || errMsg.includes('/') || errMsg.includes('\n'))
+      ? 'An unexpected internal error occurred. See details or server logs.'
+      : errMsg;
+
   return res.status(500).json({
     success: false,
     error: {
       code:    'INTERNAL_SERVER_ERROR',
-      message: isProd
-        ? 'An unexpected error occurred. Please try again later.'
-        : unknownErr.message,
-      ...(!isProd ? { stack: unknownErr.stack } : {}),
+      message: userSafeMessage,
+      ...(!isProd ? { details: { originalError: unknownErr.message }, stack: unknownErr.stack } : {}),
     },
     requestId,
   });
 }
+

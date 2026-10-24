@@ -43,10 +43,13 @@ export function ChaosPanel({ nodes, nodeChaosModes, onSetNodeChaos }: ChaosPanel
       <div className="flex gap-1 p-1 bg-gray-50 border border-yc-border rounded-lg">
         {CHAOS_MODES.filter((m) => m.value !== 'none').map((mode) => {
           const Icon = mode.icon;
+          // CHANGE: Added PostHog data-track for chaos mode selection
           return (
             <button
               key={mode.value}
               onClick={() => setSelectedMode(mode.value)}
+              data-track="simulation:chaos_select_mode"
+              data-track-mode={mode.value}
               className={`flex-1 flex items-center justify-center gap-1 px-2 py-1.5 rounded-md text-[9px] font-bold transition-all ${
                 selectedMode === mode.value
                   ? 'bg-white shadow-sm border border-yc-border text-gray-800'
@@ -91,8 +94,12 @@ export function ChaosPanel({ nodes, nodeChaosModes, onSetNodeChaos }: ChaosPanel
                   </p>
                 </div>
 
+                {/* CHANGE: Added PostHog data-track for fault injection/healing */}
                 <button
                   onClick={() => onSetNodeChaos(n.id, isFaulted ? 'none' : selectedMode)}
+                  data-track={isFaulted ? 'simulation:chaos_heal' : 'simulation:chaos_inject'}
+                  data-track-node={n.id}
+                  data-track-mode={isFaulted ? 'none' : selectedMode}
                   className={`px-3 py-1.5 border-none rounded-md text-[10px] font-bold cursor-pointer flex items-center gap-1 transition-colors ${
                     isFaulted
                       ? 'bg-emerald-400 text-white hover:bg-emerald-500'

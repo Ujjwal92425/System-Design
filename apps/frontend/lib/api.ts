@@ -1,4 +1,4 @@
-import axios from 'axios';
+import axios, { type AxiosRequestConfig, type AxiosResponse } from 'axios';
 import { useAuthStore } from '../features/auth/authStore';
 
 // Retrieve public API URL from environment variables
@@ -11,6 +11,30 @@ export const api = axios.create({
     'Content-Type': 'application/json',
   },
 });
+
+// CHANGE: Deduplicate simultaneous in-flight GET requests (prevents duplicate React StrictMode / multi-component calls)
+const inFlightGetRequests = new Map<string, Promise<any>>();
+const originalGet = api.get.bind(api);
+
+api.get = function <T = any, R = AxiosResponse<T>, D = any>(
+  url: string,
+  config?: AxiosRequestConfig<D>
+): Promise<R> {
+  const paramsKey = config?.params ? JSON.stringify(config.params) : '';
+  const key = `${url}?${paramsKey}`;
+
+  if (inFlightGetRequests.has(key)) {
+    return inFlightGetRequests.get(key)!;
+  }
+
+  const promise = (originalGet(url, config) as Promise<R>)
+    .finally(() => {
+      inFlightGetRequests.delete(key);
+    });
+
+  inFlightGetRequests.set(key, promise);
+  return promise;
+};
 
 // Request Interceptor: Attach memory JWT access token
 api.interceptors.request.use(
@@ -74,21 +98,27 @@ api.interceptors.response.use(
       isRefreshing = true;
 
       try {
-        // Trigger silent refresh rotation via cookies
+        const currentRefresh = useAuthStore.getState().refreshToken;
+
+        // CHANGE: Send refreshToken in body as fallback for cross-origin local dev while keeping withCredentials
         const res = await axios.post(
           `${API_URL}/api/auth/refresh`,
-          {},
+          { refreshToken: currentRefresh },
           { withCredentials: true }
         );
 
         const newAccessToken = res.data?.data?.token;
+        const newRefreshToken = res.data?.data?.refreshToken;
 
         if (!newAccessToken) {
           throw new Error('No access token returned from rotation');
         }
 
-        // Store new token in Zustand
+        // Store new tokens in Zustand
         useAuthStore.getState().setAccessToken(newAccessToken);
+        if (newRefreshToken) {
+          useAuthStore.getState().setRefreshToken(newRefreshToken);
+        }
 
         // Resume queued requests
         processQueue(null, newAccessToken);

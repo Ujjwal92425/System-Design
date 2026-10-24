@@ -11,7 +11,10 @@ import { SignupBody, LoginBody, ForgotPasswordBody, ResetPasswordBody, VerifyEma
 export const authRouter = Router();
 
 // Strict rate limiting on auth endpoints (AUTH-09 / SEC-07)
-const authLimiter = rateLimit({ requests: 5, window: '15m' });
+// CHANGE: Separate refreshLimiter with dev-aware allowances to prevent locking out devs and multi-tab users
+const isDev = process.env.NODE_ENV !== 'production';
+const authLimiter = rateLimit({ requests: isDev ? 100 : 10, window: '15m' });
+const refreshLimiter = rateLimit({ requests: isDev ? 200 : 60, window: '15m' });
 
 authRouter.post('/signup', authLimiter, validate(SignupBody), async (req, res, next) => {
   try {
@@ -22,6 +25,15 @@ authRouter.post('/signup', authLimiter, validate(SignupBody), async (req, res, n
   }
 });
 
+// CHANGE: Cookie options helper to ensure dev cross-port calls (localhost:3007 -> 4007) retain session
+const isProdEnv = process.env.NODE_ENV === 'production';
+const getRefreshCookieOptions = () => ({
+  httpOnly: true,
+  secure: isProdEnv,
+  sameSite: (isProdEnv ? 'strict' : 'lax') as 'strict' | 'lax',
+  maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days
+});
+
 authRouter.post('/login', authLimiter, validate(LoginBody), async (req, res, next) => {
   try {
     const userAgent = req.headers['user-agent'];
@@ -30,14 +42,14 @@ authRouter.post('/login', authLimiter, validate(LoginBody), async (req, res, nex
     const result = await authService.login(req.body, userAgent, ipAddress);
 
     // Set refresh token in HttpOnly cookie (SEC-02/03)
-    res.cookie('refreshToken', result.refreshToken, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'strict',
-      maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days
-    });
+    res.cookie('refreshToken', result.refreshToken, getRefreshCookieOptions());
 
-    success(res, { user: result.user, token: result.accessToken });
+    // CHANGE: Return refreshToken in payload as fallback for cross-origin local dev
+    success(res, {
+      user: result.user,
+      token: result.accessToken,
+      refreshToken: result.refreshToken,
+    });
   } catch (err) {
     next(err);
   }
@@ -66,11 +78,12 @@ authRouter.post('/logout', async (req, res, next) => {
       await authService.logout(token);
     }
     
-    // Clear cookie
+    // Clear cookie with identical flags
+    const opts = getRefreshCookieOptions();
     res.clearCookie('refreshToken', {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'strict'
+      httpOnly: opts.httpOnly,
+      secure: opts.secure,
+      sameSite: opts.sameSite,
     });
 
     success(res, { message: 'Logged out successfully' });
@@ -79,10 +92,12 @@ authRouter.post('/logout', async (req, res, next) => {
   }
 });
 
-authRouter.post('/refresh', authLimiter, async (req, res, next) => {
+// CHANGE: Use refreshLimiter for token rotation
+authRouter.post('/refresh', refreshLimiter, async (req, res, next) => {
   try {
     const cookies = parseCookies(req.headers.cookie);
-    const token = cookies.refreshToken || req.body.refreshToken;
+    // CHANGE: Fallback to request body if cookie was omitted by browser cross-origin policy
+    const token = cookies.refreshToken || req.body?.refreshToken;
     if (!token) {
       throw new AppError('UNAUTHORIZED', 'No refresh token provided', 401);
     }
@@ -93,14 +108,13 @@ authRouter.post('/refresh', authLimiter, async (req, res, next) => {
     const result = await authService.refresh(token, userAgent, ipAddress);
 
     // Set rotated refresh token in HttpOnly cookie
-    res.cookie('refreshToken', result.refreshToken, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'strict',
-      maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days
-    });
+    res.cookie('refreshToken', result.refreshToken, getRefreshCookieOptions());
 
-    success(res, { token: result.accessToken });
+    // CHANGE: Return rotated tokens in JSON response body
+    success(res, {
+      token: result.accessToken,
+      refreshToken: result.refreshToken,
+    });
   } catch (err) {
     next(err);
   }

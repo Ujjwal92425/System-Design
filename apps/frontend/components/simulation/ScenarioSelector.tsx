@@ -48,12 +48,15 @@ export function ScenarioSelector({ value, onChange, disabled, activeInputQps, ba
         {SCENARIOS.map((s) => {
           const Icon = s.icon;
           const selected = value === s.id;
+          // CHANGE: Added PostHog data-track for scenario selection
           return (
             <button
               key={s.id}
               type="button"
               disabled={disabled}
               onClick={() => onChange(s.id)}
+              data-track="simulation:scenario_select"
+              data-track-scenario={s.id}
               className={`flex flex-col items-start gap-1 p-2.5 rounded-lg border text-left transition-all ${
                 selected
                   ? 'border-yc-accent bg-orange-50 shadow-sm'
