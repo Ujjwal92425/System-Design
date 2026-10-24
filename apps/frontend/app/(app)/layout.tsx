@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, usePathname } from 'next/navigation'; // CHANGE: usePathname to detect the /learn workspace route
 import { useAuth } from '../../features/auth/useAuth';
 import { MarketingHeader } from '../../components/layouts/MarketingHeader';
 import { analytics } from '../../lib/analytics';
@@ -9,6 +9,8 @@ import { analytics } from '../../lib/analytics';
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const { user, loading, fetchMe } = useAuth();
   const router = useRouter();
+  // CHANGE: /learn is a full-screen workspace with its own scroll panes, so it needs a viewport-locked shell
+  const isWorkspace = usePathname() === '/learn';
 
   useEffect(() => {
     fetchMe().catch(() => {
@@ -39,9 +41,10 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   }
 
   return (
-    <div className="flex flex-col min-h-screen bg-yc-bg">
+    // CHANGE: on /learn, lock to viewport height (h-dvh + overflow-hidden) so inner panes scroll instead of being cut off
+    <div className={isWorkspace ? 'flex flex-col h-dvh overflow-hidden bg-yc-bg' : 'flex flex-col min-h-screen bg-yc-bg'}>
       <MarketingHeader />
-      <main className="flex-1 flex flex-col min-w-0">{children}</main>
+      <main className={isWorkspace ? 'flex-1 flex flex-col min-w-0 min-h-0' : 'flex-1 flex flex-col min-w-0'}>{children}</main>
     </div>
   );
 }

@@ -11,13 +11,16 @@ import { SystemHealthBadge } from '../../simulation/SystemHealthBadge';
 import { ChaosPanel } from '../../simulation/ChaosPanel';
 import { ObservabilityDashboard } from '../../simulation/ObservabilityDashboard';
 import { ErrorBoundary } from '../../simulation/ErrorBoundary';
+// CHANGE: Added TraceWaterfall import for distributed critical path tracing
+import { TraceWaterfall } from '../../simulation/TraceWaterfall';
 import {
   ChevronDown, ChevronUp, Radio, GripHorizontal,
   LayoutDashboard, BarChart3, Sliders, Activity, Zap, Terminal,
-  Loader2, AlertTriangle, Download, X
+  Loader2, AlertTriangle, Download, X, Layers
 } from 'lucide-react';
 
-type SimTab = 'controls' | 'metrics' | 'chaos' | 'events';
+// CHANGE: Added 'traces' tab to SimTab
+type SimTab = 'controls' | 'metrics' | 'traces' | 'chaos' | 'events';
 
 interface SimulationPanelProps {
   nodes: any[];
@@ -53,9 +56,11 @@ interface SimulationPanelProps {
   maxHeight?: number;
 }
 
+// CHANGE: Added Distributed Traces to navigation tabs
 const TABS: { id: SimTab; label: string; icon: typeof Sliders }[] = [
   { id: 'controls', label: 'Controls', icon: Sliders },
   { id: 'metrics', label: 'Metrics', icon: Activity },
+  { id: 'traces', label: 'Traces', icon: Layers },
   { id: 'chaos', label: 'Chaos', icon: Zap },
   { id: 'events', label: 'Events', icon: Terminal },
 ];
@@ -77,8 +82,8 @@ function getOutlookText(simulation: SimulationPanelProps['simulation']) {
     return 'Waiting for initial metrics from worker...';
   }
   const health = simulation.currentMetrics?.systemHealth;
-  if (health === 'RED') return 'Critical: nodes are failing or queues are overflowing. Check the Metrics tab or inject healing via Chaos.';
-  if (health === 'YELLOW') return 'Degraded: elevated latency or errors detected. Review node table for hotspots.';
+  if (health === 'RED') return 'Critical: nodes are failing or queues are overflowing. Check the Metrics & Traces tabs or inject healing via Chaos.';
+  if (health === 'YELLOW') return 'Degraded: elevated latency or errors detected. Review critical path traces for queue bottlenecks.';
   return 'All systems within SLA. Traffic flowing normally through the architecture.';
 }
 
@@ -129,7 +134,6 @@ export function SimulationPanel({
   const showErrorBanner = simulation.workerError && simulation.isPaused;
 
   if (!isOpen) {
-    // CHANGE: Added PostHog data-track for opening simulation console
     return (
       <div
         onClick={() => setIsOpen(true)}
@@ -192,7 +196,6 @@ export function SimulationPanel({
           </div>
 
           <div className="flex items-center gap-3">
-            {/* CHANGE: Added PostHog data-track for view toggle and close */}
             <button
               onClick={() => setDashboardView((v) => !v)}
               data-track="simulation:toggle_view"
@@ -254,7 +257,6 @@ export function SimulationPanel({
                       ? simulation.eventsLog.length
                       : 0;
 
-                  // CHANGE: Added PostHog data-track for simulation tab change
                   return (
                     <button
                       key={tab.id}
@@ -340,6 +342,20 @@ export function SimulationPanel({
                         />
                       </div>
                     </div>
+                  )}
+
+                  {/* CHANGE: Render Distributed Trace Waterfall */}
+                  {activeTab === 'traces' && (
+                    <TraceWaterfall
+                      trace={simulation.currentMetrics?.trace}
+                      p50={simulation.currentMetrics?.p50}
+                      p90={simulation.currentMetrics?.p90}
+                      p95={simulation.currentMetrics?.p95}
+                      p99={simulation.currentMetrics?.p99}
+                      p999={simulation.currentMetrics?.p999}
+                      isRunning={simulation.isRunning}
+                      onStartSimulation={simulation.start}
+                    />
                   )}
 
                   {activeTab === 'chaos' && (

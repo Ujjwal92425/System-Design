@@ -273,16 +273,24 @@ function FlowCanvasInner({
             onEditLabel,
           },
         }))}
-        edges={edges.map((e) => ({
-          ...e,
-          data: {
-            ...e.data,
-            isSimulating: simulation?.isRunning,
-            errorRate: simulation?.currentMetrics?.nodes?.find((m: any) => m.id === e.source)?.errorRate,
-            qps: simulation?.currentMetrics?.nodes?.find((m: any) => m.id === e.source)?.qps || 0,
-            onLabelChange: onEdgeLabelChange,
-          },
-        }))}
+        edges={edges.map((e) => {
+          // CHANGE: Pass target queue depth, error rate, and backpressure signals to FlowEdge
+          const srcMetrics = simulation?.currentMetrics?.nodes?.find((m: any) => m.id === e.source);
+          const tgtMetrics = simulation?.currentMetrics?.nodes?.find((m: any) => m.id === e.target);
+          return {
+            ...e,
+            data: {
+              ...e.data,
+              isSimulating: simulation?.isRunning,
+              errorRate: srcMetrics?.errorRate || 0,
+              qps: srcMetrics?.qps || 0,
+              targetQueueDepth: tgtMetrics?.queueDepth || 0,
+              targetErrorRate: tgtMetrics?.errorRate || 0,
+              targetLatency: tgtMetrics?.p99Latency || tgtMetrics?.latency || 0,
+              onLabelChange: onEdgeLabelChange,
+            },
+          };
+        })}
         onNodesChange={handleNodesChange}
         onEdgesChange={handleEdgesChange}
         onConnect={onConnect}

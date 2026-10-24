@@ -1,14 +1,34 @@
 // ═══════════════════════════════════════════════════════════════════════════════
-// Lightweight curriculum metadata for offline nav shell & SEO.
-// Full lesson content lives in PostgreSQL (see packages/db/seed scripts).
+// Curriculum metadata and lesson content loader.
+// Provides instant offline access to all 18 tracks and lessons.
 // ═══════════════════════════════════════════════════════════════════════════════
+
+// CHANGE: Import all 18 module lesson datasets
+import { module01Lessons } from './module-01';
+import { module02Lessons } from './module-02';
+import { module03Lessons } from './module-03';
+import { module04Lessons } from './module-04';
+import { module05Lessons } from './module-05';
+import { module06Lessons } from './module-06';
+import { module07Lessons } from './module-07';
+import { module08Lessons } from './module-08';
+import { module09Lessons } from './module-09';
+import { module10Lessons } from './module-10';
+import { module11Lessons } from './module-11';
+import { module12Lessons } from './module-12';
+import { module13Lessons } from './module-13';
+import { module14Lessons } from './module-14';
+import { module15Lessons } from './module-15';
+import { module16Lessons } from './module-16';
+import { module17Lessons } from './module-17';
+import { module18Lessons } from './module-18';
 
 const tracks = [
   {
     id: 'mod-01',
     slug: 'networking-os-security',
     name: 'Networking, OS & Security Fundamentals',
-    description: 'Master the foundational building blocks of distributed systems — from how data moves across the internet to how operating systems manage processes and memory, and how to secure it all.',
+    description: 'Master the foundational building blocks of distributed systems - from how data moves across the internet to how operating systems manage processes and memory, and how to secure it all.',
     level: 1,
     order: 1,
     iconUrl: '/icons/networking.svg',
@@ -45,7 +65,7 @@ const tracks = [
   {
     id: 'mod-03',
     slug: 'databases',
-    name: 'Databases — SQL, NoSQL, Indexing, Sharding & Replication',
+    name: 'Databases - SQL, NoSQL, Indexing, Sharding & Replication',
     description: 'Go deep into database internals: B-Trees, LSM Trees, ACID, CAP theorem, sharding, replication, and when to choose SQL vs NoSQL. Build the database knowledge expected of a senior engineer.',
     level: 2,
     order: 3,
@@ -65,7 +85,7 @@ const tracks = [
     id: 'mod-04',
     slug: 'caching-cdns',
     name: 'Caching & CDNs',
-    description: 'Master every layer of the cache hierarchy — from in-memory caches to CDN edge nodes. Learn eviction policies, write strategies, distributed caching with Redis, and cache invalidation.',
+    description: 'Master every layer of the cache hierarchy - from in-memory caches to CDN edge nodes. Learn eviction policies, write strategies, distributed caching with Redis, and cache invalidation.',
     level: 2,
     order: 4,
     iconUrl: '/icons/cache.svg',
@@ -83,7 +103,7 @@ const tracks = [
   {
     id: 'mod-05',
     slug: 'distributed-infrastructure',
-    name: 'Distributed Infrastructure — Load Balancers, Message Queues & Service Discovery',
+    name: 'Distributed Infrastructure - Load Balancers, Message Queues & Service Discovery',
     description: 'Architect the infrastructure that powers distributed systems: load balancing algorithms, message queue internals, Kafka architecture, service mesh, containers, and orchestration.',
     level: 2,
     order: 5,
@@ -102,7 +122,7 @@ const tracks = [
   {
     id: 'mod-06',
     slug: 'architecture-patterns',
-    name: 'Architecture Patterns — Microservices, Event-Driven, CQRS & Saga',
+    name: 'Architecture Patterns - Microservices, Event-Driven, CQRS & Saga',
     description: 'Learn the architectural patterns that define production systems at scale. From monoliths to microservices, event-driven architectures, CQRS, sagas, and migration patterns.',
     level: 3,
     order: 6,
@@ -121,7 +141,7 @@ const tracks = [
   {
     id: 'mod-07',
     slug: 'advanced-distributed-systems',
-    name: 'Advanced Distributed Systems — Consensus, Leader Election & Failure Detection',
+    name: 'Advanced Distributed Systems - Consensus, Leader Election & Failure Detection',
     description: 'Master the hardest problems in distributed systems: consensus algorithms (Raft, Paxos), leader election, distributed locking, vector clocks, gossip protocols, and failure detection.',
     level: 3,
     order: 7,
@@ -141,7 +161,7 @@ const tracks = [
     id: 'mod-08',
     slug: 'system-design-interviews',
     name: 'System Design Interview Frameworks & Case Studies',
-    description: 'Master the system design interview with a proven framework and 12 complete case studies. From URL shorteners to video streaming platforms — learn the patterns that senior engineers use.',
+    description: 'Master the system design interview with a proven framework and 12 complete case studies. From URL shorteners to video streaming platforms - learn the patterns that senior engineers use.',
     level: 3,
     order: 8,
     iconUrl: '/icons/interview.svg',
@@ -178,7 +198,7 @@ const tracks = [
   {
     id: 'mod-10',
     slug: 'production-operations',
-    name: 'Production Operations — Monitoring, Observability & Deployment',
+    name: 'Production Operations - Monitoring, Observability & Deployment',
     description: 'Run systems in production with confidence. Master observability (logs, metrics, traces), deployment strategies (blue-green, canary), incident response, chaos engineering, and SLOs.',
     level: 3,
     order: 10,
@@ -235,7 +255,7 @@ const tracks = [
   {
     id: 'mod-13',
     slug: 'design-deep-dive',
-    name: 'System Design Deep Dives — Payments, Chat, Video, Ads & More',
+    name: 'System Design Deep Dives - Payments, Chat, Video, Ads & More',
     description: 'Extend your system design skills with advanced real-world case studies. Design a chat system like WhatsApp, payment system like Stripe, video conferencing like Zoom, ad auctions, food delivery logistics, recommendation engines, and more.',
     level: 3,
     order: 13,
@@ -254,7 +274,7 @@ const tracks = [
   {
     id: 'mod-14',
     slug: 'design-deep-dive-2',
-    name: 'System Design Deep Dives II — CDN, KMS, Monitoring, Data Pipelines & More',
+    name: 'System Design Deep Dives II - CDN, KMS, Monitoring, Data Pipelines & More',
     description: 'Continue mastering advanced system design with CDN architecture from scratch, key management services, A/B testing platforms, monitoring/metrics systems, ETL data pipelines, distributed job queues, rate limiters, and geospatial services.',
     level: 3,
     order: 14,
@@ -273,7 +293,7 @@ const tracks = [
   {
     id: 'mod-15',
     slug: 'system-design-foundations',
-    name: 'System Design Foundations — Welcome, Core Concepts & Tradeoffs',
+    name: 'System Design Foundations - Welcome, Core Concepts & Tradeoffs',
     description: 'Start your system design journey with the foundational concepts: core terminology (latency, throughput, availability, consistency), the CAP theorem, and key tradeoffs that appear in every architecture decision.',
     level: 1,
     order: 15,
@@ -292,7 +312,7 @@ const tracks = [
   {
     id: 'mod-16',
     slug: 'scalable-data-structures',
-    name: 'Scalable Data Structures — Bloom Filters, Geohash, Merkle Trees & More',
+    name: 'Scalable Data Structures - Bloom Filters, Geohash, Merkle Trees & More',
     description: 'Master the probabilistic and specialized data structures that power large-scale systems: Bloom filters, Geohash, Merkle trees, consistent hashing, HyperLogLog, Count-Min Sketch, tries, skip lists, segment trees, R-trees, and bitmap indexes.',
     level: 2,
     order: 16,
@@ -311,7 +331,7 @@ const tracks = [
   {
     id: 'mod-17',
     slug: 'advanced-storage-patterns',
-    name: 'Advanced Storage Patterns — Caching, Streaming, Delivery & Transactions',
+    name: 'Advanced Storage Patterns - Caching, Streaming, Delivery & Transactions',
     description: 'Dive deep into the patterns that make production systems reliable: cache warming, materialized views, connection pooling, erasure coding, SSE, webhooks, delivery semantics, dead letter queues, and the 3PC protocol.',
     level: 2,
     order: 17,
@@ -330,7 +350,7 @@ const tracks = [
   {
     id: 'mod-18',
     slug: 'advanced-security-identity',
-    name: 'Advanced Security & Identity — TLS, Encryption, Secrets, RBAC & SSO',
+    name: 'Advanced Security & Identity - TLS, Encryption, Secrets, RBAC & SSO',
     description: 'Secure your systems end-to-end: TLS protocol deep dive, encryption at rest with envelope encryption, secrets management with Vault, role-based access control, and SAML/SSO for federated identity.',
     level: 3,
     order: 18,
@@ -356,7 +376,111 @@ export function getTrackBySlug(slug: string) {
   return tracks.find(t => t.slug === slug) || null;
 }
 
-export function getLessonBySlug(_slug: string) {
-  // Content lives in PostgreSQL — this is a no-op fallback for legacy callers
+// CHANGE: Map track slugs to their lesson arrays
+export const MODULE_LESSONS_MAP: Record<string, any[]> = {
+  'networking-os-security': module01Lessons,
+  'apis-protocols-authentication': module02Lessons,
+  'databases': module03Lessons,
+  'caching-cdns': module04Lessons,
+  'distributed-infrastructure': module05Lessons,
+  'architecture-patterns': module06Lessons,
+  'advanced-distributed-systems': module07Lessons,
+  'system-design-interviews': module08Lessons,
+  'frontend-performance': module09Lessons,
+  'production-operations': module10Lessons,
+  'simulation-driven': module11Lessons,
+  'coding-craft': module12Lessons,
+  'design-deep-dive': module13Lessons,
+  'design-deep-dive-2': module14Lessons,
+  'system-design-foundations': module15Lessons,
+  'scalable-data-structures': module16Lessons,
+  'advanced-storage-patterns': module17Lessons,
+  'advanced-security-identity': module18Lessons,
+};
+
+// CHANGE: Helper to ensure no em-dash or en-dash appears in any titles, descriptions, or notes
+export function cleanDashes(text: string): string {
+  if (!text) return text;
+  return text.replace(/—/g, ' - ').replace(/–/g, ' - ');
+}
+
+// CHANGE: Return all tracks populated with modules and lesson items (filtering out any null entries and cleaning dashes)
+export function getAllTracksWithLessons() {
+  return tracks.map(track => {
+    const rawLessons = MODULE_LESSONS_MAP[track.slug] || [];
+    const lessons = rawLessons.filter(Boolean).map(l => ({
+      ...l,
+      title: cleanDashes(l.title),
+      content: cleanDashes(l.content),
+    }));
+    const cleanTrackName = cleanDashes(track.name);
+    const cleanTrackDesc = cleanDashes(track.description);
+    return {
+      ...track,
+      name: cleanTrackName,
+      description: cleanTrackDesc,
+      lessons,
+      modules: [
+        {
+          id: `mod-${track.id}`,
+          name: cleanTrackName,
+          description: cleanTrackDesc,
+          order: track.order,
+          estimatedMin: lessons.reduce((acc: number, l: any) => acc + (l?.estimatedMin || 15), 0),
+          lessons,
+        }
+      ]
+    };
+  });
+}
+
+// CHANGE: Return a single track populated with modules and lesson items (filtering out null entries and cleaning dashes)
+export function getTrackWithLessons(slug: string) {
+  const track = tracks.find(t => t.slug === slug);
+  if (!track) return null;
+  const rawLessons = MODULE_LESSONS_MAP[track.slug] || [];
+  const lessons = rawLessons.filter(Boolean).map(l => ({
+    ...l,
+    title: cleanDashes(l.title),
+    content: cleanDashes(l.content),
+  }));
+  const cleanTrackName = cleanDashes(track.name);
+  const cleanTrackDesc = cleanDashes(track.description);
+  return {
+    ...track,
+    name: cleanTrackName,
+    description: cleanTrackDesc,
+    lessons,
+    modules: [
+      {
+        id: `mod-${track.id}`,
+        name: cleanTrackName,
+        description: cleanTrackDesc,
+        order: track.order,
+        estimatedMin: lessons.reduce((acc: number, l: any) => acc + (l?.estimatedMin || 15), 0),
+        lessons,
+      }
+    ]
+  };
+}
+
+// CHANGE: Look up a lesson across all tracks by its slug (filtering out null entries and cleaning dashes)
+export function getLessonBySlug(slug: string) {
+  for (const [trackSlug, rawLessons] of Object.entries(MODULE_LESSONS_MAP)) {
+    const lessons = (rawLessons || []).filter(Boolean);
+    const lesson = lessons.find(l => l?.slug === slug);
+    if (lesson) {
+      const track = tracks.find(t => t.slug === trackSlug);
+      return {
+        ...lesson,
+        title: cleanDashes(lesson.title),
+        content: cleanDashes(lesson.content),
+        trackSlug,
+        trackName: cleanDashes(track?.name ?? trackSlug),
+      };
+    }
+  }
   return null;
 }
+
+

@@ -582,3 +582,156 @@ body.no-scroll {
   stroke-dasharray: 6 4;
   animation: flow-dash 0.8s linear infinite;
 }
+
+/* CHANGE: Sleek, high-contrast custom scrollbar utility for curriculum explorer and notes reader */
+.custom-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(0, 0, 0, 0.28) transparent;
+  scroll-behavior: smooth;
+}
+.custom-scrollbar::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.25);
+  border-radius: 4px;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: rgba(0, 0, 0, 0.45);
+}
+
+/* CHANGE: Dedicated CSS design system for lesson markdown notes, tables, callouts, and code */
+.lesson-content {
+  color: var(--text-primary);
+  font-size: 14.5px;
+  line-height: 1.75;
+}
+.lesson-content table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 20px 0;
+  border: 1px solid var(--border);
+  background: var(--bg-surface);
+  color: var(--text-primary);
+  font-size: 13.5px;
+  line-height: 1.6;
+}
+.lesson-content thead {
+  background: var(--bg-elevated);
+}
+.lesson-content tr {
+  border-bottom: 1px solid var(--border);
+}
+.lesson-content th {
+  border: 1px solid var(--border);
+  padding: 10px 14px;
+  font-weight: 700;
+  text-align: left;
+  background: var(--bg-elevated);
+  color: var(--text-primary);
+  font-size: 13.5px;
+  white-space: nowrap;
+}
+.lesson-content td {
+  border: 1px solid var(--border);
+  padding: 10px 14px;
+  color: var(--text-primary);
+  font-size: 13.5px;
+  line-height: 1.6;
+  vertical-align: top;
+  background: var(--bg-surface);
+}
+.lesson-content td strong,
+.lesson-content th strong,
+.lesson-content strong {
+  color: var(--text-primary);
+  font-weight: 700;
+}
+.lesson-content blockquote {
+  border-left: 4px solid #FF6600;
+  background: rgba(255, 102, 0, 0.05);
+  color: var(--text-primary);
+  padding: 14px 18px;
+  margin: 18px 0;
+  border-radius: 0 8px 8px 0;
+  font-size: 14.5px;
+  line-height: 1.7;
+}
+.lesson-content h1 {
+  font-size: 24px;
+  font-weight: 800;
+  color: var(--text-primary);
+  margin-top: 28px;
+  margin-bottom: 12px;
+  letter-spacing: -0.02em;
+  line-height: 1.3;
+}
+.lesson-content h2 {
+  font-size: 19px;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin-top: 26px;
+  margin-bottom: 10px;
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 6px;
+  line-height: 1.4;
+}
+.lesson-content h3 {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin-top: 20px;
+  margin-bottom: 8px;
+}
+.lesson-content p {
+  font-size: 14.5px;
+  line-height: 1.75;
+  color: var(--text-secondary);
+  margin-top: 0;
+  margin-bottom: 14px;
+}
+.lesson-content ul {
+  padding-left: 22px;
+  margin-top: 0;
+  margin-bottom: 14px;
+  list-style-type: disc;
+  color: var(--text-secondary);
+}
+.lesson-content ol {
+  padding-left: 22px;
+  margin-top: 0;
+  margin-bottom: 14px;
+  list-style-type: decimal;
+  color: var(--text-secondary);
+}
+.lesson-content li {
+  font-size: 14.5px;
+  line-height: 1.7;
+  color: var(--text-secondary);
+  margin-bottom: 6px;
+}
+.lesson-content hr {
+  border: none;
+  border-top: 1px solid var(--border);
+  margin: 32px 0;
+}
+.lesson-content a {
+  color: #FF6600;
+  text-decoration: underline;
+  font-weight: 500;
+}
+.lesson-content code:not(pre code) {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  background: var(--bg-elevated);
+  padding: 2px 5px;
+  border-radius: 4px;
+  color: #FF6600;
+  border: 1px solid var(--border);
+  font-weight: 600;
+}
+

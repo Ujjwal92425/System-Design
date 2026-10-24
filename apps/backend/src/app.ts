@@ -31,7 +31,8 @@ import { env } from './config/env';
 import { logger } from './utils/logger';
 import { requestLogger } from './middleware/requestLogger';
 import { rateLimit } from './middleware/rateLimit';
-import { authenticate } from './middleware/authenticate';
+// CHANGE: Import optionalAuthenticate for public routes like /api/learn
+import { authenticate, optionalAuthenticate } from './middleware/authenticate';
 import { errorHandler } from './middleware/errorHandler';
 
 // ── Feature Routers ──────────────────────────────────────────────────────────
@@ -128,7 +129,8 @@ app.use('/api/auth', authRouter);
 // The frontend then silently refreshes via POST /api/auth/refresh.
 app.use('/api/designs/public', publicDesignsRouter);
 app.use('/api/users',     authenticate, usersRouter);
-app.use('/api/learn',     authenticate, learnRouter);
+// CHANGE: Use optionalAuthenticate so public tracks/lessons can be browsed without login
+app.use('/api/learn',     optionalAuthenticate, learnRouter);
 app.use('/api/designs',    authenticate, designsRouter);
 app.use('/api/simulation', authenticate, simulationRouter);
 app.use('/api/usage',      authenticate, usageRouter);

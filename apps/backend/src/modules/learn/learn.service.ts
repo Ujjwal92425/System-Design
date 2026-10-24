@@ -47,11 +47,12 @@ export const learnService = {
    * List all published tracks along with user progress metrics.
    * All tracks are visible (premium tracks show "PRO" badge on frontend).
    */
-  async listTracks(userId: string) {
+  // CHANGE: Support optional userId for guest/unauthenticated browsing
+  async listTracks(userId?: string) {
     const tracks = await lessonsRepo.listTracks();
-    const progressList = await db.userProgress.findMany({
+    const progressList = userId ? await db.userProgress.findMany({
       where: { userId }
-    });
+    }) : [];
 
     const progressMap = new Map(progressList.map(p => [p.trackId, p.completedPct]));
 
@@ -65,17 +66,18 @@ export const learnService = {
    * Get track details by slug, including nested modules and lessons with completed states.
    * Premium lessons are filtered out for free users.
    */
-  async getTrackDetail(slug: string, userId: string) {
+  // CHANGE: Support optional userId for guest/unauthenticated browsing
+  async getTrackDetail(slug: string, userId?: string) {
     const track = await lessonsRepo.findTrackBySlug(slug);
     if (!track) {
       throw new AppError('NOT_FOUND', 'Track not found', 404);
     }
 
     // Fetch user progress for this track
-    const userProgress = await progressRepo.getTrackProgress(userId, track.id);
+    const userProgress = userId ? await progressRepo.getTrackProgress(userId, track.id) : null;
     
     // Fetch all lesson states for this user in this track
-    const states = await db.lessonState.findMany({
+    const states = userId ? await db.lessonState.findMany({
       where: {
         userId,
         lesson: {
@@ -84,7 +86,7 @@ export const learnService = {
           }
         }
       }
-    });
+    }) : [];
 
     const stateMap = new Map(states.map(s => [s.lessonId, s.status]));
 
@@ -108,19 +110,20 @@ export const learnService = {
    * Get a single lesson by slug, including bookmark/progress states and siblings navigation.
    * Premium lessons return redacted content for non-PRO users (isLocked: true).
    */
-  async getLessonDetail(slug: string, userId: string) {
+  // CHANGE: Support optional userId for guest/unauthenticated browsing
+  async getLessonDetail(slug: string, userId?: string) {
     const lesson = await lessonsRepo.findWithModule(slug);
     if (!lesson) {
       throw new AppError('NOT_FOUND', 'Lesson not found', 404);
     }
 
     // Check premium access
-    const user = await db.user.findUnique({
+    const user = userId ? await db.user.findUnique({
       where: { id: userId },
       select: { role: true }
-    });
+    }) : null;
 
-    const hasAccess = await hasPremiumAccess(userId, user?.role ?? 'USER');
+    const hasAccess = userId ? await hasPremiumAccess(userId, user?.role ?? 'USER') : false;
 
     // If the lesson is premium and user doesn't have access, return masked version
     if (lesson.isPremium && !hasAccess) {
@@ -132,9 +135,9 @@ export const learnService = {
     }
 
     // Fetch or create lesson state for this user
-    const lessonState = await db.lessonState.findUnique({
+    const lessonState = userId ? await db.lessonState.findUnique({
       where: { userId_lessonId: { userId, lessonId: lesson.id } }
-    });
+    }) : null;
 
     // Calculate siblings (Next/Prev) inside the same track
     const trackId = lesson.module.trackId;
@@ -176,12 +179,13 @@ export const learnService = {
   /**
    * Search through lessons content and titles using full-text filtering.
    */
-  async searchLessons(userId: string, query: string, filters?: { difficulty?: string; tags?: string[] }) {
-    const user = await db.user.findUnique({
+  // CHANGE: Support optional userId for guest/unauthenticated browsing
+  async searchLessons(userId: string | undefined, query: string, filters?: { difficulty?: string; tags?: string[] }) {
+    const user = userId ? await db.user.findUnique({
       where: { id: userId },
       select: { role: true },
-    });
-    const includePremium = await hasPremiumAccess(userId, user?.role ?? 'USER');
+    }) : null;
+    const includePremium = userId ? await hasPremiumAccess(userId, user?.role ?? 'USER') : false;
     return lessonsRepo.search(query, filters, includePremium);
   },
 

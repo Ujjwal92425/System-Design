@@ -6,6 +6,9 @@ interface SimulationKpiBarProps {
   currentMetrics: {
     inputQps?: number;
     systemHealth?: string;
+    p50?: number;
+    p95?: number;
+    p99?: number;
     nodes?: { qps?: number; latency?: number; errorRate?: number; cpu?: number }[];
   } | null;
   trafficQps: number;
@@ -38,6 +41,7 @@ export function SimulationKpiBar({ currentMetrics, trafficQps, scenario }: Simul
 
   const inputQps = currentMetrics?.inputQps ?? trafficQps;
   const health = currentMetrics?.systemHealth || 'GREEN';
+  const p99 = currentMetrics?.p99;
 
   const healthColor =
     health === 'RED' ? 'text-red-500 bg-red-50 border-red-200' :
@@ -53,11 +57,12 @@ export function SimulationKpiBar({ currentMetrics, trafficQps, scenario }: Simul
       color: 'text-yc-accent',
     },
     {
-      label: 'Avg Latency',
+      label: 'Avg / p99 Latency',
       value: `${Math.round(avgLatency)}ms`,
-      sub: avgLatency > 200 ? 'High' : avgLatency > 100 ? 'Elevated' : 'OK',
+      // CHANGE: Surface real-time p99 tail latency alongside mean latency
+      sub: typeof p99 === 'number' && p99 > 0 ? `p99: ${p99.toFixed(0)}ms` : (avgLatency > 200 ? 'High' : avgLatency > 100 ? 'Elevated' : 'OK'),
       icon: Clock,
-      color: avgLatency > 200 ? 'text-red-500' : avgLatency > 100 ? 'text-amber-500' : 'text-emerald-600',
+      color: avgLatency > 200 || (p99 && p99 > 300) ? 'text-red-500' : avgLatency > 100 ? 'text-amber-500' : 'text-emerald-600',
     },
     {
       label: 'Avg CPU',
@@ -88,7 +93,7 @@ export function SimulationKpiBar({ currentMetrics, trafficQps, scenario }: Simul
         </div>
       ))}
       <div className={`hidden sm:flex col-span-4 items-center justify-center gap-2 py-1 px-3 rounded-lg border text-[10px] font-bold font-mono ${healthColor}`}>
-        System Health: {health}
+        System Health: {health} {typeof p99 === 'number' && p99 > 0 ? `· p99: ${p99.toFixed(1)}ms` : ''}
       </div>
     </div>
   );

@@ -32,8 +32,6 @@ export const module04Lessons = [
     tags: ["cache-aside","read-through","write-through","write-back","caching-patterns","stampede"]
   },
 
-  null,
-
   {
     id: "lesson-04-04",
     slug: "caching-cdns-04-distributed-caching-redis-memcached",

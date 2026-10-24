@@ -176,7 +176,8 @@ export default function LessonPage({
             </span>
             <span className="flex items-center space-x-1 text-xs text-gray-500">
               <Clock className="w-3 h-3" />
-              <span>{lesson.estimatedMin} min read</span>
+              {/* CHANGE: Guard estimatedMin with optional chaining and fallback */}
+              <span>{lesson?.estimatedMin ?? 15} min read</span>
             </span>
             {isComplete && (
               <span className="flex items-center space-x-1 text-xs text-emerald-600 bg-emerald-50 border border-emerald-200 px-2.5 py-0.5 rounded-full">

@@ -158,8 +158,9 @@ export default function TrackPage() {
       </div>
 
       {modules.map((mod: any, mi: number) => {
-        const modLessons = mod.lessons ?? [];
-        const modCompleted = modLessons.filter((l: any) => lessonStatuses[l.id]?.status === 'COMPLETE').length;
+        // CHANGE: Defensively filter lessons and guard estimatedMin
+        const modLessons = (mod.lessons ?? []).filter(Boolean);
+        const modCompleted = modLessons.filter((l: any) => lessonStatuses[l?.id]?.status === 'COMPLETE').length;
         return (
           <div key={mod.id} style={{
             background: 'var(--bg-surface)',
@@ -185,13 +186,13 @@ export default function TrackPage() {
             </div>
 
             {modLessons.map((lesson: any, li: number) => {
-              const state = lessonStatuses[lesson.id];
-              const status = state?.status ?? lesson.status ?? 'NOT_STARTED';
+              const state = lessonStatuses[lesson?.id];
+              const status = state?.status ?? lesson?.status ?? 'NOT_STARTED';
               const isCompleted = status === 'COMPLETE';
               return (
                 <Link
-                  key={lesson.id}
-                  href={`/learn/${trackSlug}/${lesson.slug}`}
+                  key={lesson?.id ?? li}
+                  href={`/learn/${trackSlug}/${lesson?.slug}`}
                   style={{
                     display: 'flex', alignItems: 'center', gap: '12px',
                     padding: '12px 20px', textDecoration: 'none',
@@ -209,17 +210,17 @@ export default function TrackPage() {
                   )}
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <span className="mono" style={{ fontSize: '10px', fontWeight: 700, color: BRAND, marginRight: '8px' }}>
-                      {String(lesson.order ?? li + 1).padStart(2, '0')}
+                      {String(lesson?.order ?? li + 1).padStart(2, '0')}
                     </span>
                     <span style={{ fontSize: '13px', fontWeight: 500, color: 'var(--text-primary)' }}>
-                      {lesson.title}
+                      {lesson?.title}
                     </span>
                   </div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0 }}>
                     <span className="mono" style={{ fontSize: '10px', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '3px' }}>
-                      <Clock style={{ width: '10px', height: '10px' }} />{lesson.estimatedMin}m
+                      <Clock style={{ width: '10px', height: '10px' }} />{lesson?.estimatedMin ?? 15}m
                     </span>
-                    {lesson.difficulty && <DiffBadge d={lesson.difficulty} />}
+                    {lesson?.difficulty && <DiffBadge d={lesson.difficulty} />}
                     <ChevronRight style={{ width: '13px', height: '13px', color: 'var(--text-muted)' }} />
                   </div>
                 </Link>

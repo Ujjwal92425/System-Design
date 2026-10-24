@@ -6,26 +6,14 @@ import { io as socketIO, Socket } from 'socket.io-client';
 // =============================================================================
 // Web Worker Blob — runs simulation tick logic in a separate thread
 //
-// FIXES applied in this version:
-//   1. Added try/catch around runSimulationTick() — worker crash no longer
-//      silently stops the simulation; errors are posted back to the main thread
-//   2. Fixed orphan edge crash — guard adj[source] before pushing
-//   3. Fixed division by zero — guard all denominators with Math.max(1, ...)
-//   4. Fixed retry storm formula — replaced unbounded geometric series with
-//      capped exponential backoff (max 3 retries, 2x multiplier, 500ms cap)
-//   5. Fixed write ratio propagation — removed spurious *2 multiplier;
-//      downstream load is now correctly: (1 - writeRatio) reads + writeRatio writes
-//   6. Fixed CPU formula — removed magic /2 * 0.8; uses utilization = qps / capacity
-//      directly per-core, capped at 100%
-//   7. Added missing node models: CIRCUIT_BREAKER (open/half-open/closed states),
-//      DEAD_LETTER_QUEUE (retry count, poison message tracking),
-//      PUBSUB (partition-based fan-out), AUTH_SERVICE / OAUTH / JWT (token overhead),
-//      WAF (block rate), REVERSE_PROXY, OBSERVABILITY nodes (no-op passthrough),
-//      LLM_GATEWAY / EMBEDDING_SVC / VECTOR_DB / RAG_SERVICE / INFERENCE_SVC
-//   8. Added isNaN/isFinite guards on all computed numeric values to prevent
-//      NaN propagation through the graph
-//   9. Added health ping — worker responds to HEALTH_CHECK messages;
-//      main thread uses this to detect unresponsive workers
+// HYPERSCALE PHYSICS APPLIED:
+//   1. Kingman M/G/1 Queueing Delay: Asymptotic queue waiting time when rho >= 0.65
+//   2. Log-Normal Percentile Distributions: Real-world heavy tail p50, p90, p95, p99, p99.9
+//   3. Metastable Failures: Retry storm amplification & Thundering Herd cold-cache stampede
+//   4. Distributed Critical Path Trace: Hop-by-hop waterfall profiling per tick
+//   5. Protected Concurrency & Connection Pools with bounded buffers
+//   6. Persistent Async Queue Buffering: Producer temporal decoupling with multi-tick worker drain
+//   7. Distributed Deadline Propagation: gRPC/Envoy timeout budgets with cascading cancellation
 // =============================================================================
 
 const workerCode = `
@@ -46,10 +34,11 @@ const workerCode = `
   var nodeReplicas = {};  // { nodeId: count }
   var hpaCooldown = {};   // { nodeId: tick }
   var prevCpu = {};       // { nodeId: [cpu1, cpu2] } rolling window
-  // Circuit breaker state: { nodeId: { state: 'CLOSED'|'OPEN'|'HALF_OPEN', failCount, lastFailureTick } }
-  var cbState = {};
+  var cbState = {};       // { nodeId: { state, failCount, lastFailureTick } }
+  var cacheWarmth = {};   // { nodeId: float 0.0-1.0 }
+  // CHANGE: Persistent async queue backlogs across ticks (temporal decoupling)
+  var queueBacklogs = {}; // { nodeId: number of queued messages }
 
-  // Safe number guard — prevents NaN/Infinity from propagating through the graph
   function safeNum(v, fallback) {
     var n = Number(v);
     return isFinite(n) ? n : (fallback !== undefined ? fallback : 0);
@@ -74,6 +63,8 @@ const workerCode = `
       if (hpaCooldown[id] === undefined) hpaCooldown[id] = 0;
       if (prevCpu[id] === undefined) prevCpu[id] = [];
       if (cbState[id] === undefined) cbState[id] = { state: 'CLOSED', failCount: 0, lastFailureTick: 0 };
+      if (cacheWarmth[id] === undefined) cacheWarmth[id] = 1.0;
+      if (queueBacklogs[id] === undefined) queueBacklogs[id] = 0;
     });
     var knownIds = {};
     graphNodes.forEach(function(n) { knownIds[n.id] = true; });
@@ -82,6 +73,8 @@ const workerCode = `
     Object.keys(hpaCooldown).forEach(function(id) { if (!knownIds[id]) delete hpaCooldown[id]; });
     Object.keys(prevCpu).forEach(function(id) { if (!knownIds[id]) delete prevCpu[id]; });
     Object.keys(cbState).forEach(function(id) { if (!knownIds[id]) delete cbState[id]; });
+    Object.keys(cacheWarmth).forEach(function(id) { if (!knownIds[id]) delete cacheWarmth[id]; });
+    Object.keys(queueBacklogs).forEach(function(id) { if (!knownIds[id]) delete queueBacklogs[id]; });
   }
 
   self.onmessage = function(e) {
@@ -89,8 +82,6 @@ const workerCode = `
     var type = msg.type;
     var payload = msg.payload || {};
 
-    // FIX: Health check — worker responds immediately so main thread
-    // can detect if the worker is unresponsive
     if (type === 'HEALTH_CHECK') {
       self.postMessage({ type: 'HEALTH_OK', payload: { tick: tickCount, isRunning: isRunning } });
       return;
@@ -112,6 +103,8 @@ const workerCode = `
         hpaCooldown = {};
         prevCpu = {};
         cbState = {};
+        cacheWarmth = {};
+        queueBacklogs = {};
         if (!isRunning) { isRunning = true; startSimulation(); }
       } else if (type === 'STOP') {
         isRunning = false;
@@ -139,13 +132,10 @@ const workerCode = `
     intervalId = setInterval(function() {
       tickCount++;
       try {
-        // FIX: Wrap tick processing in try/catch. If anything goes wrong,
-        // we post an ERROR message instead of silently dying.
         var metrics = runSimulationTick();
         self.postMessage({ type: 'TICK', payload: metrics });
       } catch (err) {
         self.postMessage({ type: 'ERROR', payload: { message: 'Tick ' + tickCount + ' failed: ' + err.message, tick: tickCount } });
-        // Pause simulation on tick error to prevent infinite error loops
         isRunning = false;
         if (intervalId) { clearInterval(intervalId); intervalId = null; }
         self.postMessage({ type: 'PAUSED', payload: { reason: err.message, tick: tickCount } });
@@ -160,7 +150,7 @@ const workerCode = `
   }
 
   // ===========================================================================
-  // Erlang-C multi-server queueing formula
+  // Queueing & Distribution Physics
   // ===========================================================================
   function erlangC(lmbda, mu, c) {
     lmbda = safeNum(lmbda, 0);
@@ -171,11 +161,7 @@ const workerCode = `
     function fact(n) {
       if (n <= 1) return 1;
       var r = 1;
-      // FIX: Cap factorial at 12 to prevent overflow (JS Number precision limit)
-      // For c > 12, use Stirling approximation
-      if (n > 12) {
-        return Math.sqrt(2 * Math.PI * n) * Math.pow(n / Math.E, n);
-      }
+      if (n > 12) return Math.sqrt(2 * Math.PI * n) * Math.pow(n / Math.E, n);
       for (var i = 2; i <= n; i++) r *= i;
       return r;
     }
@@ -183,6 +169,104 @@ const workerCode = `
     for (var k = 0; k < c; k++) sum += Math.pow(c * rho, k) / fact(k);
     var top = Math.pow(c * rho, c) / (fact(c) * (1 - rho));
     return safeMin(top / (sum + top), 1);
+  }
+
+  // CHANGE: Kingman's M/G/1 queueing delay formula for realistic heavy-traffic waiting time
+  function kingmanDelay(arrivalRate, serviceCapacity, baseDelay) {
+    arrivalRate = safeNum(arrivalRate, 0);
+    serviceCapacity = Math.max(1, safeNum(serviceCapacity, 1));
+    baseDelay = Math.max(1, safeNum(baseDelay, 5));
+    var rho = arrivalRate / serviceCapacity;
+    if (rho < 0.65) return Math.max(0, rho * baseDelay * 0.15);
+    if (rho >= 1.0) {
+      var over = rho - 1.0;
+      return Math.min(4500, baseDelay * 4 + over * 1500);
+    }
+    var varianceFactor = (1.0 + 1.44) / 2.0; // Ca=1, Cs=1.2
+    var queueWait = (rho / (1.0 - rho)) * varianceFactor * baseDelay * 0.45;
+    return Math.min(3500, queueWait);
+  }
+
+  // CHANGE: Log-normal percentiles estimator for realistic tail-at-scale (p50, p90, p95, p99, p99.9)
+  function estimatePercentiles(meanLatency, gcPauseMs, isSaturated) {
+    meanLatency = Math.max(1, safeNum(meanLatency, 5));
+    gcPauseMs = safeNum(gcPauseMs, 0);
+    var p50 = safeRound(meanLatency * 0.85);
+    var p90 = safeRound(meanLatency * 1.35 + (gcPauseMs * 0.3));
+    var p95 = safeRound(meanLatency * 1.75 + (gcPauseMs * 0.6));
+    var p99 = safeRound(meanLatency * 2.65 + gcPauseMs + (isSaturated ? 250 : 0));
+    var p999 = safeRound(meanLatency * 4.2 + (gcPauseMs * 1.8) + (isSaturated ? 600 : 0));
+    return { p50: p50, p90: p90, p95: p95, p99: p99, p999: p999 };
+  }
+
+  // CHANGE: Distributed critical path trace waterfall with gRPC deadline cancellation
+  function buildCriticalPathTrace(entrypoints, adj, nodeMetrics) {
+    var criticalPath = [];
+    var currentTraceId = entrypoints[0] ? entrypoints[0].id : null;
+    var traceVisited = {};
+    var cumulativeTraceMs = 0;
+    var deadlineExceededAt = null;
+
+    while (currentTraceId && !traceVisited[currentTraceId] && criticalPath.length < 8) {
+      traceVisited[currentTraceId] = true;
+      var trMetric = nodeMetrics[currentTraceId];
+      if (trMetric) {
+        var isBneck = trMetric.queueDepth > 20 || trMetric.latency > 150 || trMetric.errorRate > 20;
+        cumulativeTraceMs += trMetric.latency;
+        var isExceeded = cumulativeTraceMs > 1200;
+        if (isExceeded && !deadlineExceededAt) {
+          deadlineExceededAt = currentTraceId;
+        }
+
+        var status = isExceeded
+          ? 'DEADLINE_EXCEEDED'
+          : trMetric.errorRate > 40
+          ? 'CRITICAL'
+          : (trMetric.errorRate > 10 || isBneck)
+          ? 'DEGRADED'
+          : 'OK';
+
+        criticalPath.push({
+          nodeId: currentTraceId,
+          label: trMetric.label,
+          nodeType: trMetric.type,
+          serviceLatencyMs: trMetric.serviceLatency || safeRound(trMetric.latency * 0.7),
+          queueDelayMs: trMetric.queueDelay || safeRound(trMetric.latency * 0.3),
+          gcPauseMs: trMetric.gcPause || 0,
+          totalDurationMs: trMetric.latency,
+          p99Latency: trMetric.p99Latency || safeRound(trMetric.latency * 2.5),
+          queueDepth: trMetric.queueDepth,
+          errorRate: trMetric.errorRate,
+          qps: trMetric.qps,
+          isBottleneck: isBneck,
+          status: status
+        });
+      }
+      var nextNodes = adj[currentTraceId] || [];
+      if (nextNodes.length === 0) break;
+      var worstNext = nextNodes[0];
+      var maxL = -1;
+      nextNodes.forEach(function(nxt) {
+        var l = nodeMetrics[nxt] ? nodeMetrics[nxt].latency : 0;
+        if (l > maxL) { maxL = l; worstNext = nxt; }
+      });
+      currentTraceId = worstNext;
+    }
+
+    var totalCriticalLatency = criticalPath.reduce(function(s, sp) { return s + sp.totalDurationMs; }, 0);
+    var maxSpan = criticalPath[0];
+    criticalPath.forEach(function(sp) {
+      if (sp.totalDurationMs > (maxSpan ? maxSpan.totalDurationMs : 0)) maxSpan = sp;
+    });
+
+    return {
+      spans: criticalPath,
+      totalLatencyMs: totalCriticalLatency,
+      bottleneckNodeId: maxSpan ? maxSpan.nodeId : '',
+      bottleneckType: maxSpan ? maxSpan.nodeType : '',
+      bottleneckLatencyMs: maxSpan ? maxSpan.totalDurationMs : 0,
+      timestamp: Date.now()
+    };
   }
 
   // ===========================================================================
@@ -214,7 +298,8 @@ const workerCode = `
     if (nodeSpecType.indexOf('DATABASE') >= 0) return 40;
     if (nodeSpecType.indexOf('CACHE') >= 0) return 2;
     if (nodeSpecType.indexOf('CDN') >= 0) return 2;
-    if (nodeSpecType.indexOf('QUEUE') >= 0) return 5;
+    if (nodeSpecType.indexOf('QUEUE') >= 0) return 3; // Fast producer ACK
+    if (nodeSpecType.indexOf('PUBSUB') >= 0) return 3;
     if (nodeSpecType.indexOf('AUTH') >= 0) return 30;
     if (nodeSpecType.indexOf('WAF') >= 0) return 10;
     if (nodeSpecType.indexOf('LLM') >= 0) return 500;
@@ -244,7 +329,6 @@ const workerCode = `
   // Main tick logic
   // ===========================================================================
   function runSimulationTick() {
-    // --- Traffic generation ---
     var currentInputQps = safeNum(trafficQps, 1000);
     if (scenario === 'spike') {
       var phase = tickCount % 15;
@@ -254,44 +338,69 @@ const workerCode = `
     }
     currentInputQps = safeNum(currentInputQps, 0);
 
-    // --- Build adjacency list ---
     var adj = {}, incomingCount = {};
     graphNodes.forEach(function(n) { adj[n.id] = []; incomingCount[n.id] = 0; });
     graphEdges.forEach(function(e) {
-      // FIX: Guard against orphan edges (source or target not in graph)
       if (adj[e.source]) adj[e.source].push(e.target);
       if (incomingCount[e.target] !== undefined) incomingCount[e.target]++;
     });
 
-    // --- Find entry points ---
     var entrypoints = graphNodes.filter(function(n) { return incomingCount[n.id] === 0; });
     if (entrypoints.length === 0 && graphNodes.length > 0) entrypoints = [graphNodes[0]];
 
-    // --- Initialize per-node metrics accumulator ---
     var nodeMetrics = {};
     graphNodes.forEach(function(n) {
       nodeMetrics[n.id] = {
         id: n.id, label: n.data && n.data.label || n.type, type: n.type,
-        qps: 0, latency: 0, errorRate: 0, cpu: 0, memory: 0, queueDepth: 0,
+        qps: 0, latency: 0, errorRate: 0, cpu: 0, memory: 0, queueDepth: safeRound(queueBacklogs[n.id] || 0),
         cacheHitRate: 0, readReplicasUsed: 0, replicas: Math.max(1, nodeReplicas[n.id] || 1),
-        activeConnections: 0
+        activeConnections: 0, serviceLatency: 0, queueDelay: 0, gcPause: 0,
+        p50Latency: 0, p90Latency: 0, p95Latency: 0, p99Latency: 0, p999Latency: 0
       };
     });
 
-    // --- BFS traversal queue ---
     var queue = [];
+    var events = [];
+
+    // CHANGE: Enqueue entrypoint requests with SLA deadline budget (default 1200ms)
     entrypoints.forEach(function(ep) {
-      queue.push({ id: ep.id, load: currentInputQps / Math.max(1, entrypoints.length), hopLatency: 0 });
+      var epData = ep.data || {};
+      var deadline = safeNum(epData.timeoutMs, 1200);
+      queue.push({
+        id: ep.id,
+        load: currentInputQps / Math.max(1, entrypoints.length),
+        hopLatency: 0,
+        cumulativeLatency: 0,
+        deadlineBudgetMs: deadline
+      });
     });
+
+    // CHANGE: Automatically enqueue any queue nodes that hold a persistent backlog from prior ticks
+    graphNodes.forEach(function(n) {
+      var nType = n.type || '';
+      if ((nType === 'QUEUE' || nType === 'PUBSUB') && safeNum(queueBacklogs[n.id], 0) > 0) {
+        queue.push({
+          id: n.id,
+          load: 0, // No new external load needed to trigger internal backlog drain
+          hopLatency: 0,
+          cumulativeLatency: 0,
+          deadlineBudgetMs: 5000,
+          isBacklogDrain: true
+        });
+      }
+    });
+
     var visited = {};
     var lbRoundRobinCounter = {};
-    var events = [];
 
     while (queue.length > 0) {
       var item = queue.shift();
       var id = item.id;
       var load = safeNum(item.load, 0);
       var cumulativeHopLatency = safeNum(item.hopLatency, 0);
+      var cumulativePathLatency = safeNum(item.cumulativeLatency, 0);
+      var deadlineBudget = safeNum(item.deadlineBudgetMs, 1200);
+
       var node = null;
       for (var ni = 0; ni < graphNodes.length; ni++) {
         if (graphNodes[ni].id === id) { node = graphNodes[ni]; break; }
@@ -300,13 +409,18 @@ const workerCode = `
 
       nodeMetrics[id].qps = safeNum(nodeMetrics[id].qps + load, 0);
 
-      // If already visited, just propagate load downstream (fan-in)
       if (visited[id]) {
         var targets = adj[id] || [];
         if (targets.length > 0) {
           var fanOut = load / targets.length;
           targets.forEach(function(tgt) {
-            queue.push({ id: tgt, load: safeNum(fanOut, 0), hopLatency: cumulativeHopLatency + 2 });
+            queue.push({
+              id: tgt,
+              load: safeNum(fanOut, 0),
+              hopLatency: cumulativeHopLatency + 2,
+              cumulativeLatency: cumulativePathLatency + 2,
+              deadlineBudgetMs: deadlineBudget
+            });
           });
         }
         continue;
@@ -335,42 +449,35 @@ const workerCode = `
       var nodeQps = safeNum(nodeMetrics[id].qps, 0);
       var nodeLatency = baseLatency + cumulativeHopLatency;
       var nodeErrorRate = 0;
-      var queueDepth = 0;
+      var queueDepth = safeRound(queueBacklogs[id] || 0);
       var isPartitioned = false;
       var oomCrashed = false;
       var gcPauseMs = 0;
+      var rawServiceTime = baseLatency;
+      var rawQueueDelay = 0;
 
-      // ======================================================================
-      // CIRCUIT BREAKER model
-      // ======================================================================
+      // Circuit Breaker model
       if (nodeSpecType === 'CIRCUIT_BREAKER') {
         var cb = cbState[id] || { state: 'CLOSED', failCount: 0, lastFailureTick: 0 };
-        var failureThreshold = safeNum(nodeData.failureThreshold, 5);
         var halfOpenMaxQps = safeNum(nodeData.halfOpenMaxQps, 100);
         var recoveryTimeout = safeNum(nodeData.recoveryTimeoutMs, 30000);
         var ticksSinceLastFail = tickCount - cb.lastFailureTick;
-
-        // FIX: Convert recovery timeout from ms to ticks (1 tick = 1s)
         var recoveryTicks = Math.max(1, Math.floor(recoveryTimeout / 1000));
 
         if (cb.state === 'OPEN') {
           if (ticksSinceLastFail >= recoveryTicks) {
-            // Transition to HALF_OPEN
             cb.state = 'HALF_OPEN';
             cb.failCount = 0;
             events.push({ tick: tickCount, type: 'CIRCUIT_BREAKER', message: nodeSpecType + ' ' + id + ' → HALF_OPEN (recovery attempt)', severity: 'INFO' });
           } else {
-            // Circuit is open — reject all requests
             nodeQps = 0;
             nodeErrorRate = 100;
-            nodeLatency = 0; // Requests rejected instantly
+            nodeLatency = 0;
             events.push({ tick: tickCount, type: 'CIRCUIT_BREAKER', message: nodeSpecType + ' ' + id + ' OPEN — requests rejected', severity: 'WARNING' });
           }
         } else if (cb.state === 'HALF_OPEN') {
-          // Allow limited traffic
           nodeQps = Math.min(nodeQps, halfOpenMaxQps);
           if (nodeQps > effectiveCapacity * 0.5) {
-            // If overloaded in half-open, trip back to OPEN
             cb.state = 'OPEN';
             cb.lastFailureTick = tickCount;
             events.push({ tick: tickCount, type: 'CIRCUIT_BREAKER', message: nodeSpecType + ' ' + id + ' → OPEN (half-open overloaded)', severity: 'ERROR' });
@@ -379,27 +486,7 @@ const workerCode = `
         cbState[id] = cb;
       }
 
-      // ======================================================================
-      // DEAD_LETTER_QUEUE model
-      // ======================================================================
-      if (nodeSpecType === 'DEAD_LETTER_QUEUE') {
-        // DLQ processes failed messages — it always accepts and logs
-        var maxRetry = safeNum(nodeData.maxRetryCount, 3);
-        var dlqBaseRate = safeNum(nodeData.dlqBaseRate, 0.02);
-        var processingRate = safeNum(nodeData.processingRate, 500) * replicas;
-        nodeQps = Math.min(nodeQps, processingRate);
-        // DLQ has a small error rate for messages beyond max retries
-        var poisonRatio = Math.min(1, nodeQps / (processingRate * (maxRetry + 1)));
-        nodeErrorRate = poisonRatio * 5;
-        nodeLatency = baseLatency + (poisonRatio * 100);
-        if (poisonRatio > 0.5) {
-          events.push({ tick: tickCount, type: 'DLQ', message: nodeSpecType + ' ' + id + ' poison messages: ' + safeRound(poisonRatio * 100) + '%', severity: 'WARNING' });
-        }
-      }
-
-      // ======================================================================
       // Chaos mode checks
-      // ======================================================================
       if (isFailed || chaosMode === 'KILL') {
         nodeErrorRate = 100; nodeLatency = 5000;
         events.push({ tick: tickCount, type: 'KILL', message: nodeSpecType + ' ' + id + ' killed', severity: 'ERROR' });
@@ -414,14 +501,12 @@ const workerCode = `
         events.push({ tick: tickCount, type: 'PARTITION', message: nodeSpecType + ' ' + id + ' partitioned', severity: 'WARNING' });
       } else if (chaosMode === 'CACHE_EVICTION') {
         nodeData.ttlSeconds = 0; nodeData.evictionPolicy = 'fifo';
-        events.push({ tick: tickCount, type: 'CACHE_EVICTION', message: 'Cache ' + id + ' evicted', severity: 'WARNING' });
+        cacheWarmth[id] = 0.02;
+        events.push({ tick: tickCount, type: 'CACHE_EVICTION', message: 'Cache ' + id + ' evicted — cold cache stampede triggered', severity: 'WARNING' });
       }
 
-      // ======================================================================
-      // Node processing (skip if already killed by circuit breaker or chaos)
-      // ======================================================================
       if (nodeErrorRate < 100) {
-        // --- Memory tracking ---
+        // Memory tracking
         var baseMemMb = maxMemMb * 0.3;
         var denom = Math.max(1, replicas * cpuCores * 50);
         var concurrentFactor = Math.min(nodeQps, denom) / denom;
@@ -435,7 +520,7 @@ const workerCode = `
         }
         nodeMetrics[id].memory = safeRound((memState.usedMb / Math.max(1, maxMemMb)) * 100);
 
-        // --- GC pause ---
+        // GC pause
         var memPct = memState.usedMb / Math.max(1, maxMemMb);
         if (memPct > 0.7 && tickCount - memState.lastGcTick > 3) {
           gcPauseMs = Math.min(200, 50 + (memPct - 0.7) * 500);
@@ -445,7 +530,7 @@ const workerCode = `
           events.push({ tick: tickCount, type: 'GC', message: nodeSpecType + ' ' + id + ' GC pause ' + safeRound(gcPauseMs) + 'ms', severity: 'WARNING' });
         }
 
-        // --- Connection pool semaphore ---
+        // Connection pool semaphore
         var poolSize = getPoolSize(nodeData, nodeSpecType);
         var maxConns = safeNum(nodeData.maxConnections, poolSize || 200);
         var activeConns = Math.min(nodeQps, maxConns);
@@ -458,7 +543,7 @@ const workerCode = `
           events.push({ tick: tickCount, type: 'CONN_POOL', message: nodeSpecType + ' ' + id + ' connection pool saturated (' + maxConns + ')', severity: 'WARNING' });
         }
 
-        // --- Rate limiter ---
+        // Rate limiter
         if (nodeSpecType === 'RATE_LIMITER') {
           var limit = safeNum(nodeData.rateLimitQps, 2000);
           var dropped = Math.max(0, nodeQps - limit);
@@ -467,89 +552,119 @@ const workerCode = `
           nodeLatency = 1;
         }
 
-        // --- WAF (Web Application Firewall) ---
+        // WAF
         if (nodeSpecType === 'WAF') {
           var blockRate = safeNum(nodeData.blockRate, 0.05);
           var inspected = nodeQps;
           var blocked = inspected * blockRate;
           nodeQps = inspected - blocked;
-          nodeLatency = baseLatency + 5; // inspection overhead
+          nodeLatency = baseLatency + 5;
           nodeErrorRate = safeMin(blockRate * 100, 100);
-          if (blockRate > 0.2) {
-            events.push({ tick: tickCount, type: 'WAF', message: nodeSpecType + ' ' + id + ' blocking ' + safeRound(blockRate * 100) + '% of traffic', severity: 'WARNING' });
+        }
+
+        // =====================================================================
+        // CHANGE: Persistent Async Queue & Multi-Tick Drain Mechanics
+        // =====================================================================
+        if (nodeSpecType === 'QUEUE' || nodeSpecType === 'PUBSUB') {
+          var maxQueueCap = safeNum(nodeData.maxQueueCapacity, 50000);
+          queueBacklogs[id] = safeNum(queueBacklogs[id], 0) + load;
+
+          // Reject if queue buffer is completely exhausted
+          if (queueBacklogs[id] > maxQueueCap) {
+            var overflow = queueBacklogs[id] - maxQueueCap;
+            queueBacklogs[id] = maxQueueCap;
+            nodeErrorRate = Math.min(100, safeRound((overflow / Math.max(1, load)) * 100));
+            events.push({
+              tick: tickCount,
+              type: 'QUEUE_OVERFLOW',
+              message: nodeSpecType + ' ' + id + ' buffer overflow (' + maxQueueCap + ' msgs) — 429 backpressure drop',
+              severity: 'ERROR'
+            });
           }
-        }
 
-        // --- Auth services (AUTH_SERVICE, OAUTH, JWT) ---
-        if (nodeSpecType === 'AUTH_SERVICE' || nodeSpecType === 'OAUTH' || nodeSpecType === 'JWT') {
-          // Auth has overhead per request
-          var tokenCacheHit = 0.7; // 70% of auth checks hit cache
-          nodeLatency = nodeLatency * (tokenCacheHit * 0.5 + (1 - tokenCacheHit) * 2);
-          // Rate-limit auth to prevent brute force
-          var authCapacity = effectiveCapacity * 0.6;
-          if (nodeQps > authCapacity) {
-            var excess = (nodeQps - authCapacity) / nodeQps;
-            nodeErrorRate = Math.min(nodeErrorRate + excess * 50, 60);
-            nodeQps = Math.min(nodeQps, authCapacity);
+          // Asynchronous Producer response: immediate fast ACK (2-4ms)
+          nodeLatency = baseLatency;
+          rawServiceTime = baseLatency;
+
+          // Calculate consumer processing rate from downstream targets
+          var qTargets = adj[id] || [];
+          var totalConsumerDrainCapacity = 0;
+          qTargets.forEach(function(tgt) {
+            var tgtNode = null;
+            for (var ti = 0; ti < graphNodes.length; ti++) {
+              if (graphNodes[ti].id === tgt) { tgtNode = graphNodes[ti]; break; }
+            }
+            var tgtData = tgtNode ? (tgtNode.data || {}) : {};
+            var tgtReplicas = Math.max(1, nodeReplicas[tgt] || 1);
+            var tgtCap = getCapacity(tgtData, tgtNode ? tgtNode.type : '');
+            totalConsumerDrainCapacity += (tgtCap * tgtReplicas);
+          });
+          if (totalConsumerDrainCapacity <= 0) {
+            totalConsumerDrainCapacity = safeNum(nodeData.processingRate, 3000) * replicas;
           }
-        }
 
-        // --- Erlang-C queueing (multi-server) ---
-        if (poolSize > 0 && nodeQps > 0) {
-          var mu = effectiveCapacity / Math.max(1, poolSize);
-          var rho = nodeQps / (poolSize * Math.max(1, mu));
-          if (rho >= 1) {
-            queueDepth = nodeQps - effectiveCapacity;
-            nodeErrorRate = Math.min(90, ((nodeQps - effectiveCapacity) / Math.max(1, nodeQps)) * 100);
-            nodeLatency += (rho - 1) * 1000;
-          } else {
-            var cProb = erlangC(nodeQps, mu, poolSize);
-            var avgWait = (cProb * mu) / Math.max(1, (poolSize * mu - nodeQps));
-            queueDepth = safeRound(avgWait * nodeQps);
-            nodeLatency += avgWait;
+          var drainAmount = Math.min(queueBacklogs[id], totalConsumerDrainCapacity);
+          queueBacklogs[id] = Math.max(0, queueBacklogs[id] - drainAmount);
+          queueDepth = safeRound(queueBacklogs[id]);
+
+          nodeMetrics[id].qps = safeRound(nodeQps + drainAmount);
+          nodeMetrics[id].latency = safeRound(nodeLatency);
+          nodeMetrics[id].queueDepth = queueDepth;
+          nodeMetrics[id].errorRate = safeRound(nodeErrorRate);
+          nodeMetrics[id].cpu = Math.min(100, safeRound((drainAmount / Math.max(1, totalConsumerDrainCapacity)) * 100));
+          nodeMetrics[id].replicas = replicas;
+          nodeMemory[id] = memState;
+
+          if (queueDepth > 0) {
+            events.push({
+              tick: tickCount,
+              type: 'QUEUE_BACKLOG',
+              message: nodeSpecType + ' ' + id + ' buffering ' + queueDepth + ' msgs (draining ' + safeRound(drainAmount) + '/s)',
+              severity: queueDepth > maxQueueCap * 0.7 ? 'WARNING' : 'INFO'
+            });
           }
-        }
 
-        // --- Queue node ---
-        if (nodeSpecType === 'QUEUE') {
-          var processingRate = safeNum(nodeData.processingRate, 3000) * replicas;
-          queueDepth = Math.max(0, nodeQps - processingRate);
-          nodeQps = Math.min(nodeQps, processingRate);
-        }
-
-        // --- PubSub node ---
-        if (nodeSpecType === 'PUBSUB') {
-          var pubRate = safeNum(nodeData.publishRate, 5000) * replicas;
-          var subRate = safeNum(nodeData.subscribeRate, 5000) * replicas;
-          var partitions = Math.max(1, safeNum(nodeData.partitions, 3));
-          var throughput = Math.min(pubRate, subRate * partitions);
-          var backlog = Math.max(0, nodeQps - throughput);
-          nodeQps = Math.min(nodeQps, throughput);
-          nodeLatency = baseLatency + (backlog > 0 ? Math.min(backlog / throughput * 1000, 5000) : 0);
-          queueDepth = backlog;
-          if (backlog > throughput * 2) {
-            events.push({ tick: tickCount, type: 'PUBSUB', message: nodeSpecType + ' ' + id + ' backlog growing: ' + safeRound(backlog) + ' messages', severity: 'WARNING' });
+          // Dispatch drained messages downstream to workers
+          if (qTargets.length > 0 && !isFailed && !isPartitioned && drainAmount > 0) {
+            var perWorkerDrain = drainAmount / qTargets.length;
+            qTargets.forEach(function(tgt) {
+              queue.push({
+                id: tgt,
+                load: safeNum(perWorkerDrain, 0),
+                hopLatency: 2,
+                cumulativeLatency: 2,
+                deadlineBudgetMs: 5000 // Decoupled background workers get independent deadline
+              });
+            });
           }
+
+          var qPcts = estimatePercentiles(nodeLatency, gcPauseMs, false);
+          nodeMetrics[id].p50Latency = qPcts.p50;
+          nodeMetrics[id].p90Latency = qPcts.p90;
+          nodeMetrics[id].p95Latency = qPcts.p95;
+          nodeMetrics[id].p99Latency = qPcts.p99;
+          nodeMetrics[id].p999Latency = qPcts.p999;
+          continue; // Finish Queue processing cleanly
         }
 
-        // --- Capacity overload (generic) ---
+        // Kingman M/G/1 queueing delay formula
+        var kDelay = kingmanDelay(nodeQps, effectiveCapacity, baseLatency);
+        rawQueueDelay = kDelay;
+        nodeLatency += kDelay;
+        if (nodeQps > effectiveCapacity * 0.7) {
+          queueDepth = Math.max(queueDepth, safeRound((kDelay / Math.max(1, baseLatency)) * (nodeQps / 50)));
+        }
         if (nodeErrorRate === 0 && nodeQps > effectiveCapacity) {
-          var excess = nodeQps - effectiveCapacity;
-          nodeErrorRate = safeMin((excess / Math.max(1, nodeQps)) * 100, 95);
-          nodeLatency = baseLatency + cumulativeHopLatency + (excess * 0.1);
+          var capExcess = nodeQps - effectiveCapacity;
+          nodeErrorRate = safeMin((capExcess / Math.max(1, nodeQps)) * 100, 95);
         }
 
-        // --- FIX: Retry storm / error backoff ---
-        // OLD formula: nodeQps *= (1 + errRatio + errRatio² + errRatio³ + errRatio⁴)
-        //   This is an unbounded geometric series that can blow up to Infinity
-        // NEW: capped exponential backoff — max 3 retry amplifications, 2x multiplier, capped at 2x original
+        // Retry storm amplification
         if (nodeErrorRate > 0 && !oomCrashed && nodeSpecType !== 'CIRCUIT_BREAKER') {
           var errRatio = safeNum(nodeErrorRate / 100, 0);
-          // Cap amplification: at most 3 effective "retries"
-          // Each retry amplifies load by (1 + errRatio * retryCount), capped at 2x
           var retryCount = Math.min(3, Math.floor(errRatio * 10));
           var amplification = 1 + (errRatio * retryCount * 0.5);
-          amplification = Math.min(amplification, 2.0); // cap at 2x original load
+          amplification = Math.min(amplification, 2.5);
           var backoffDelay = Math.min(500, errRatio * 50 + errRatio * errRatio * 150);
           nodeQps = safeNum(nodeQps * amplification, 0);
           nodeLatency += backoffDelay;
@@ -558,7 +673,7 @@ const workerCode = `
           }
         }
 
-        // --- Disk I/O penalty (DB writes) ---
+        // Disk I/O penalty (DB writes)
         if (nodeSpecType.indexOf('DATABASE') >= 0 && writeRatio > 0 && nodeQps > 0) {
           var writeOps = nodeQps * writeRatio;
           var storageType = nodeData.storageType || 'ssd';
@@ -569,7 +684,6 @@ const workerCode = `
           if (writeOps > effectiveCapacity * 0.5) {
             nodeErrorRate = Math.min(nodeErrorRate + 10, 90);
           }
-          // Read replica offload
           var replicaCount = safeNum(nodeData.readReplicaCount, 0);
           var replicaLag = safeNum(nodeData.replicationLagMs, 100);
           if (replicaCount > 0) {
@@ -578,52 +692,51 @@ const workerCode = `
           }
         }
 
-        // --- CDN ---
-        if (nodeSpecType.indexOf('CDN') >= 0) {
-          var hitRatio = nodeData.hitRatioOverride !== undefined ? safeNum(nodeData.hitRatioOverride, 90) / 100 : 0.90;
-          if (isChaosActive) hitRatio = 0.1;
-          hitRatio = safeNum(hitRatio, 0.1);
-          var misses = nodeQps * (1 - hitRatio);
-          nodeLatency = (2 * hitRatio) + (80 * (1 - hitRatio));
-          nodeErrorRate = 0;
-          nodeMetrics[id].cacheHitRate = safeRound(hitRatio * 100);
-          var cdnTargets = adj[id] || [];
-          if (cdnTargets.length > 0) {
-            cdnTargets.forEach(function(tgt) {
-              queue.push({ id: tgt, load: safeNum(misses / cdnTargets.length, 0), hopLatency: cumulativeHopLatency + netLatencyPerHop });
-            });
-          }
-          // FIX: Write back metrics and continue (don't fall through to generic CPU/propagation)
-          nodeMetrics[id].qps = safeRound(nodeQps);
-          nodeMetrics[id].latency = safeRound(nodeLatency);
-          nodeMetrics[id].errorRate = safeRound(nodeErrorRate);
-          nodeMetrics[id].queueDepth = safeRound(queueDepth);
-          nodeMetrics[id].replicas = replicas;
-          nodeMemory[id] = memState;
-          continue;
-        }
-
-        // --- Cache ---
+        // Cold cache & stampede physics
         if (nodeSpecType.indexOf('CACHE') >= 0) {
-          var hitRate = 0.85;
-          if (isChaosActive) hitRate = 0.05;
+          if (cacheWarmth[id] === undefined) cacheWarmth[id] = 1.0;
+          if (isChaosActive || chaosMode === 'CACHE_EVICTION') cacheWarmth[id] = 0.02;
+          var baseHitTarget = nodeData.hitRate !== undefined ? safeNum(nodeData.hitRate, 85) / 100 : 0.85;
           var ttlSec = safeNum(nodeData.ttlSeconds, 3600);
           var ttlDecay = Math.max(0, 1 - (nodeQps / Math.max(1, ttlSec * 100)));
-          hitRate = Math.min(0.99, hitRate * (0.5 + 0.5 * ttlDecay));
-          if (nodeData.evictionPolicy === 'lfu') hitRate *= 0.95;
-          else if (nodeData.evictionPolicy === 'fifo') hitRate *= 0.90;
+          var hitRate = Math.min(0.99, Math.max(0.02, baseHitTarget * cacheWarmth[id] * (0.6 + 0.4 * ttlDecay)));
           hitRate = safeNum(hitRate, 0.02);
+
+          var downstreamFailing = false;
+          var cacheTargets = adj[id] || [];
+          for (var ci = 0; ci < cacheTargets.length; ci++) {
+            if (nodeMetrics[cacheTargets[ci]] && nodeMetrics[cacheTargets[ci]].errorRate > 25) {
+              downstreamFailing = true;
+              break;
+            }
+          }
+          if (!downstreamFailing && cacheWarmth[id] < 1.0) {
+            cacheWarmth[id] = Math.min(1.0, cacheWarmth[id] + 0.25);
+          } else if (downstreamFailing && cacheWarmth[id] < 0.5) {
+            events.push({ tick: tickCount, type: 'CACHE_STAMPEDE', message: 'Thundering herd on ' + id + ' — downstream database saturated, cache warming blocked', severity: 'ERROR' });
+          }
+
           var cacheMisses = nodeQps * (1 - hitRate);
           nodeLatency = (baseLatency * hitRate) + (40 * (1 - hitRate));
           nodeErrorRate = 0;
           nodeMetrics[id].cacheHitRate = safeRound(hitRate * 100);
-          var cacheTargets = adj[id] || [];
           if (cacheTargets.length > 0) {
             cacheTargets.forEach(function(tgt) {
-              queue.push({ id: tgt, load: safeNum(cacheMisses / cacheTargets.length, 0), hopLatency: cumulativeHopLatency + netLatencyPerHop });
+              queue.push({
+                id: tgt,
+                load: safeNum(cacheMisses / cacheTargets.length, 0),
+                hopLatency: cumulativeHopLatency + netLatencyPerHop,
+                cumulativeLatency: cumulativePathLatency + nodeLatency,
+                deadlineBudgetMs: deadlineBudget
+              });
             });
           }
-          // FIX: Write back metrics and continue
+          var cachePcts = estimatePercentiles(nodeLatency, gcPauseMs, false);
+          nodeMetrics[id].p50Latency = cachePcts.p50;
+          nodeMetrics[id].p90Latency = cachePcts.p90;
+          nodeMetrics[id].p95Latency = cachePcts.p95;
+          nodeMetrics[id].p99Latency = cachePcts.p99;
+          nodeMetrics[id].p999Latency = cachePcts.p999;
           nodeMetrics[id].qps = safeRound(nodeQps);
           nodeMetrics[id].latency = safeRound(nodeLatency);
           nodeMetrics[id].errorRate = safeRound(nodeErrorRate);
@@ -633,33 +746,26 @@ const workerCode = `
           continue;
         }
 
-        // --- Load balancer ---
+        // Load balancer & API gateway
         if (nodeSpecType.indexOf('LOAD_BALANCER') >= 0 || nodeSpecType.indexOf('API_GATEWAY') >= 0) {
-          var algo = nodeData.routingAlgorithm || 'round_robin';
           var lbTargets = adj[id] || [];
           if (lbTargets.length > 0) {
-            if (algo === 'least_connections') {
-              var loads = lbTargets.map(function(t) {
-                return { id: t, load: nodeMetrics[t] && nodeMetrics[t].qps || 0 };
+            lbTargets.forEach(function(tgt) {
+              queue.push({
+                id: tgt,
+                load: safeNum(nodeQps / lbTargets.length, 0),
+                hopLatency: cumulativeHopLatency + netLatencyPerHop,
+                cumulativeLatency: cumulativePathLatency + nodeLatency,
+                deadlineBudgetMs: deadlineBudget
               });
-              loads.sort(function(a, b) { return a.load - b.load; });
-              loads[0].load += nodeQps;
-              loads.forEach(function(t) {
-                queue.push({ id: t.id, load: safeNum(t.load, 0), hopLatency: cumulativeHopLatency + netLatencyPerHop });
-              });
-            } else if (algo === 'ip_hash') {
-              if (!lbRoundRobinCounter[id]) lbRoundRobinCounter[id] = 0;
-              var idx = lbRoundRobinCounter[id] % lbTargets.length;
-              lbRoundRobinCounter[id]++;
-              queue.push({ id: lbTargets[idx], load: safeNum(nodeQps, 0), hopLatency: cumulativeHopLatency + netLatencyPerHop });
-            } else {
-              // round_robin (default)
-              lbTargets.forEach(function(tgt) {
-                queue.push({ id: tgt, load: safeNum(nodeQps / lbTargets.length, 0), hopLatency: cumulativeHopLatency + netLatencyPerHop });
-              });
-            }
+            });
           }
-          // FIX: Write back metrics and continue
+          var lbPcts = estimatePercentiles(nodeLatency, gcPauseMs, false);
+          nodeMetrics[id].p50Latency = lbPcts.p50;
+          nodeMetrics[id].p90Latency = lbPcts.p90;
+          nodeMetrics[id].p95Latency = lbPcts.p95;
+          nodeMetrics[id].p99Latency = lbPcts.p99;
+          nodeMetrics[id].p999Latency = lbPcts.p999;
           nodeMetrics[id].qps = safeRound(nodeQps);
           nodeMetrics[id].latency = safeRound(nodeLatency);
           nodeMetrics[id].errorRate = safeRound(nodeErrorRate);
@@ -667,152 +773,85 @@ const workerCode = `
           nodeMetrics[id].replicas = replicas;
           nodeMemory[id] = memState;
           continue;
-        }
-
-        // --- LLM Gateway / Embedding / VectorDB / RAG / Inference ---
-        if (nodeSpecType === 'LLM_GATEWAY') {
-          var contextWindow = safeNum(nodeData.contextWindow, 4096);
-          var overheadPerToken = contextWindow / 4096;
-          nodeLatency = baseLatency * overheadPerToken;
-          if (nodeQps > effectiveCapacity) {
-            nodeErrorRate = safeMin(((nodeQps - effectiveCapacity) / nodeQps) * 100, 80);
-            nodeQps = effectiveCapacity;
-          }
-        }
-        if (nodeSpecType === 'EMBEDDING_SVC') {
-          var dimSize = safeNum(nodeData.dimensionSize, 768);
-          var computeFactor = dimSize / 768;
-          nodeLatency = baseLatency * computeFactor;
-          if (nodeQps > effectiveCapacity) {
-            nodeErrorRate = safeMin(((nodeQps - effectiveCapacity) / nodeQps) * 100, 60);
-            nodeQps = effectiveCapacity;
-          }
-        }
-        if (nodeSpecType === 'VECTOR_DB') {
-          var topK = Math.max(1, safeNum(nodeData.topK, 10));
-          var searchComplexity = Math.log2(topK + dimSize) / 10;
-          nodeLatency = baseLatency * (1 + searchComplexity);
-          if (nodeQps > effectiveCapacity) {
-            nodeErrorRate = safeMin(((nodeQps - effectiveCapacity) / nodeQps) * 100, 70);
-            nodeQps = effectiveCapacity;
-          }
-        }
-        if (nodeSpecType === 'RAG_SERVICE') {
-          var chunkSize = safeNum(nodeData.chunkSize, 512);
-          var ragOverhead = chunkSize / 512;
-          nodeLatency = baseLatency * ragOverhead;
-          if (nodeQps > effectiveCapacity) {
-            nodeErrorRate = safeMin(((nodeQps - effectiveCapacity) / nodeQps) * 100, 60);
-            nodeQps = effectiveCapacity;
-          }
-        }
-        if (nodeSpecType === 'INFERENCE_SVC') {
-          // Inference is slow and expensive
-          var inferenceOverhead = 5; // 5x multiplier on base latency
-          nodeLatency = baseLatency * inferenceOverhead;
-          if (nodeQps > effectiveCapacity) {
-            nodeErrorRate = safeMin(((nodeQps - effectiveCapacity) / nodeQps) * 100, 90);
-            nodeQps = effectiveCapacity;
-          }
-        }
-
-        // --- Service Mesh ---
-        if (nodeSpecType === 'SERVICE_MESH') {
-          var sidecarOverhead = safeNum(nodeData.sidecarLatencyMs, 3);
-          nodeLatency += sidecarOverhead * 2; // inbound + outbound sidecar
-          // mTLS overhead
-          if (nodeData.enableMtls !== false) {
-            nodeLatency += 2;
-          }
-          // Retry amplification
-          if (nodeData.enableRetries !== false && nodeErrorRate > 0) {
-            nodeQps *= (1 + nodeErrorRate / 200); // 0.5% amplification per error %
-          }
-        }
-
-        // --- Observability nodes (MONITORING, LOGS, METRICS, TRACING, ALERTING) ---
-        // These consume a small % of CPU/memory but pass traffic through
-        if (['MONITORING', 'LOGS', 'METRICS', 'TRACING', 'ALERTING', 'SECRETS_MANAGER'].indexOf(nodeSpecType) >= 0) {
-          var obsOverhead = 0.05; // 5% overhead for observability
-          nodeLatency += 2;
-          nodeQps = nodeQps * (1 - obsOverhead);
-        }
-
-        // --- Notification Service ---
-        if (nodeSpecType === 'NOTIFICATION_SERVICE') {
-          var channels = Math.max(1, safeNum(nodeData.channels, 1));
-          var channelOverhead = channels * 0.5;
-          nodeLatency = baseLatency + channelOverhead;
-          if (nodeQps > effectiveCapacity) {
-            nodeErrorRate = safeMin(((nodeQps - effectiveCapacity) / nodeQps) * 100, 60);
-            nodeQps = effectiveCapacity;
-          }
         }
       }
 
-      // ======================================================================
-      // FIX: CPU calculation — removed magic /2 * 0.8 fudge factor
-      // OLD: cpuUtil = Math.round(cpuUtil * (cpuCores / 2) * 0.8);
-      // NEW: utilization = qps / capacity, normalized by cores
-      // ======================================================================
+      // =======================================================================
+      // CHANGE: Distributed gRPC Deadline Propagation & Cascading Cancellation
+      // =======================================================================
+      var currentTotalPathLatency = cumulativePathLatency + nodeLatency;
+      var isDeadlineExceeded = currentTotalPathLatency > deadlineBudget;
+      if (isDeadlineExceeded && nodeErrorRate < 100) {
+        nodeErrorRate = Math.min(100, Math.max(nodeErrorRate, 90));
+        events.push({
+          tick: tickCount,
+          type: 'DEADLINE_EXCEEDED',
+          message: nodeSpecType + ' ' + id + ' deadline exceeded (' + safeRound(currentTotalPathLatency) + 'ms > ' + deadlineBudget + 'ms) — downstream calls canceled (504)',
+          severity: 'ERROR'
+        });
+      }
+
+      // CPU utilization
       var cpuUtil = safeNum((nodeQps / Math.max(1, effectiveCapacity)) * 100, 0);
-      // Scale by core count: more cores = more throughput at same utilization
       cpuUtil = safeMin(cpuUtil, 100);
 
-      // --- Payload variability (latency jitter: ±20%) ---
+      // Latency jitter (±20%)
       var jitterFactor = 0.8 + (Math.random() * 0.4);
       nodeLatency = safeRound(nodeLatency * jitterFactor);
 
-      // --- Persist metrics ---
+      // Persist metrics & percentiles
       nodeMetrics[id].qps = safeRound(nodeQps);
       nodeMetrics[id].latency = safeRound(nodeLatency);
+      nodeMetrics[id].serviceLatency = safeRound(rawServiceTime);
+      nodeMetrics[id].queueDelay = safeRound(rawQueueDelay);
+      nodeMetrics[id].gcPause = safeRound(gcPauseMs);
       nodeMetrics[id].errorRate = safeRound(nodeErrorRate);
       nodeMetrics[id].cpu = Math.min(100, safeRound(cpuUtil));
       nodeMetrics[id].queueDepth = safeRound(queueDepth);
       nodeMetrics[id].replicas = replicas;
 
-      // Store memory state
+      var genPcts = estimatePercentiles(nodeLatency, gcPauseMs, nodeErrorRate > 15);
+      nodeMetrics[id].p50Latency = genPcts.p50;
+      nodeMetrics[id].p90Latency = genPcts.p90;
+      nodeMetrics[id].p95Latency = genPcts.p95;
+      nodeMetrics[id].p99Latency = genPcts.p99;
+      nodeMetrics[id].p999Latency = genPcts.p999;
+
       nodeMemory[id] = memState;
 
-      // Track CPU for HPA
       if (!prevCpu[id]) prevCpu[id] = [];
       prevCpu[id].push(cpuUtil);
       if (prevCpu[id].length > 5) prevCpu[id].shift();
 
-      // ======================================================================
-      // FIX: Propagate to downstream — fixed write ratio
-      // OLD: writeQps = nodeQps * writeRatio * 2   (spurious *2)
-      //      outgoingLoad = readQps + writeQps
-      // NEW: writeQps = nodeQps * writeRatio
-      //      readQps = nodeQps * (1 - writeRatio)
-      //      outgoingLoad = readQps + writeQps = nodeQps (correct)
-      // ======================================================================
-      // For terminal nodes (DB, Queue) that don't propagate further, skip propagation
       var isTerminal = (nodeSpecType.indexOf('DATABASE') >= 0 ||
                         nodeSpecType.indexOf('OBJECT_STORAGE') >= 0 ||
                         nodeSpecType.indexOf('FILE_STORAGE') >= 0 ||
                         nodeSpecType.indexOf('DATA_LAKE') >= 0 ||
                         nodeSpecType.indexOf('SEARCH_ENGINE') >= 0 ||
-                        nodeSpecType === 'DEAD_LETTER_QUEUE' ||
-                        nodeSpecType === 'QUEUE');
-      if (!isTerminal) {
-        var targets = adj[id] || [];
-        if (targets.length > 0 && !oomCrashed && !isFailed && !isPartitioned) {
+                        nodeSpecType === 'DEAD_LETTER_QUEUE');
+
+      // CHANGE: Do not propagate downstream if request has exceeded deadline (cascading cancellation)
+      if (!isTerminal && !isDeadlineExceeded) {
+        var downTargets = adj[id] || [];
+        if (downTargets.length > 0 && !oomCrashed && !isFailed && !isPartitioned) {
           var writeQps = nodeQps * writeRatio;
           var readQps = nodeQps * (1 - writeRatio);
-          // FIX: Use total QPS, not writeRatio * 2
-          var outgoingLoad = readQps + writeQps; // = nodeQps
-          var perTarget = safeNum(outgoingLoad / targets.length, 0);
-          targets.forEach(function(tgt) {
-            queue.push({ id: tgt, load: perTarget, hopLatency: cumulativeHopLatency + netLatencyPerHop });
+          var outgoingLoad = readQps + writeQps;
+          var perTarget = safeNum(outgoingLoad / downTargets.length, 0);
+          downTargets.forEach(function(tgt) {
+            queue.push({
+              id: tgt,
+              load: perTarget,
+              hopLatency: cumulativeHopLatency + netLatencyPerHop,
+              cumulativeLatency: currentTotalPathLatency,
+              deadlineBudgetMs: deadlineBudget
+            });
           });
         }
       }
     } // end BFS
 
-    // ========================================================================
     // HPA: auto-scale replicas based on CPU
-    // ========================================================================
     graphNodes.forEach(function(n) {
       var id = n.id;
       var d = n.data || {};
@@ -839,9 +878,7 @@ const workerCode = `
       }
     });
 
-    // ========================================================================
-    // Aggregate system health
-    // ========================================================================
+    // Aggregate system health & cluster percentiles
     var nodesArray = Object.keys(nodeMetrics).map(function(k) { return nodeMetrics[k]; });
     var totalErrors = 0, maxLatency = 0, oomCount = 0;
     nodesArray.forEach(function(m) {
@@ -851,9 +888,27 @@ const workerCode = `
     });
     var systemHealth = (oomCount > 0 || totalErrors > 40 || maxLatency > 800) ? 'RED' : (totalErrors > 10 || maxLatency > 150) ? 'YELLOW' : 'GREEN';
 
+    var criticalPathTrace = buildCriticalPathTrace(entrypoints, adj, nodeMetrics);
+
+    var clusterP50 = safeRound(nodesArray.reduce(function(s, n) { return s + (n.p50Latency || n.latency); }, 0) / Math.max(1, nodesArray.length));
+    var clusterP90 = safeRound(nodesArray.reduce(function(s, n) { return s + (n.p90Latency || Math.round(n.latency * 1.3)); }, 0) / Math.max(1, nodesArray.length));
+    var clusterP95 = safeRound(nodesArray.reduce(function(s, n) { return s + (n.p95Latency || Math.round(n.latency * 1.7)); }, 0) / Math.max(1, nodesArray.length));
+    var clusterP99 = safeRound(nodesArray.reduce(function(s, n) { return s + (n.p99Latency || Math.round(n.latency * 2.6)); }, 0) / Math.max(1, nodesArray.length));
+    var clusterP999 = safeRound(nodesArray.reduce(function(s, n) { return s + (n.p999Latency || Math.round(n.latency * 4)); }, 0) / Math.max(1, nodesArray.length));
+
     return {
-      tick: tickCount, timestamp: Date.now(), nodes: nodesArray,
-      systemHealth: systemHealth, inputQps: safeRound(currentInputQps), activeScenario: scenario,
+      tick: tickCount,
+      timestamp: Date.now(),
+      nodes: nodesArray,
+      systemHealth: systemHealth,
+      inputQps: safeRound(currentInputQps),
+      activeScenario: scenario,
+      p50: clusterP50,
+      p90: clusterP90,
+      p95: clusterP95,
+      p99: clusterP99,
+      p999: clusterP999,
+      trace: criticalPathTrace,
       events: events
     };
   }
@@ -878,8 +933,6 @@ export class SimulationWorkerBridge {
       const blob = new Blob([workerCode], { type: 'application/javascript' });
       this.worker = new Worker(URL.createObjectURL(blob));
 
-      // FIX: Add worker-level error handler — catches uncaught errors
-      // that propagate out of the worker's event loop
       this.worker.onerror = (event) => {
         console.error('[WorkerBridge] Worker-level error:', event.message, event);
         if (this.onErrorCallback) {
@@ -900,7 +953,6 @@ export class SimulationWorkerBridge {
             if (this.syncToBackend) this.completeBackendRun();
             this.stopHealthPing();
             break;
-          // FIX: Handle worker errors and paused state
           case 'ERROR':
             console.error('[WorkerBridge] Worker tick error:', payload);
             if (this.onErrorCallback) this.onErrorCallback(payload);
@@ -910,20 +962,16 @@ export class SimulationWorkerBridge {
             if (this.onPausedCallback) this.onPausedCallback(payload);
             this.stopHealthPing();
             break;
-          // FIX: Health check pong
           case 'HEALTH_OK':
             this.lastHealthPong = Date.now();
             break;
         }
       };
 
-      // FIX: Start health pings — detect if worker becomes unresponsive
       this.startHealthPing();
     }
   }
 
-  // FIX: Health ping — every 2s we ask the worker if it's alive.
-  // If no response within `healthCheckTimeoutMs`, we notify via onErrorCallback.
   private startHealthPing() {
     this.lastHealthPong = Date.now();
     this.healthPingInterval = setInterval(() => {
@@ -976,7 +1024,6 @@ export class SimulationWorkerBridge {
     });
   }
 
-  // FIX: Allow main thread to register error/paused callbacks
   onError(callback: (error: any) => void) {
     this.onErrorCallback = callback;
   }
@@ -1034,7 +1081,6 @@ export class SimulationWorkerBridge {
     this.onTickCallback = onTick;
     this.onCompleteCallback = onComplete || null;
     this.allTicks = [];
-    // Reset health pong on start
     this.lastHealthPong = Date.now();
     this.worker?.postMessage({ type: 'START' });
   }

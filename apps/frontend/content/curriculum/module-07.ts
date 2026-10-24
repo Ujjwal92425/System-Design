@@ -131,8 +131,6 @@ export const module07Lessons = [
     tags: ["twophase-commit","2pc","saga","distributed-transactions","compensation"]
   },
 
-  null,
-
   {
     id: "lesson-07-13",
     slug: "advanced-distributed-systems-13-concurrency-and-synchronization",

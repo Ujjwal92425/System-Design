@@ -33,20 +33,37 @@ function FlowEdge({
   const isSimulating = Boolean(data?.isSimulating);
   const errorRate = Number(data?.errorRate || 0);
   const qps = Number(data?.qps || 0);
+
+  // CHANGE: Read downstream node backpressure and error metrics from edge data
+  const targetQueueDepth = Number(data?.targetQueueDepth || 0);
+  const targetErrorRate = Number(data?.targetErrorRate || 0);
+  const effectiveErrorRate = Math.max(errorRate, targetErrorRate);
+  const hasBackpressure = targetQueueDepth > 20;
+  const isSeverelyBackpressured = targetQueueDepth > 70;
   const [hovered, setHovered] = useState(false);
 
+  // CHANGE: Backpressure & error-sensitive stroke color transition (Amber on queue buildup, Red on critical backpressure or high errors)
   const strokeColor = !isSimulating
     ? '#FF6600'
-    : errorRate > 50
+    : effectiveErrorRate > 50 || isSeverelyBackpressured
     ? '#ef4444'
-    : errorRate > 10
+    : effectiveErrorRate > 10 || hasBackpressure
     ? '#f59e0b'
     : '#FF6600';
 
-  const strokeWidth = selected ? 3.5 : 3;
+  const strokeWidth = selected ? 3.5 : (hasBackpressure || effectiveErrorRate > 10 ? 3.5 : 3);
 
+  // CHANGE: Decelerate packet flow to visually convey downstream queue backpressure
   const packetCount = qps > 2000 ? 3 : qps > 500 ? 2 : qps > 0 ? 1 : 0;
-  const speed = qps > 2000 ? '1s' : qps > 500 ? '1.5s' : '2s';
+  const speed = isSeverelyBackpressured
+    ? '4s'
+    : hasBackpressure
+    ? '2.8s'
+    : qps > 2000
+    ? '1s'
+    : qps > 500
+    ? '1.5s'
+    : '2s';
 
   const handleLabelChange = useCallback((newLabel: string) => {
     const onChange = (data?.onLabelChange) as ((edgeId: string, label: string) => void) | undefined;
@@ -124,8 +141,10 @@ function FlowEdge({
             }}
           >
             <div className="bg-yc-bg-card text-yc-text text-[9px] font-mono px-2 py-1 rounded-md shadow-lg border border-yc-border whitespace-nowrap">
-              {label} {isSimulating && errorRate > 0 ? `· ${errorRate}% err` : ''}
+              {label} {isSimulating && effectiveErrorRate > 0 ? `· ${effectiveErrorRate.toFixed(1)}% err` : ''}
               {isSimulating && qps > 0 ? ` · ${qps.toLocaleString()} qps` : ''}
+              {/* CHANGE: Display downstream queue backpressure count in edge tooltip */}
+              {isSimulating && targetQueueDepth > 0 ? ` · ⚠️ Backlog: ${Math.round(targetQueueDepth)} queued` : ''}
             </div>
           </div>
         </EdgeLabelRenderer>

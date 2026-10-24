@@ -88,7 +88,8 @@ export default async function LessonLayout({
         slug: lessonSlug,
         trackSlug,
         difficulty: lesson.difficulty,
-        estimatedMin: lesson.estimatedMin,
+        // CHANGE: Fallback estimatedMin to 15 if missing
+        estimatedMin: lesson.estimatedMin || 15,
         tags: lesson.tags || [],
         companies: lesson.companies || [],
       })
@@ -100,7 +101,8 @@ export default async function LessonLayout({
         slug: lessonSlug,
         trackSlug,
         difficulty: lesson.difficulty,
-        estimatedMin: lesson.estimatedMin,
+        // CHANGE: Fallback estimatedMin to 15 if missing
+        estimatedMin: lesson.estimatedMin || 15,
         tags: lesson.tags || [],
         companies: lesson.companies || [],
       })
@@ -113,7 +115,8 @@ export default async function LessonLayout({
           description,
           slug: lessonSlug,
           trackSlug,
-          estimatedMin: lesson.estimatedMin,
+          // CHANGE: Fallback estimatedMin to 15 if missing
+          estimatedMin: lesson.estimatedMin || 15,
           steps,
         })
       );

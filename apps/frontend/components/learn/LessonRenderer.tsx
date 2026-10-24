@@ -196,9 +196,11 @@ export function LessonRenderer({ mdxSource }: LessonRendererProps) {
     let cancelled = false;
     setCompiled('__loading__');
 
-    // Programmatically strip the "Next Steps" section from the end of the content
+    // CHANGE: Programmatically strip "Next Steps" section and replace em/en dashes with clean hyphens
     const cleanedSource = mdxSource
       .replace(/\n*##\s*(?:\d+\.)?\s*Next\s*Steps?[\s\S]*$/i, '')
+      .replace(/—/g, ' - ')
+      .replace(/–/g, ' - ')
       .trim();
 
     serialize(cleanedSource, {
@@ -207,9 +209,15 @@ export function LessonRenderer({ mdxSource }: LessonRendererProps) {
         remarkPlugins: [remarkGfm],
       },
     })
-      .then(result => { if (!cancelled) setCompiled(result); })
-      .catch(() => { if (!cancelled) setCompiled('__error__'); });
-    return () => { cancelled = true; };
+      .then((result) => {
+        if (!cancelled) setCompiled(result);
+      })
+      .catch(() => {
+        if (!cancelled) setCompiled('__error__');
+      });
+    return () => {
+      cancelled = true;
+    };
   }, [mdxSource]);
 
   if (compiled === '__loading__') {
@@ -223,8 +231,21 @@ export function LessonRenderer({ mdxSource }: LessonRendererProps) {
     );
   }
 
+  // CHANGE: Provide a clean fallback view if MDX serialization fails on raw characters (cleaning dashes)
   if (compiled === '__error__') {
-    return <p className="text-sm text-red-500">Failed to render lesson content.</p>;
+    return (
+      <div
+        style={{
+          maxWidth: 'none',
+          whiteSpace: 'pre-wrap',
+          lineHeight: '1.7',
+          color: 'var(--text-secondary)',
+          fontSize: '14.5px',
+        }}
+      >
+        {mdxSource.replace(/—/g, ' - ').replace(/–/g, ' - ')}
+      </div>
+    );
   }
 
   return (
